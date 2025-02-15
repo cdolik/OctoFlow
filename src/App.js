@@ -3,6 +3,7 @@ import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import Assessment from './components/Assessment';
 import Summary from './components/Summary';
 import Results from './components/Results';
+import StageSelector from './components/StageSelector';
 import './App.css';
 import './components/styles.css';
 
@@ -34,8 +35,8 @@ function App() {
           <Route path="/assessment" element={<Assessment />} />
           <Route path="/summary" element={<Summary />} />
           <Route path="/results" element={<Results />} />
-          <Route path="/" element={<Navigate to="/assessment" replace />} />
-          <Route path="*" element={<Navigate to="/assessment" replace />} />
+          <Route path="/" element={<StageSelector />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
     </Router>

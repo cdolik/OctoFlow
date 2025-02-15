@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { categories, tooltips } from '../data/categories';
+import { STAGE_CONFIG } from '../data/stages';
 
 const Tooltip = ({ term }) => (
   <span className="tooltip">
@@ -14,9 +15,16 @@ const Assessment = () => {
   const [answers, setAnswers] = useState({});
   const [currentCategory, setCurrentCategory] = useState(0);
   const [initialized, setInitialized] = useState(false);
+  const [stage, setStage] = useState(null);
 
-  // Enhanced session storage handling
   useEffect(() => {
+    const selectedStage = sessionStorage.getItem('selectedStage');
+    if (!selectedStage) {
+      navigate('/');
+      return;
+    }
+    setStage(selectedStage);
+
     const savedAnswers = sessionStorage.getItem('assessmentAnswers');
     const savedCategory = sessionStorage.getItem('currentCategory');
     
@@ -38,7 +46,7 @@ const Assessment = () => {
     }
     
     setInitialized(true);
-  }, []);
+  }, [navigate]);
 
   useEffect(() => {
     if (!initialized) return;
@@ -58,14 +66,23 @@ const Assessment = () => {
     }));
   };
 
+  // Filter questions based on company stage
+  const filteredCategories = categories.map(category => ({
+    ...category,
+    questions: category.questions.filter(q => 
+      STAGE_CONFIG[stage]?.questionFilter(q)
+    )
+  })).filter(cat => cat.questions.length > 0);
+
   const handleNext = () => {
-    if (currentCategory < categories.length - 1) {
+    if (currentCategory < filteredCategories.length - 1) {
       setCurrentCategory(prev => prev + 1);
     } else {
-      // Use relative path for navigation
-      navigate('../summary', { 
-        state: { answers },
-        replace: true 
+      navigate('/summary', { 
+        state: { 
+          answers,
+          stage 
+        }
       });
     }
   };
@@ -86,14 +103,21 @@ const Assessment = () => {
     }, text);
   };
 
-  const currentQuestions = categories[currentCategory].questions;
-  const progress = ((currentCategory + 1) / categories.length) * 100;
+  const currentQuestions = filteredCategories[currentCategory]?.questions || [];
+  const progress = ((currentCategory + 1) / filteredCategories.length) * 100;
   
   // Calculate completion status for current category
   const isCategoryComplete = currentQuestions.every(q => answers[q.id]);
 
   return (
     <div className="assessment-container">
+      <div className="stage-indicator">
+        <span className="stage-label">{STAGE_CONFIG[stage]?.label}</span>
+        <span className="stage-focus">
+          Focus: {STAGE_CONFIG[stage]?.focus.join(', ')}
+        </span>
+      </div>
+
       <div className="progress-container">
         <div className="progress-bar">
           <div 
@@ -103,10 +127,10 @@ const Assessment = () => {
         </div>
         <div className="progress-info">
           <span className="progress-text">
-            Step {currentCategory + 1} of {categories.length}
+            Step {currentCategory + 1} of {filteredCategories.length}
           </span>
           <span className="category-title">
-            {categories[currentCategory].title}
+            {filteredCategories[currentCategory]?.title}
           </span>
         </div>
       </div>
@@ -151,7 +175,7 @@ const Assessment = () => {
             disabled={!isCategoryComplete}
             className="next-button"
           >
-            {currentCategory < categories.length - 1 ? 'Next' : 'Review Answers'}
+            {currentCategory < filteredCategories.length - 1 ? 'Next' : 'Review Answers'}
           </button>
         </div>
       </div>
