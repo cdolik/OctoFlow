@@ -1,0 +1,118 @@
+/* Styles for the assessment form, including layout, questions, options, and buttons */
+.assessment-form {
+  max-width: 800px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.question {
+  margin-bottom: 2rem;
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.options .option-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid #e1e4e8;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.options label:hover {
+  background: #f6f8fa;
+}
+
+.assessment-form button {
+  background: #2ea44f;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.assessment-form button:disabled {
+  background: #94d3a2;
+  cursor: not-allowed;
+}
+
+.assessment-form button:hover:not(:disabled) {
+  background: #2c974b;
+}
+
+/* Styles for the results page, including overall score, category scores, recommendations, and retake button */
+.results-container {
+  max-width: 1000px;
+  margin: 2rem auto;
+  padding: 2rem;
+}
+
+.overall-score {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.category-scores {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+}
+
+.category-score {
+  background: #fff;
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.recommendations ul {
+  list-style: none;
+  padding: 0;
+}
+
+.recommendations li {
+  margin: 0.5rem 0;
+}
+
+.recommendations a {
+  color: #0366d6;
+  text-decoration: none;
+}
+
+.recommendations a:hover {
+  text-decoration: underline;
+}
+
+.results-container .retake-button {
+  display: inline-block;
+  margin-top: 2rem;
+  padding: 0.75rem 1.5rem;
+  background: #0366d6;
+  color: white;
+  text-decoration: none;
+  border-radius: 6px;
+  transition: background-color 0.2s;
+}
+
+.results-container .retake-button:hover {
+  background: #035fc7;
+}
+
+.error-state {
+  text-align: center;
+  padding: 3rem;
+}
