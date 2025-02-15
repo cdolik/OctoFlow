@@ -11,6 +11,7 @@ import {
 } from 'chart.js';
 import { Radar } from 'react-chartjs-2';
 import { STAGE_CONFIG } from '../data/stages';
+import { categories } from '../data/categories';
 
 ChartJS.register(
   RadialLinearScale,
@@ -19,6 +20,85 @@ ChartJS.register(
   Filler,
   Tooltip,
   Legend
+);
+
+const QUICK_START_TEMPLATES = {
+  'pre-seed': [
+    {
+      name: 'Basic CI Pipeline',
+      link: 'https://github.com/actions/starter-workflows/blob/main/ci/node.js.yml',
+      icon: '⚡'
+    },
+    {
+      name: 'Branch Protection',
+      link: 'https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-a-branch-protection-rule',
+      icon: '🛡️'
+    }
+  ],
+  'series-a': [
+    {
+      name: 'Security Starter Kit',
+      link: 'https://github.com/startups/security',
+      icon: '🔒'
+    },
+    {
+      name: 'Team Management',
+      link: 'https://docs.github.com/en/organizations/managing-user-access-to-your-organizations-repositories',
+      icon: '👥'
+    }
+  ],
+  'series-b': [
+    {
+      name: 'Enterprise Scale',
+      link: 'https://docs.github.com/en/enterprise-cloud@latest/admin/overview',
+      icon: '🏢'
+    },
+    {
+      name: 'Advanced Security',
+      link: 'https://docs.github.com/en/code-security',
+      icon: '🔐'
+    }
+  ]
+};
+
+const STAGE_BENCHMARKS = {
+  'pre-seed': {
+    'GitHub Usage': 1.5,
+    'Team Collaboration': 1.8,
+    'CI/CD & Automation': 1.9,
+    'Security Essentials': 1.4
+  },
+  'series-a': {
+    'GitHub Usage': 2.5,
+    'Team Collaboration': 2.9,
+    'CI/CD & Automation': 3.2,
+    'Security Essentials': 2.3
+  },
+  'series-b': {
+    'GitHub Usage': 3.2,
+    'Team Collaboration': 3.5,
+    'CI/CD & Automation': 3.8,
+    'Security Essentials': 3.2
+  }
+};
+
+const ProgressBar = ({ current, benchmark }) => (
+  <div className="progress-container">
+    <div className="progress-labels">
+      <span>Your Score: {current.toFixed(1)}</span>
+      <span>Stage Average: {benchmark.toFixed(1)}</span>
+    </div>
+    <div className="progress-bar">
+      <div 
+        className="progress-user" 
+        style={{ width: `${(current/4)*100}%` }}
+      />
+      <div
+        className="progress-benchmark"
+        style={{ left: `${(benchmark/4)*100}%` }}
+      />
+    </div>
+  </div>
 );
 
 const GitHubOffer = ({ type, title, description, ctaText, ctaLink }) => (
@@ -36,6 +116,25 @@ const GitHubOffer = ({ type, title, description, ctaText, ctaLink }) => (
     </a>
   </div>
 );
+
+const GITHUB_OFFERS = [
+  {
+    id: 'security',
+    title: 'Advanced Security',
+    criteria: (scores) => scores.security < 2.5,
+    link: 'https://github.com/startups/security',
+    badge: '50% OFF',
+    description: 'Automated vulnerability detection for your repos'
+  },
+  {
+    id: 'copilot',
+    title: 'GitHub Copilot',
+    criteria: (scores) => scores.automation < 3,
+    link: 'https://github.com/features/copilot',
+    badge: 'FREE TRIAL',
+    description: 'AI-powered code completion'
+  }
+];
 
 const Results = () => {
   const location = useLocation();
@@ -169,6 +268,15 @@ const Results = () => {
     .filter(s => s.focus)
     .reduce((acc, curr) => acc + curr.score, 0) / scores.filter(s => s.focus).length;
 
+  const calculateStageScore = (score, category, stage) => {
+    const benchmark = STAGE_BENCHMARKS[stage]?.[category] || 0;
+    return {
+      score,
+      benchmark,
+      deviation: score - benchmark
+    };
+  };
+
   return (
     <div className="results-container">
       <div className="results-header">
@@ -179,7 +287,7 @@ const Results = () => {
       </div>
       
       <div className="score-overview">
-        <div className="score-card overall">
+        <div className="score-card overall"></div>
           <h3>Overall Maturity</h3>
           <div className="score-value">{overallScore.toFixed(1)} / 4.0</div>
         </div>
@@ -192,6 +300,49 @@ const Results = () => {
       <div className="chart-container">
         <div className="chart-wrapper">
           <Radar data={chartData} options={chartOptions} />
+        </div>
+      </div>
+
+      <div className="quick-start-section">
+        <h3>🚀 Stage-Specific Quick Starts</h3>
+        <div className="template-grid">
+          {QUICK_START_TEMPLATES[stage]?.map((template, index) => (
+            <a 
+              key={index}
+              href={template.link}
+              className="template-card"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <div className="template-icon">{template.icon}</div>
+              <div className="template-content">
+                <h4>{template.name}</h4>
+                <span className="template-link">Get Started →</span>
+              </div>
+            </a>
+          ))}
+        </div>
+      </div>
+
+      <div className="github-offers">
+        <h3>💡 GitHub for Startups Offers</h3>
+        <div className="offer-grid">
+          {GITHUB_OFFERS
+            .filter(offer => offer.criteria(scores))
+            .map(offer => (
+              <a
+                key={offer.id}
+                href={offer.link}
+                className="offer-card"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <div className="offer-badge">{offer.badge}</div>
+                <h4>{offer.title}</h4>
+                <p>{offer.description}</p>
+                <span className="offer-cta">Learn More →</span>
+              </a>
+            ))}
         </div>
       </div>
 
@@ -223,6 +374,8 @@ const Results = () => {
             })
             .filter(Boolean);
 
+          const benchmark = STAGE_BENCHMARKS[stage]?.[score.category.toLowerCase()];
+
           return recommendations?.length ? (
             <div 
               key={score.category} 
@@ -237,7 +390,7 @@ const Results = () => {
                   </span>
                 </div>
               </div>
-              
+              {benchmark && <ProgressBar current={score.score} benchmark={benchmark} />}
               <div className="recommendation-list">
                 {recommendations.map((rec, index) => (
                   <div key={index} className="recommendation-item">
@@ -258,6 +411,26 @@ const Results = () => {
         })}
       </div>
 
+      {scores.map((score) => {
+        const stageMetrics = calculateStageScore(score.score, score.category, stage);
+        return (
+          <div key={score.category} className="category-score">
+            <div className="score-header">
+              <h4>{score.category}</h4>
+              <ProgressBar 
+                current={score.score} 
+                benchmark={stageMetrics.benchmark} 
+              />
+            </div>
+            {stageMetrics.deviation > 0 && (
+              <div className="score-achievement">
+                Performing {Math.round(stageMetrics.deviation * 100)}% above stage average
+              </div>
+            )}
+          </div>
+        );
+      })}
+
       <div className="results-actions">
         <button 
           onClick={() => {
@@ -265,7 +438,7 @@ const Results = () => {
             navigate('/');
           }}
           className="restart-button"
-        >
+        ></button>
           Start New Assessment
         </button>
       </div>

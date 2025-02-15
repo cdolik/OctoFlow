@@ -1,21 +1,37 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { categories } from '../data/categories';
 import { STAGE_CONFIG } from '../data/stages';
 
+const trackEvent = (eventName, payload) => {
+  const sessionId = sessionStorage.getItem('sessionId');
+  const enhancedPayload = {
+    ...payload,
+    timestamp: Date.now(),
+    sessionId
+  };
+  console.log('Analytics:', { eventName, ...enhancedPayload });
+};
+
 const Summary = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  
-  const answers = useMemo(() => 
-    location.state?.answers || {},
-    [location.state?.answers]
-  );
-  
-  const stage = useMemo(() => 
-    location.state?.stage || sessionStorage.getItem('selectedStage'),
-    [location.state?.stage]
-  );
+  const [answers, setAnswers] = useState({});
+  const [stage, setStage] = useState(null);
+
+  useEffect(() => {
+    const savedAnswers = location.state?.answers || JSON.parse(sessionStorage.getItem('assessmentAnswers') || '{}');
+    const selectedStage = location.state?.stage || sessionStorage.getItem('selectedStage');
+    
+    setAnswers(savedAnswers);
+    setStage(selectedStage);
+
+    trackEvent('summary_viewed', {
+      stage: selectedStage,
+      totalAnswers: Object.keys(savedAnswers).length,
+      categories: categories.map(cat => cat.id)
+    });
+  }, [location.state]);
 
   useEffect(() => {
     if (!stage || Object.keys(answers).length === 0) {
@@ -45,6 +61,12 @@ const Summary = () => {
   };
 
   const handleEdit = (categoryIndex) => {
+    trackEvent('category_edit_started', {
+      stage,
+      category: categories[categoryIndex].id,
+      currentAnswers: Object.keys(answers).length
+    });
+
     sessionStorage.setItem('currentCategory', categoryIndex.toString());
     navigate('/assessment');
   };
@@ -57,10 +79,18 @@ const Summary = () => {
       focus: STAGE_CONFIG[stage].focus.includes(category.id.split('-')[0])
     }));
 
+    trackEvent('assessment_completed', {
+      stage,
+      scores,
+      timeSpent: Math.floor((Date.now() - parseInt(sessionStorage.getItem('assessmentStartTime'))) / 1000)
+    });
+
+    sessionStorage.setItem('assessmentCompleted', 'true');
     navigate('/results', { 
       state: { 
         scores,
-        stage 
+        stage,
+        answers
       }
     });
   };

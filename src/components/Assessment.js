@@ -10,6 +10,23 @@ const Tooltip = ({ term }) => (
   </span>
 );
 
+const trackEvent = (eventName, payload) => {
+  const enhancedPayload = {
+    ...payload,
+    timestamp: Date.now(),
+    userAgent: window.navigator.userAgent,
+    sessionId: sessionStorage.getItem('sessionId') || Math.random().toString(36).substring(7)
+  };
+  
+  // Basic console logging for development
+  console.log('Analytics:', { eventName, ...enhancedPayload });
+  
+  // Store sessionId if not exists
+  if (!sessionStorage.getItem('sessionId')) {
+    sessionStorage.setItem('sessionId', enhancedPayload.sessionId);
+  }
+};
+
 const Assessment = () => {
   const navigate = useNavigate();
   const [answers, setAnswers] = useState({});
@@ -59,11 +76,55 @@ const Assessment = () => {
     }
   }, [answers, currentCategory, initialized]);
 
+  useEffect(() => {
+    const startTime = Date.now();
+    const sessionId = Math.random().toString(36).substring(7);
+    
+    sessionStorage.setItem('assessmentStartTime', startTime.toString());
+    sessionStorage.setItem('sessionId', sessionId);
+    
+    trackEvent('assessment_started', {
+      stage: sessionStorage.getItem('selectedStage'),
+      startTime,
+      totalQuestions: categories.reduce((acc, cat) => acc + cat.questions.length, 0)
+    });
+    
+    return () => {
+      // Track if assessment is abandoned
+      const isCompleted = sessionStorage.getItem('assessmentCompleted');
+      if (!isCompleted) {
+        trackEvent('assessment_abandoned', {
+          stage: sessionStorage.getItem('selectedStage'),
+          lastCategory: currentCategory,
+          progress: `${currentCategory + 1}/${categories.length}`,
+          timeSpent: Math.floor((Date.now() - startTime) / 1000),
+          completedQuestions: Object.keys(answers).length
+        });
+      }
+    };
+  }, []);
+
   const handleAnswer = (questionId, value) => {
-    setAnswers(prev => ({
-      ...prev,
+    const updatedAnswers = {
+      ...answers,
       [questionId]: value
-    }));
+    };
+    setAnswers(updatedAnswers);
+    sessionStorage.setItem('assessmentAnswers', JSON.stringify(updatedAnswers));
+
+    const currentQuestion = categories[currentCategory].questions.find(q => q.id === questionId);
+    
+    trackEvent('question_answered', {
+      questionId,
+      value,
+      category: categories[currentCategory].id,
+      categoryTitle: categories[currentCategory].title,
+      stage: sessionStorage.getItem('selectedStage'),
+      questionText: currentQuestion?.text,
+      timeSpent: Math.floor((Date.now() - (sessionStorage.getItem('lastQuestionTime') || Date.now())) / 1000)
+    });
+    
+    sessionStorage.setItem('lastQuestionTime', Date.now().toString());
   };
 
   // Filter questions based on company stage
@@ -76,13 +137,43 @@ const Assessment = () => {
 
   const handleNext = () => {
     if (currentCategory < filteredCategories.length - 1) {
-      setCurrentCategory(prev => prev + 1);
+      setCurrentCategory(prev => {
+        const next = prev + 1;
+        sessionStorage.setItem('currentCategory', next.toString());
+        
+        trackEvent('assessment_progress', {
+          fromCategory: prev,
+          toCategory: next,
+          totalCategories: categories.length,
+          stage: sessionStorage.getItem('selectedStage')
+        });
+        
+        return next;
+      });
     } else {
       navigate('/summary', { 
         state: { 
           answers,
           stage 
         }
+      });
+    }
+  };
+
+  const handleBack = () => {
+    if (currentCategory > 0) {
+      setCurrentCategory(prev => {
+        const next = prev - 1;
+        sessionStorage.setItem('currentCategory', next.toString());
+        
+        trackEvent('assessment_navigation', {
+          direction: 'back',
+          fromCategory: prev,
+          toCategory: next,
+          stage: sessionStorage.getItem('selectedStage')
+        });
+        
+        return next;
       });
     }
   };
@@ -164,7 +255,7 @@ const Assessment = () => {
         <div className="navigation-buttons">
           {currentCategory > 0 && (
             <button 
-              onClick={() => setCurrentCategory(prev => prev - 1)}
+              onClick={handleBack}
               className="back-button"
             >
               Back

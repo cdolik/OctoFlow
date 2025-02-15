@@ -1260,3 +1260,485 @@ button:disabled {
     align-items: flex-start;
   }
 }
+
+.github-offer-card {
+  background: #f6f8fa;
+  border: 1px solid #d0d7de;
+  border-radius: 6px;
+  padding: 16px;
+  margin: 8px 0;
+  transition: all 0.2s ease;
+}
+
+.github-offer-card:hover {
+  border-color: #2DA44E;
+  box-shadow: 0 1px 3px rgba(27, 31, 35, 0.1);
+}
+
+.offer-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  background: #2DA44E;
+  color: white;
+  border-radius: 12px;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.github-cta {
+  display: inline-block;
+  padding: 6px 16px;
+  background: #2DA44E;
+  color: white;
+  text-decoration: none;
+  border-radius: 6px;
+  margin-top: 12px;
+  font-size: 14px;
+  transition: background 0.2s;
+}
+
+.github-cta:hover {
+  background: #2c974b;
+}
+
+.recommendation-card {
+  background: white;
+  border: 1px solid #d0d7de;
+  border-radius: 6px;
+  padding: 16px;
+  margin: 16px 0;
+}
+
+.recommendation-card.focus-area {
+  border-left: 4px solid #2DA44E;
+}
+
+.recommendation-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.recommendation-meta {
+  display: flex;
+  gap: 8px;
+}
+
+.focus-tag {
+  background: #dafbe1;
+  color: #1a7f37;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+}
+
+.score-tag {
+  background: #f6f8fa;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+}
+
+.recommendation-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.recommendation-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  background: #f6f8fa;
+  border-radius: 4px;
+}
+
+.rec-type {
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.rec-type.github {
+  background: #0d1117;
+  color: white;
+}
+
+.rec-type.best-practice {
+  background: #2DA44E;
+  color: white;
+}
+
+.rec-type.marketplace {
+  background: #8250df;
+  color: white;
+}
+
+.rec-link {
+  color: #1F2328;
+  text-decoration: none;
+}
+
+.rec-link:hover {
+  color: #2DA44E;
+}
+
+/* Quick Start Templates */
+.quick-start-section {
+  margin: 2rem 0;
+  padding: 2rem;
+  background: #f6f8fa;
+  border-radius: 8px;
+  border: 1px solid #d0d7de;
+}
+
+.quick-start-section h3 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: #1F2328;
+}
+
+.template-grid {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  margin-top: 1.5rem;
+}
+
+.template-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.25rem;
+  border: 1px solid #d0d7de;
+  border-radius: 6px;
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.2s ease;
+}
+
+.template-card:hover {
+  border-color: #2DA44E;
+  background: #f6f8fa;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.template-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.template-content {
+  flex: 1;
+}
+
+.template-content h4 {
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+  color: #1F2328;
+}
+
+.template-link {
+  color: #2DA44E;
+  font-size: 0.9rem;
+}
+
+/* Benchmark Progress */
+.progress-container {
+  margin: 1rem 0;
+}
+
+.progress-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.875rem;
+  color: #656d76;
+  margin-bottom: 0.5rem;
+}
+
+.progress-bar {
+  height: 8px;
+  background: #f6f8fa;
+  border: 1px solid #d0d7de;
+  border-radius: 6px;
+  position: relative;
+  overflow: hidden;
+}
+
+.progress-user {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  background: #2DA44E;
+  border-radius: 6px;
+  transition: width 0.6s ease;
+}
+
+.progress-benchmark {
+  position: absolute;
+  top: -4px;
+  width: 2px;
+  height: 14px;
+  background: #1F2328;
+  margin-left: -1px;
+}
+
+.progress-benchmark::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: -3px;
+  width: 8px;
+  height: 8px;
+  background: #1F2328;
+  border-radius: 50%;
+}
+
+/* Enhanced Score Cards */
+.score-overview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin: 2rem 0;
+}
+
+.score-card {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 8px;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transition: transform 0.2s ease;
+}
+
+.score-card:hover {
+  transform: translateY(-2px);
+}
+
+.score-card.focus {
+  border: 2px solid #2DA44E;
+}
+
+.score-card h3 {
+  margin: 0 0 1rem;
+  color: #656d76;
+  font-size: 1rem;
+}
+
+.score-value {
+  font-size: 2.5rem;
+  font-weight: 600;
+  color: #2DA44E;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .template-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .score-overview {
+    grid-template-columns: 1fr;
+  }
+  
+  .progress-labels {
+    font-size: 0.75rem;
+  }
+}
+
+/* Enhanced Visuals for Templates, Benchmarks, and Offers Sections */
+.template-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+}
+
+.template-card {
+  border: 1px solid #d0d7de;
+  border-radius: 8px;
+  padding: 1.5rem;
+  transition: transform 0.1s ease;
+  text-decoration: none;
+  color: inherit;
+}
+
+.template-card:hover {
+  transform: translateY(-2px);
+  border-color: #2DA44E;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.template-icon {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Benchmark Progress Bar */
+.progress-container {
+  margin: 1rem 0;
+}
+
+.progress-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  color: #656d76;
+}
+
+.progress-bar {
+  height: 8px;
+  background: #f6f8fa;
+  border-radius: 4px;
+  position: relative;
+  margin: 0.5rem 0;
+}
+
+.progress-user {
+  height: 100%;
+  background: #2DA44E;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.progress-benchmark {
+  position: absolute;
+  top: -2px;
+  width: 2px;
+  height: 12px;
+  background: #1F2328;
+  transform: translateX(-50%);
+}
+
+.progress-benchmark::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: -3px;
+  width: 8px;
+  height: 8px;
+  background: #1F2328;
+  border-radius: 50%;
+}
+
+/* GitHub Offers */
+.offer-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  margin-top: 1.5rem;
+}
+
+.offer-card {
+  border: 1px solid #d0d7de;
+  border-radius: 8px;
+  padding: 1.5rem;
+  position: relative;
+  background: white;
+  transition: all 0.2s ease;
+}
+
+.offer-card:hover {
+  border-color: #2DA44E;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.offer-badge {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  background: #2DA44E;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.offer-card h4 {
+  margin: 0 0 0.5rem;
+  color: #1F2328;
+}
+
+.offer-card p {
+  color: #656d76;
+  margin: 0 0 1rem;
+}
+
+.offer-cta {
+  color: #2DA44E;
+  font-weight: 500;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .template-grid,
+  .offer-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .progress-labels {
+    font-size: 0.75rem;
+  }
+  
+  .offer-badge {
+    font-size: 0.7rem;
+    padding: 3px 10px;
+  }
+}
+
+.score-achievement {
+  display: inline-block;
+  margin-top: 0.5rem;
+  padding: 4px 8px;
+  background: #dafbe1;
+  color: #1a7f37;
+  border-radius: 12px;
+  font-size: 0.875rem;
+}
+
+.quick-start-section {
+  margin: 2rem 0;
+  padding: 2rem;
+  background: #f6f8fa;
+  border-radius: 8px;
+  border: 1px solid #d0d7de;
+}
+
+.quick-start-section h3 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: #1F2328;
+}
+
+/* Enhance template card spacing */
+.template-grid {
+  margin-top: 1.5rem;
+}
+
+.template-content h4 {
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+/* Add subtle hover animation */
+.template-card,
+.offer-card,
+.score-card {
+  transform: translateY(0);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.template-card:hover,
+.offer-card:hover,
+.score-card:hover {
+  transform: translateY(-2px);
+}
