@@ -1,5 +1,6 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { categories } from '../data/categories';
 
 const Summary = () => {
   const location = useLocation();
