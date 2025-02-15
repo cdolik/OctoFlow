@@ -1,15 +1,15 @@
 {
   "files": {
-    "main.css": "/OctoFlow/static/css/main.f855e6bc.css",
-    "main.js": "/OctoFlow/static/js/main.295ec292.js",
+    "main.css": "/OctoFlow/static/css/main.01e4828c.css",
+    "main.js": "/OctoFlow/static/js/main.1656ce62.js",
     "static/js/488.885fb5b1.chunk.js": "/OctoFlow/static/js/488.885fb5b1.chunk.js",
     "index.html": "/OctoFlow/index.html",
-    "main.f855e6bc.css.map": "/OctoFlow/static/css/main.f855e6bc.css.map",
-    "main.295ec292.js.map": "/OctoFlow/static/js/main.295ec292.js.map",
+    "main.01e4828c.css.map": "/OctoFlow/static/css/main.01e4828c.css.map",
+    "main.1656ce62.js.map": "/OctoFlow/static/js/main.1656ce62.js.map",
     "488.885fb5b1.chunk.js.map": "/OctoFlow/static/js/488.885fb5b1.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.f855e6bc.css",
-    "static/js/main.295ec292.js"
+    "static/css/main.01e4828c.css",
+    "static/js/main.1656ce62.js"
   ]
 }
