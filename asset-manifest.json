@@ -1,16 +1,24 @@
 {
   "files": {
-    "main.css": "/octoflow/static/css/main.f855e6bc.css",
-    "main.js": "/octoflow/static/js/main.cfff5257.js",
-    "static/js/453.fe56f76c.chunk.js": "/octoflow/static/js/453.fe56f76c.chunk.js",
-    "static/media/logo.svg": "/octoflow/static/media/logo.6ce24c58023cc2f8fd88fe9d219db6c6.svg",
+    "main.css": "/octoflow/static/css/main.435d5fe5.chunk.css",
+    "main.js": "/octoflow/static/js/main.00c686c8.chunk.js",
+    "main.js.map": "/octoflow/static/js/main.00c686c8.chunk.js.map",
+    "runtime-main.js": "/octoflow/static/js/runtime-main.8222c89f.js",
+    "runtime-main.js.map": "/octoflow/static/js/runtime-main.8222c89f.js.map",
+    "static/js/2.e3d52393.chunk.js": "/octoflow/static/js/2.e3d52393.chunk.js",
+    "static/js/2.e3d52393.chunk.js.map": "/octoflow/static/js/2.e3d52393.chunk.js.map",
+    "static/js/3.fecab6e4.chunk.js": "/octoflow/static/js/3.fecab6e4.chunk.js",
+    "static/js/3.fecab6e4.chunk.js.map": "/octoflow/static/js/3.fecab6e4.chunk.js.map",
     "index.html": "/octoflow/index.html",
-    "main.f855e6bc.css.map": "/octoflow/static/css/main.f855e6bc.css.map",
-    "main.cfff5257.js.map": "/octoflow/static/js/main.cfff5257.js.map",
-    "453.fe56f76c.chunk.js.map": "/octoflow/static/js/453.fe56f76c.chunk.js.map"
+    "precache-manifest.d602b734a4f4f81759fca1fe6c37dd6f.js": "/octoflow/precache-manifest.d602b734a4f4f81759fca1fe6c37dd6f.js",
+    "service-worker.js": "/octoflow/service-worker.js",
+    "static/css/main.435d5fe5.chunk.css.map": "/octoflow/static/css/main.435d5fe5.chunk.css.map",
+    "static/js/2.e3d52393.chunk.js.LICENSE.txt": "/octoflow/static/js/2.e3d52393.chunk.js.LICENSE.txt"
   },
   "entrypoints": [
-    "static/css/main.f855e6bc.css",
-    "static/js/main.cfff5257.js"
+    "static/js/runtime-main.8222c89f.js",
+    "static/js/2.e3d52393.chunk.js",
+    "static/css/main.435d5fe5.chunk.css",
+    "static/js/main.00c686c8.chunk.js"
   ]
 }
