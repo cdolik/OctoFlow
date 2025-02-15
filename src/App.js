@@ -1,20 +1,23 @@
 import React from 'react';
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
-import './App.css';
+import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Assessment from './components/Assessment';
+import Summary from './components/Summary';
 import Results from './components/Results';
+import './App.css';
+import './components/styles.css';
 
 function App() {
   return (
-    <HashRouter>
+    <Router>
       <div className="App">
         <Routes>
-          <Route path="/" element={<Navigate to="/assessment" />} />
           <Route path="/assessment" element={<Assessment />} />
+          <Route path="/summary" element={<Summary />} />
           <Route path="/results" element={<Results />} />
+          <Route path="/" element={<Navigate to="/assessment" replace />} />
         </Routes>
       </div>
-    </HashRouter>
+    </Router>
   );
 }
 
