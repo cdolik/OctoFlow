@@ -287,7 +287,7 @@ const Results = () => {
       </div>
       
       <div className="score-overview">
-        <div className="score-card overall"></div>
+        <div className="score-card overall">
           <h3>Overall Maturity</h3>
           <div className="score-value">{overallScore.toFixed(1)} / 4.0</div>
         </div>
@@ -438,7 +438,7 @@ const Results = () => {
             navigate('/');
           }}
           className="restart-button"
-        ></button>
+        >
           Start New Assessment
         </button>
       </div>
