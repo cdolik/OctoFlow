@@ -1,24 +1,15 @@
 {
   "files": {
-    "main.css": "/octoflow/static/css/main.435d5fe5.chunk.css",
-    "main.js": "/octoflow/static/js/main.00c686c8.chunk.js",
-    "main.js.map": "/octoflow/static/js/main.00c686c8.chunk.js.map",
-    "runtime-main.js": "/octoflow/static/js/runtime-main.8222c89f.js",
-    "runtime-main.js.map": "/octoflow/static/js/runtime-main.8222c89f.js.map",
-    "static/js/2.e3d52393.chunk.js": "/octoflow/static/js/2.e3d52393.chunk.js",
-    "static/js/2.e3d52393.chunk.js.map": "/octoflow/static/js/2.e3d52393.chunk.js.map",
-    "static/js/3.fecab6e4.chunk.js": "/octoflow/static/js/3.fecab6e4.chunk.js",
-    "static/js/3.fecab6e4.chunk.js.map": "/octoflow/static/js/3.fecab6e4.chunk.js.map",
-    "index.html": "/octoflow/index.html",
-    "precache-manifest.d602b734a4f4f81759fca1fe6c37dd6f.js": "/octoflow/precache-manifest.d602b734a4f4f81759fca1fe6c37dd6f.js",
-    "service-worker.js": "/octoflow/service-worker.js",
-    "static/css/main.435d5fe5.chunk.css.map": "/octoflow/static/css/main.435d5fe5.chunk.css.map",
-    "static/js/2.e3d52393.chunk.js.LICENSE.txt": "/octoflow/static/js/2.e3d52393.chunk.js.LICENSE.txt"
+    "main.css": "/OctoFlow/static/css/main.f855e6bc.css",
+    "main.js": "/OctoFlow/static/js/main.295ec292.js",
+    "static/js/488.885fb5b1.chunk.js": "/OctoFlow/static/js/488.885fb5b1.chunk.js",
+    "index.html": "/OctoFlow/index.html",
+    "main.f855e6bc.css.map": "/OctoFlow/static/css/main.f855e6bc.css.map",
+    "main.295ec292.js.map": "/OctoFlow/static/js/main.295ec292.js.map",
+    "488.885fb5b1.chunk.js.map": "/OctoFlow/static/js/488.885fb5b1.chunk.js.map"
   },
   "entrypoints": [
-    "static/js/runtime-main.8222c89f.js",
-    "static/js/2.e3d52393.chunk.js",
-    "static/css/main.435d5fe5.chunk.css",
-    "static/js/main.00c686c8.chunk.js"
+    "static/css/main.f855e6bc.css",
+    "static/js/main.295ec292.js"
   ]
 }
