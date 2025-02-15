@@ -13,24 +13,43 @@ const Assessment = () => {
   const navigate = useNavigate();
   const [answers, setAnswers] = useState({});
   const [currentCategory, setCurrentCategory] = useState(0);
+  const [initialized, setInitialized] = useState(false);
 
-  // Load answers from session storage on mount
+  // Enhanced session storage handling
   useEffect(() => {
     const savedAnswers = sessionStorage.getItem('assessmentAnswers');
     const savedCategory = sessionStorage.getItem('currentCategory');
+    
     if (savedAnswers) {
-      setAnswers(JSON.parse(savedAnswers));
+      try {
+        const parsedAnswers = JSON.parse(savedAnswers);
+        setAnswers(parsedAnswers);
+      } catch (e) {
+        console.error('Error parsing saved answers:', e);
+        sessionStorage.removeItem('assessmentAnswers');
+      }
     }
+    
     if (savedCategory) {
-      setCurrentCategory(Number(savedCategory));
+      const categoryNum = Number(savedCategory);
+      if (!isNaN(categoryNum) && categoryNum >= 0 && categoryNum < categories.length) {
+        setCurrentCategory(categoryNum);
+      }
     }
+    
+    setInitialized(true);
   }, []);
 
-  // Save answers to session storage whenever they change
   useEffect(() => {
-    sessionStorage.setItem('assessmentAnswers', JSON.stringify(answers));
-    sessionStorage.setItem('currentCategory', currentCategory.toString());
-  }, [answers, currentCategory]);
+    if (!initialized) return;
+    
+    try {
+      sessionStorage.setItem('assessmentAnswers', JSON.stringify(answers));
+      sessionStorage.setItem('currentCategory', currentCategory.toString());
+    } catch (e) {
+      console.error('Error saving to session storage:', e);
+    }
+  }, [answers, currentCategory, initialized]);
 
   const handleAnswer = (questionId, value) => {
     setAnswers(prev => ({
@@ -43,21 +62,12 @@ const Assessment = () => {
     if (currentCategory < categories.length - 1) {
       setCurrentCategory(prev => prev + 1);
     } else {
-      // Calculate scores and navigate to summary
-      navigate('/summary', { state: { answers } });
+      // Use relative path for navigation
+      navigate('../summary', { 
+        state: { answers },
+        replace: true 
+      });
     }
-  };
-
-  const calculateScores = (answers) => {
-    const scores = {};
-    categories.forEach(category => {
-      const categoryScores = category.questions.map(q => answers[q.id] || 0);
-      scores[category.id] = {
-        average: categoryScores.reduce((a, b) => a + b, 0) / categoryScores.length,
-        title: category.title
-      };
-    });
-    return scores;
   };
 
   const renderQuestionText = (text) => {
@@ -67,7 +77,7 @@ const Assessment = () => {
         return parts.map((part, i) => 
           i === parts.length - 1 ? part : (
             <React.Fragment key={i}>
-              {part}{term}<Tooltip term={term} />
+              {part}<strong>{term}</strong><Tooltip term={term} />
             </React.Fragment>
           )
         );
@@ -78,27 +88,39 @@ const Assessment = () => {
 
   const currentQuestions = categories[currentCategory].questions;
   const progress = ((currentCategory + 1) / categories.length) * 100;
+  
+  // Calculate completion status for current category
+  const isCategoryComplete = currentQuestions.every(q => answers[q.id]);
 
   return (
     <div className="assessment-container">
-      <div className="progress-bar">
-        <div 
-          className="progress-fill" 
-          style={{ width: `${progress}%` }}
-        />
-        <span className="progress-text">
-          Step {currentCategory + 1} of {categories.length}
-        </span>
+      <div className="progress-container">
+        <div className="progress-bar">
+          <div 
+            className="progress-fill" 
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+        <div className="progress-info">
+          <span className="progress-text">
+            Step {currentCategory + 1} of {categories.length}
+          </span>
+          <span className="category-title">
+            {categories[currentCategory].title}
+          </span>
+        </div>
       </div>
 
       <div className="assessment-form">
-        <h2>{categories[currentCategory].title}</h2>
         {currentQuestions.map(question => (
-          <div key={question.id} className="question">
-            <p>{renderQuestionText(question.text)}</p>
-            <div className="options">
+          <div key={question.id} className="question-card">
+            <p className="question-text">{renderQuestionText(question.text)}</p>
+            <div className="options-grid">
               {question.options.map(option => (
-                <label key={option.value} className="option-label">
+                <label 
+                  key={option.value} 
+                  className={`option-card ${answers[question.id] === option.value ? 'selected' : ''}`}
+                >
                   <input
                     type="radio"
                     name={question.id}
@@ -106,12 +128,15 @@ const Assessment = () => {
                     checked={answers[question.id] === option.value}
                     onChange={() => handleAnswer(question.id, option.value)}
                   />
-                  {renderQuestionText(option.text)}
+                  <span className="option-text">
+                    {renderQuestionText(option.text)}
+                  </span>
                 </label>
               ))}
             </div>
           </div>
         ))}
+
         <div className="navigation-buttons">
           {currentCategory > 0 && (
             <button 
@@ -123,7 +148,7 @@ const Assessment = () => {
           )}
           <button 
             onClick={handleNext}
-            disabled={!currentQuestions.every(q => answers[q.id])}
+            disabled={!isCategoryComplete}
             className="next-button"
           >
             {currentCategory < categories.length - 1 ? 'Next' : 'Review Answers'}

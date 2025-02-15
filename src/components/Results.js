@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Chart as ChartJS,
@@ -20,62 +20,85 @@ ChartJS.register(
   Legend
 );
 
-const getRecommendations = (score) => {
-  if (score < 2) {
-    return {
-      level: 'Foundational',
-      description: 'Focus on establishing basic practices.',
-      links: [
-        { text: 'GitHub Flow Guide', url: 'https://docs.github.com/en/get-started/quickstart/github-flow' },
-        { text: 'CI/CD Fundamentals', url: 'https://docs.github.com/en/actions/automating-builds-and-tests' }
-      ]
-    };
-  } else if (score < 3) {
-    return {
-      level: 'Intermediate',
-      description: 'Good foundation. Time to enhance automation and standardization.',
-      links: [
-        { text: 'Branch Protection Rules', url: 'https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/defining-the-mergeability-of-pull-requests/about-protected-branches' },
-        { text: 'Advanced CI/CD', url: 'https://docs.github.com/en/actions/learn-github-actions/understanding-github-actions' }
-      ]
-    };
-  } else {
-    return {
-      level: 'Advanced',
-      description: 'Excellent practices. Consider fine-tuning and optimization.',
-      links: [
-        { text: 'GitHub Advanced Security', url: 'https://docs.github.com/en/get-started/learning-about-github/about-github-advanced-security' },
-        { text: 'DevOps Best Practices', url: 'https://docs.github.com/en/actions/automating-builds-and-tests/about-continuous-integration' }
-      ]
-    };
-  }
-};
-
 const Results = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { scores } = location.state || {};
+  
+  // Memoize scores to avoid dependency issues
+  const scores = useMemo(() => 
+    location.state?.scores || [],
+    [location.state?.scores]
+  );
 
-  if (!scores) {
-    navigate('/assessment');
-    return null;
-  }
+  // Redirect to assessment if no scores available
+  useEffect(() => {
+    if (scores.length === 0) {
+      navigate('../assessment', { replace: true });
+    }
+  }, [scores, navigate]);
 
-  const categories = Object.values(scores);
-  const averageScore = categories.reduce((acc, cat) => acc + cat.average, 0) / categories.length;
-  const recommendations = getRecommendations(averageScore);
+  const getRecommendations = (score, category) => {
+    if (score < 2) {
+      return {
+        level: 'Emerging',
+        text: `Consider establishing basic ${category} practices to improve your development workflow.`,
+        links: [
+          {
+            text: 'GitHub Flow Guide',
+            url: 'https://docs.github.com/en/get-started/quickstart/github-flow'
+          },
+          {
+            text: 'Setting up CI/CD',
+            url: 'https://docs.github.com/en/actions/automating-builds-and-tests'
+          }
+        ]
+      };
+    } else if (score < 3) {
+      return {
+        level: 'Developing',
+        text: `Good foundation in ${category}. Focus on automation and standardization.`,
+        links: [
+          {
+            text: 'Branch Protection Rules',
+            url: 'https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/defining-the-mergeability-of-pull-requests/about-protected-branches'
+          },
+          {
+            text: 'Advanced GitHub Actions',
+            url: 'https://docs.github.com/en/actions/learn-github-actions/understanding-github-actions'
+          }
+        ]
+      };
+    } else {
+      return {
+        level: 'Optimizing',
+        text: `Strong ${category} practices. Consider advanced optimization and automation.`,
+        links: [
+          {
+            text: 'GitHub Advanced Security',
+            url: 'https://docs.github.com/en/get-started/learning-about-github/about-github-advanced-security'
+          },
+          {
+            text: 'DevOps Best Practices',
+            url: 'https://docs.github.com/en/enterprise-cloud@latest/admin/best-practices'
+          }
+        ]
+      };
+    }
+  };
 
   const chartData = {
-    labels: categories.map(cat => cat.title),
+    labels: scores.map(s => s.category),
     datasets: [
       {
-        label: 'Your Score',
-        data: categories.map(cat => cat.average),
-        backgroundColor: 'rgba(46, 164, 79, 0.2)',
-        borderColor: 'rgba(46, 164, 79, 1)',
+        label: 'Your Workflow Maturity',
+        data: scores.map(s => s.score),
+        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+        borderColor: 'rgb(54, 162, 235)',
         borderWidth: 2,
-        pointBackgroundColor: 'rgba(46, 164, 79, 1)',
-        pointRadius: 4
+        pointBackgroundColor: 'rgb(54, 162, 235)',
+        pointBorderColor: '#fff',
+        pointHoverBackgroundColor: '#fff',
+        pointHoverBorderColor: 'rgb(54, 162, 235)'
       }
     ]
   };
@@ -83,72 +106,93 @@ const Results = () => {
   const chartOptions = {
     scales: {
       r: {
-        min: 0,
-        max: 4,
+        angleLines: {
+          display: true
+        },
+        suggestedMin: 0,
+        suggestedMax: 4,
         ticks: {
           stepSize: 1
         }
       }
     },
     plugins: {
+      legend: {
+        position: 'top'
+      },
       tooltip: {
         callbacks: {
-          label: (context) => `Score: ${context.raw.toFixed(1)}/4`
+          label: (context) => {
+            return `Score: ${context.raw.toFixed(1)} / 4.0`;
+          }
         }
       }
-    }
+    },
+    maintainAspectRatio: false
   };
+
+  const overallScore = scores.reduce((acc, curr) => acc + curr.score, 0) / scores.length;
 
   return (
     <div className="results-container">
-      <h2>Your GitHub Workflow Assessment Results</h2>
-      <div className="results-score">
-        <h3>Overall Maturity Level: {recommendations.level}</h3>
-        <p className="score-description">{recommendations.description}</p>
+      <h2>Your DevOps Maturity Assessment</h2>
+      
+      <div className="overall-score">
+        <h3>Overall Maturity Score</h3>
+        <div className="score-value">{overallScore.toFixed(1)} / 4.0</div>
       </div>
 
       <div className="chart-container">
-        <Radar data={chartData} options={chartOptions} />
-      </div>
-
-      <div className="category-details">
-        {categories.map(category => (
-          <div key={category.title} className="category-score">
-            <h4>{category.title}</h4>
-            <div className="score-bar">
-              <div 
-                className="score-fill" 
-                style={{ width: `${(category.average / 4) * 100}%` }}
-              />
-              <span className="score-text">{category.average.toFixed(1)}/4</span>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="recommendations">
-        <h3>Recommended Resources</h3>
-        <div className="resource-links">
-          {recommendations.links.map((link, index) => (
-            <a 
-              key={index} 
-              href={link.url} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="resource-link"
-            >
-              {link.text} →
-            </a>
-          ))}
+        <div className="chart-wrapper">
+          <Radar data={chartData} options={chartOptions} />
         </div>
       </div>
 
-      <button 
-        onClick={() => navigate('/assessment')} 
-        className="restart-button"
-      >
-        Start New Assessment
-      </button>
+      <div className="recommendations">
+        <h3>Recommendations by Category</h3>
+        {scores.map((score) => {
+          const recommendation = getRecommendations(score.score, score.category);
+          return (
+            <div key={score.category} className="recommendation-card">
+              <div className="recommendation-header">
+                <h4>{score.category}</h4>
+                <span className={`maturity-level ${recommendation.level.toLowerCase()}`}>
+                  {recommendation.level}
+                </span>
+              </div>
+              <div className="recommendation-score">
+                Score: {score.score.toFixed(1)} / {score.maxScore.toFixed(1)}
+              </div>
+              <p className="recommendation-text">{recommendation.text}</p>
+              <div className="recommendation-links">
+                <h5>Helpful Resources:</h5>
+                <ul>
+                  {recommendation.links.map((link, index) => (
+                    <li key={index}>
+                      <a 
+                        href={link.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {link.text} →
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="results-actions">
+        <button 
+          onClick={() => navigate('../assessment', { replace: true })}
+          className="restart-button"
+        >
+          Start New Assessment
+        </button>
+      </div>
     </div>
   );
 };
