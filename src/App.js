@@ -28,10 +28,12 @@ function App() {
     <Router>
       <div className="App">
         <header className="App-header">
-          <h1>OctoFlow</h1>
-          <p>GitHub Workflow Assessment Tool</p>
-        </header>
-        <Routes>
+        1>
+  <header className="hero-section">
+  <h1>OctoFlow</h1>
+  <h2>Benchmark Your Engineering Health</h2>
+  <p>2x deployment speed, enterprise security at startup cost</p>
+
           <Route path="/assessment" element={<Assessment />} />
           <Route path="/summary" element={<Summary />} />
           <Route path="/results" element={<Results />} />
