@@ -30,9 +30,26 @@ function App() {
         <header className="App-header">
         1>
   <header className="hero-section">
-  <h1>OctoFlow</h1>
-  <h2>Benchmark Your Engineering Health</h2>
-  <p>2x deployment speed, enterprise security at startup cost</p>
+    <div className="hero-content">
+        <h1>OctoFlow</h1>
+        <h2>Benchmark Your Engineering Health</h2>
+        <p>2x deployment speed, enterprise security at startup cost</p>
+        <div className="value-stack">
+            <div className="value-stack-item">
+                <h3>2x Deployment Speed</h3>
+                <p>Accelerate your delivery with streamlined workflows.</p>
+            </div>
+            <div className="value-stack-item">
+                <h3>Enterprise Security</h3>
+                <p>Ensure top-notch security without breaking the bank.</p>
+            </div>
+            <div className="value-stack-item">
+                <h3>Startup Cost</h3>
+                <p>Optimize costs while maintaining high standards.</p>
+            </div>
+        </div>
+    </div>
+</header>  <p>2x deployment speed, enterprise security at startup cost</p>
 
           <Route path="/assessment" element={<Assessment />} />
           <Route path="/summary" element={<Summary />} />
