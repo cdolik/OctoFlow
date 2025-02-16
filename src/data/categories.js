@@ -10,6 +10,60 @@ export const tooltips = {
   'issue templates': 'Standardized templates for bug reports and features',
 };
 
+export const stages = [
+  {
+    id: "pre-seed",
+    label: "Pre-Seed Startup",
+    description: "Just starting out with a small team",
+    benchmarks: {
+      deploymentFreq: "2/week",
+      securityLevel: 1,
+      costEfficiency: 0.8
+    }
+  },
+  {
+    id: "seed",
+    label: "Seed Stage",
+    description: "Raised seed funding, building MVP",
+    benchmarks: {
+      deploymentFreq: "1/day",
+      securityLevel: 2,
+      costEfficiency: 0.7
+    }
+  },
+  {
+    id: "series-a",
+    label: "Series A",
+    description: "Scaling operations and team",
+    benchmarks: {
+      deploymentFreq: "multiple/day",
+      securityLevel: 3,
+      costEfficiency: 0.6
+    }
+  }
+];
+
+export const categories = [
+  {
+    id: "deployment",
+    label: "Deployment Pipeline",
+    description: "Assess your deployment frequency and automation",
+    weight: 0.3
+  },
+  {
+    id: "security",
+    label: "Security & Compliance",
+    description: "Evaluate your security practices and risk management",
+    weight: 0.4
+  },
+  {
+    id: "cost",
+    label: "Cost Optimization",
+    description: "Review infrastructure and operational costs",
+    weight: 0.3
+  }
+];
+
 export const categories = [
   {
     id: 'github-ecosystem',

@@ -1,5 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, Suspense, lazy } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { getAssessmentData } from '../utils/storage';
+import ProgressTracker from './ProgressTracker';
 import {
   Chart as ChartJS,
   RadialLinearScale,
@@ -9,7 +11,6 @@ import {
   Tooltip,
   Legend
 } from 'chart.js';
-import { Radar } from 'react-chartjs-2';
 import { STAGE_CONFIG } from '../data/stages';
 import { categories } from '../data/categories';
 
@@ -21,6 +22,11 @@ ChartJS.register(
   Tooltip,
   Legend
 );
+
+// Lazy load Chart.js component
+const RadarChart = lazy(() => import('react-chartjs-2').then(module => ({
+  default: module.Radar
+})));
 
 const QUICK_START_TEMPLATES = {
   'pre-seed': [
@@ -136,15 +142,38 @@ const GITHUB_OFFERS = [
   }
 ];
 
+const calculateScores = (assessmentData) => {
+  // Simple scoring logic - can be enhanced based on requirements
+  const scores = {
+    deployment: 0,
+    security: 0,
+    cost: 0
+  };
+
+  if (assessmentData.deployment_frequency === 'multiple_daily') scores.deployment = 100;
+  else if (assessmentData.deployment_frequency === 'daily') scores.deployment = 75;
+  else if (assessmentData.deployment_frequency === 'weekly') scores.deployment = 50;
+  else scores.deployment = 25;
+
+  // Calculate security score based on practices implemented
+  const securityPractices = assessmentData.security_practices || [];
+  scores.security = (securityPractices.length / 4) * 100;
+
+  return scores;
+};
+
 const Results = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  
-  const scores = useMemo(() => 
-    location.state?.scores || [],
-    [location.state?.scores]
-  );
-  
+  const assessmentData = getAssessmentData();
+
+  if (Object.keys(assessmentData).length === 0) {
+    navigate('/');
+    return null;
+  }
+
+  const scores = calculateScores(assessmentData);
+
   const stage = useMemo(() => 
     location.state?.stage || sessionStorage.getItem('selectedStage'),
     [location.state?.stage]
@@ -202,22 +231,14 @@ const Results = () => {
   ];
 
   const chartData = {
-    labels: scores.map(s => s.category),
-    datasets: [
-      {
-        label: 'Your Workflow Maturity',
-        data: scores.map(s => s.score),
-        backgroundColor: 'rgba(45, 164, 78, 0.2)',
-        borderColor: '#2DA44E',
-        borderWidth: 2,
-        pointBackgroundColor: scores.map(s => 
-          s.focus ? '#2DA44E' : 'rgba(45, 164, 78, 0.5)'
-        ),
-        pointBorderColor: '#fff',
-        pointHoverBackgroundColor: '#fff',
-        pointHoverBorderColor: '#2DA44E'
-      }
-    ]
+    labels: ['Deployment Efficiency', 'Security Practices', 'Cost Optimization'],
+    datasets: [{
+      label: 'Your Score',
+      data: [scores.deployment, scores.security, scores.cost],
+      backgroundColor: 'rgba(46, 164, 79, 0.2)',
+      borderColor: '#2ea44f',
+      pointBackgroundColor: '#2ea44f'
+    }]
   };
 
   const chartOptions = {
@@ -299,7 +320,9 @@ const Results = () => {
 
       <div className="chart-container">
         <div className="chart-wrapper">
-          <Radar data={chartData} options={chartOptions} />
+          <Suspense fallback={<div>Loading chart...</div>}>
+            <RadarChart data={chartData} options={chartOptions} />
+          </Suspense>
         </div>
       </div>
 
