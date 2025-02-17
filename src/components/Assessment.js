@@ -1,74 +1,98 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import GitHubTooltip from './GitHubTooltip';
 import ProgressTracker from './ProgressTracker';
-import { persistResponse, getAssessmentData } from '../utils/storage';
+import TimeEstimator from './TimeEstimator';
+import { getStageQuestions } from '../data/categories';
+import { saveAssessmentResponse, getAssessmentResponses } from '../utils/storage';
+import { trackQuestionAnswer } from '../utils/analytics';
 import './styles.css';
 
-const AssessmentSteps = [
-  {
-    id: 'deployment_frequency',
-    question: 'How often does your team deploy to production?',
-    options: [
-      { value: 'multiple_daily', label: 'Multiple times per day' },
-      { value: 'daily', label: 'Once per day' },
-      { value: 'weekly', label: 'Weekly' },
-      { value: 'monthly', label: 'Monthly or less' }
-    ]
-  },
-  {
-    id: 'security_practices',
-    question: 'Which security practices do you currently employ?',
-    options: [
-      { value: 'code_scanning', label: 'Automated code scanning' },
-      { value: 'secret_scanning', label: 'Secret scanning' },
-      { value: 'dep_review', label: 'Dependency review' },
-      { value: 'none', label: 'None of the above' }
-    ],
-    multiple: true
-  }
-  // More questions can be added here
-];
+export default function Assessment({ stage, onStepChange }) {
+  const [categoryIndex, setCategoryIndex] = useState(0);
+  const [questionIndex, setQuestionIndex] = useState(0);
+  const [responses, setResponses] = useState(getAssessmentResponses());
 
-const Assessment = () => {
-  const navigate = useNavigate();
-  const [currentStep, setCurrentStep] = useState(0);
-  const [answers, setAnswers] = useState(getAssessmentData());
+  // Get stage-specific questions
+  const categories = getStageQuestions(stage);
+  const currentCategory = categories[categoryIndex];
+  const currentQuestion = currentCategory?.questions[questionIndex];
+  const totalQuestions = categories.reduce((sum, cat) => sum + cat.questions.length, 0);
+  const questionsAnswered = Object.keys(responses).length;
+  const progress = (questionsAnswered / totalQuestions) * 100;
 
   const handleAnswer = (value) => {
-    const questionId = AssessmentSteps[currentStep].id;
-    const newAnswers = { ...answers, [questionId]: value };
-    setAnswers(newAnswers);
-    persistResponse(questionId, value);
+    if (!currentQuestion) return;
 
-    if (currentStep < AssessmentSteps.length - 1) {
-      setCurrentStep(currentStep + 1);
+    const questionId = currentQuestion.id;
+    setResponses(prev => ({ ...prev, [questionId]: value }));
+    saveAssessmentResponse(questionId, value);
+    trackQuestionAnswer(questionId, value);
+
+    // Navigation logic
+    if (questionIndex < currentCategory.questions.length - 1) {
+      setQuestionIndex(questionIndex + 1);
+    } else if (categoryIndex < categories.length - 1) {
+      setCategoryIndex(categoryIndex + 1);
+      setQuestionIndex(0);
     } else {
-      navigate('/summary');
+      onStepChange(3); // Move to Summary
     }
   };
 
-  const currentQuestion = AssessmentSteps[currentStep];
+  if (!currentCategory || !currentQuestion) {
+    return <div>Loading...</div>;
+  }
 
   return (
-    <div className="assessment-container">
-      <ProgressTracker currentQuestion={currentStep + 1} />
-      
-      <div className="question-card">
-        <h2>{currentQuestion.question}</h2>
+    <div className="assessment">
+      <div className="stage-indicator">
+        <span className="stage-label">{stage} Stage Assessment</span>
+        <span className="stage-focus">Focus: {currentCategory.title}</span>
+      </div>
+
+      <ProgressTracker progress={progress} />
+      <TimeEstimator 
+        totalQuestions={totalQuestions} 
+        questionsAnswered={questionsAnswered} 
+      />
+
+      <div className="question-container">
+        <h3>
+          {currentQuestion.text}{' '}
+          {currentQuestion.tooltipTerm && (
+            <GitHubTooltip term={currentQuestion.tooltipTerm}>
+              <span className="tooltip-trigger">{currentQuestion.tooltipTerm}</span>
+            </GitHubTooltip>
+          )}
+          {currentQuestion.textAfter}
+        </h3>
+
         <div className="options-grid">
-          {currentQuestion.options.map((option) => (
+          {currentQuestion.options.map(option => (
             <button
               key={option.value}
-              className="option-button"
+              className={`option-button ${responses[currentQuestion.id] === option.value ? 'selected' : ''}`}
               onClick={() => handleAnswer(option.value)}
             >
               {option.label}
             </button>
           ))}
         </div>
+
+        {currentQuestion.recommendation && (
+          <div className="question-hint">
+            <small>
+              <a 
+                href={currentQuestion.recommendation.link} 
+                target="_blank" 
+                rel="noopener noreferrer"
+              >
+                Learn more about this practice →
+              </a>
+            </small>
+          </div>
+        )}
       </div>
     </div>
   );
-};
-
-export default Assessment;
+}

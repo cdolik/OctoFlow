@@ -25,8 +25,39 @@ export const persistResponse = (questionId, value) => {
   }
 };
 
+// Storage utilities with score persistence
+export const saveAssessmentResponse = (questionId, value) => {
+  const existing = JSON.parse(sessionStorage.getItem('octoflow') || '{}');
+  const updatedResponses = {
+    ...existing,
+    responses: {
+      ...(existing.responses || {}),
+      [questionId]: value
+    }
+  };
+  sessionStorage.setItem('octoflow', JSON.stringify(updatedResponses));
+};
+
+export const saveScores = (scores) => {
+  const existing = JSON.parse(sessionStorage.getItem('octoflow') || '{}');
+  sessionStorage.setItem('octoflow', JSON.stringify({
+    ...existing,
+    scores
+  }));
+};
+
+export const getAssessmentResponses = () => {
+  const data = JSON.parse(sessionStorage.getItem('octoflow') || '{}');
+  return data.responses || {};
+};
+
+export const getStoredScores = () => {
+  const data = JSON.parse(sessionStorage.getItem('octoflow') || '{}');
+  return data.scores;
+};
+
 export const clearAssessment = () => {
-  sessionStorage.removeItem(STORAGE_KEY);
+  sessionStorage.removeItem('octoflow');
 };
 
 export const getProgress = () => {

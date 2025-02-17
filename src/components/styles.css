@@ -1591,3 +1591,281 @@ button:disabled {
   text-align: center;
   margin: 1rem 0;
 }
+
+/* Stage Selector */
+.stage-selector {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.stage-selector h2 {
+  text-align: center;
+  margin-bottom: 2rem;
+  color: #24292e;
+}
+
+.stage-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+  padding: 1rem;
+}
+
+.stage-card {
+  background: #ffffff;
+  border: 1px solid #e1e4e8;
+  border-radius: 6px;
+  padding: 1.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+}
+
+.stage-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px rgba(0,0,0,0.12);
+  border-color: #2DA44E;
+}
+
+.stage-card h3 {
+  color: #24292e;
+  margin: 0 0 1rem 0;
+}
+
+.stage-card p {
+  color: #586069;
+  margin: 0 0 1.5rem 0;
+}
+
+.benefit {
+  border-top: 1px solid #e1e4e8;
+  padding-top: 1rem;
+}
+
+.benefit-text {
+  color: #2DA44E;
+  font-weight: 500;
+}
+
+.benefit small {
+  display: block;
+  color: #6a737d;
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+}
+
+/* Tooltip Styles */
+.tooltip-wrapper {
+  cursor: help;
+}
+
+/* Assessment Styles */
+.assessment {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.progress-tracker {
+  margin-bottom: 2rem;
+}
+
+.progress-bar-container {
+  width: 100%;
+  height: 8px;
+  background: #e1e4e8;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  background: #2DA44E;
+  transition: width 0.3s ease;
+}
+
+.time-remaining {
+  margin-top: 0.5rem;
+  color: #586069;
+  font-size: 0.9rem;
+}
+
+.question-container {
+  background: white;
+  border-radius: 8px;
+  padding: 2rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+}
+
+.options-grid {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.option-button {
+  padding: 1rem;
+  border: 1px solid #e1e4e8;
+  border-radius: 6px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.option-button:hover {
+  border-color: #2DA44E;
+  transform: translateY(-1px);
+}
+
+/* Summary Styles */
+.summary {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.response-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid #e1e4e8;
+}
+
+.score-badge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.9rem;
+}
+
+.score-1 { background: #ffdce0; color: #cb2431; }
+.score-2 { background: #fff5b1; color: #735c0f; }
+.score-3 { background: #dcffe4; color: #28a745; }
+.score-4 { background: #05a82d; color: white; }
+
+/* Results Styles */
+.results {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.score-visualization {
+  background: white;
+  border-radius: 8px;
+  padding: 2rem;
+  margin: 2rem 0;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+}
+
+.action-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.action-card {
+  background: white;
+  border: 1px solid #e1e4e8;
+  border-radius: 6px;
+  padding: 1.5rem;
+}
+
+.action-link {
+  color: #2DA44E;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.action-link:hover {
+  text-decoration: underline;
+}
+
+/* Add to existing styles */
+
+.score-summary {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.overall-score {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 1rem 0;
+}
+
+.score-number {
+  font-size: 3rem;
+  font-weight: bold;
+  color: #2DA44E;
+}
+
+.score-label {
+  font-size: 1.2rem;
+  color: #586069;
+  margin-top: 0.5rem;
+}
+
+.category-scores {
+  margin: 2rem 0;
+}
+
+.category-score {
+  margin: 1rem 0;
+}
+
+.score-bar {
+  height: 8px;
+  background: #e1e4e8;
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 0.5rem 0;
+}
+
+.score-fill {
+  height: 100%;
+  transition: width 1s ease-out;
+}
+
+.score-value {
+  font-size: 0.9rem;
+  color: #586069;
+}
+
+.completion-rate {
+  font-size: 0.9rem;
+  color: #586069;
+  margin-top: 1rem;
+}
+
+/* Recommendations styling */
+.recommendations {
+  margin-top: 3rem;
+}
+
+.action-card {
+  background: white;
+  border: 1px solid #e1e4e8;
+  border-radius: 6px;
+  padding: 1.5rem;
+  margin: 1rem 0;
+}
+
+.action-list {
+  margin: 1rem 0;
+  padding-left: 1.5rem;
+}
+
+.action-list li {
+  margin: 0.5rem 0;
+  color: #24292e;
+}
+
+/* Score level indicators */
+.score-level-advanced { color: #2DA44E; }
+.score-level-proactive { color: #1F883D; }
+.score-level-basic { color: #FCA000; }
+.score-level-initial { color: #CB2431; }

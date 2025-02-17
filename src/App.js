@@ -1,48 +1,41 @@
-import React, { useState, useEffect } from 'react';
-import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import ErrorBoundary from './ErrorBoundary';
+import Hero from './components/Hero';
+import StageSelector from './components/StageSelector';
 import Assessment from './components/Assessment';
 import Summary from './components/Summary';
 import Results from './components/Results';
-import StageSelector from './components/StageSelector';
-import Hero from './components/Hero';
-import ErrorBoundary from './components/ErrorBoundary';
+import { withFlowValidation } from './withFlowValidation';
 import './App.css';
-import './components/styles.css';
+
+// Wrap key components with flow validation
+const ValidatedAssessment = withFlowValidation(Assessment);
+const ValidatedSummary = withFlowValidation(Summary);
+const ValidatedResults = withFlowValidation(Results);
 
 function App() {
-  const [isLoading, setIsLoading] = useState(true);
+  const [stage, setStage] = useState(null);
+  const [currentStep, setCurrentStep] = useState(0);
 
-  useEffect(() => {
-    // Initialize session storage if needed
-    if (!sessionStorage.getItem('octoflow')) {
-      sessionStorage.setItem('octoflow', '{}');
-    }
-    setIsLoading(false);
-  }, []);
+  const handleStageSelect = (selectedStage) => {
+    setStage(selectedStage);
+    setCurrentStep(1); // Move to the assessment step
+  };
 
-  if (isLoading) {
-    return <div className="loading">Loading...</div>;
-  }
+  const handleStepChange = (step) => {
+    setCurrentStep(step);
+  };
 
   return (
-    <Router>
-      <div className="App">
-        <ErrorBoundary>
-          <Routes>
-            <Route path="/" element={
-              <>
-                <Hero />
-                <StageSelector />
-              </>
-            } />
-            <Route path="/assessment" element={<Assessment />} />
-            <Route path="/summary" element={<Summary />} />
-            <Route path="/results" element={<Results />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </ErrorBoundary>
-      </div>
-    </Router>
+    <div className="App">
+      <ErrorBoundary>
+        {currentStep === 0 && <Hero onStageSelect={handleStageSelect} />}
+        {currentStep === 1 && <StageSelector onStageSelect={handleStageSelect} />}
+        {currentStep === 2 && <ValidatedAssessment stage={stage} onStepChange={handleStepChange} />}
+        {currentStep === 3 && <ValidatedSummary onStepChange={handleStepChange} />}
+        {currentStep === 4 && <ValidatedResults />}
+      </ErrorBoundary>
+    </div>
   );
 }
 

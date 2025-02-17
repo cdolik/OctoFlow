@@ -1,34 +1,58 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { trackCTAClick } from '../utils/analytics';
 
 class ErrorBoundary extends React.Component {
-  state = { hasError: false };
-  
-  static getDerivedStateFromError() {
-    return { hasError: true };
+  constructor(props) {
+    super(props);
+    this.state = { 
+      hasError: false, 
+      error: null,
+      errorInfo: null
+    };
   }
-  
-  componentDidCatch(error) {
-    console.error('Assessment error:', error);
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('Flow Error:', error, errorInfo);
+    this.setState({
+      error,
+      errorInfo
+    });
+  }
+
+  handleReset = () => {
     sessionStorage.clear();
-  }
-  
+    trackCTAClick('error_reset');
+    window.location.reload();
+  };
+
   render() {
     if (this.state.hasError) {
       return (
-        <div className="error-fallback">
+        <div className="error-state">
           <h2>Something went wrong</h2>
-          <p>We've cleared your session data. Please try starting over.</p>
-          <button 
-            className="cta-button"
-            onClick={() => window.location.href = '/'}
-          >
-            Restart Assessment
-          </button>
+          <p>{this.state.error?.message || 'An unexpected error occurred'}</p>
+          <div className="error-actions">
+            <button 
+              onClick={this.handleReset}
+              className="cta-button"
+            >
+              Start Over
+            </button>
+            <small>This will clear your progress</small>
+          </div>
+          {process.env.NODE_ENV === 'development' && (
+            <pre className="error-details">
+              {this.state.errorInfo?.componentStack}
+            </pre>
+          )}
         </div>
       );
     }
-    
+
     return this.props.children;
   }
 }
