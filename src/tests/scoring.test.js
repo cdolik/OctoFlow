@@ -1,42 +1,93 @@
 import { calculateWeightedScore, getScoreLevel, getRecommendations } from '../utils/scoring';
-import { categories } from '../data/categories';
+import { stages } from '../data/categories';
 
 describe('Scoring System', () => {
   const mockResponses = {
-    'eco-1': 3,
-    'eco-2': 4,
-    'sec-1': 2,
-    'sec-2': 3,
-    'auto-1': 4
+    'codeowners': 3,
+    'branch-protection': 4,
+    'project-management': 2,
+    'secret-scanning': 3,
+    'dependabot': 4,
+    'copilot-usage': 3,
+    'deployment-automation': 4
   };
 
-  test('calculateWeightedScore produces correct calculations', () => {
-    const scores = calculateWeightedScore(mockResponses, categories);
-    
-    expect(scores.overallScore).toBeGreaterThan(0);
-    expect(scores.overallScore).toBeLessThanOrEqual(4);
-    expect(scores.categoryScores).toHaveProperty('github-ecosystem');
-    expect(scores.categoryScores).toHaveProperty('security');
-    expect(scores.categoryScores).toHaveProperty('automation');
+  describe('calculateWeightedScore', () => {
+    test('calculates correct scores for pre-seed stage', () => {
+      const scores = calculateWeightedScore(mockResponses, 'pre-seed');
+      
+      expect(scores.overallScore).toBeGreaterThan(0);
+      expect(scores.overallScore).toBeLessThanOrEqual(4);
+      expect(scores.categoryScores).toHaveProperty('github-ecosystem');
+      expect(scores.categoryScores).toHaveProperty('security');
+      expect(scores.completionRate).toBeDefined();
+      expect(scores.gaps).toBeDefined();
+    });
+
+    test('handles invalid stage gracefully', () => {
+      const scores = calculateWeightedScore(mockResponses, 'invalid-stage');
+      expect(scores.benchmarks).toEqual(expect.objectContaining({
+        'github-ecosystem': expect.any(Number),
+        'security': expect.any(Number)
+      }));
+    });
   });
 
-  test('getScoreLevel returns correct levels', () => {
-    expect(getScoreLevel(3.8)).toBe('Advanced');
-    expect(getScoreLevel(2.7)).toBe('Proactive');
-    expect(getScoreLevel(1.8)).toBe('Basic');
-    expect(getScoreLevel(1.2)).toBe('Initial');
+  describe('getScoreLevel', () => {
+    test('returns correct assessment levels', () => {
+      expect(getScoreLevel(3.8)).toEqual({
+        level: 'Advanced',
+        description: expect.any(String)
+      });
+      expect(getScoreLevel(2.7)).toEqual({
+        level: 'Proactive',
+        description: expect.any(String)
+      });
+      expect(getScoreLevel(1.8)).toEqual({
+        level: 'Basic',
+        description: expect.any(String)
+      });
+      expect(getScoreLevel(1.2)).toEqual({
+        level: 'Initial',
+        description: expect.any(String)
+      });
+    });
   });
 
-  test('getRecommendations provides relevant actions', () => {
-    const scores = calculateWeightedScore(mockResponses, categories);
-    const recommendations = getRecommendations(scores, 'pre-seed');
-    
-    expect(Array.isArray(recommendations)).toBe(true);
-    recommendations.forEach(rec => {
-      expect(rec).toHaveProperty('category');
-      expect(rec).toHaveProperty('priority');
-      expect(rec).toHaveProperty('actions');
-      expect(Array.isArray(rec.actions)).toBe(true);
+  describe('getRecommendations', () => {
+    test('provides stage-appropriate recommendations', () => {
+      const scores = calculateWeightedScore(mockResponses, 'seed');
+      const recommendations = getRecommendations(scores, 'seed');
+      
+      expect(recommendations).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            category: expect.any(String),
+            priority: expect.stringMatching(/^(high|medium)$/),
+            impact: expect.stringMatching(/^(High|Medium|Low)$/),
+            effort: expect.stringMatching(/^(High|Medium|Low)$/),
+            steps: expect.any(Array)
+          })
+        ])
+      );
+    });
+
+    test('prioritizes recommendations correctly', () => {
+      const scores = calculateWeightedScore(mockResponses, 'series-a');
+      const recommendations = getRecommendations(scores, 'series-a');
+      
+      const highPriorityFirst = recommendations.length > 1 && 
+        (recommendations[0].priority === 'high' || recommendations[0].impact === 'High');
+      expect(highPriorityFirst).toBeTruthy();
+    });
+  });
+
+  describe('stage-specific behavior', () => {
+    test('filters questions appropriately by stage', () => {
+      stages.forEach(stage => {
+        const scores = calculateWeightedScore(mockResponses, stage.id);
+        expect(scores.benchmarks).toMatchObject(stage.benchmarks.expectedScores);
+      });
     });
   });
 });

@@ -10,6 +10,165 @@ export const tooltips = {
   'issue templates': 'Standardized templates for bug reports and features',
 };
 
+export const categories = {
+  'github-ecosystem': {
+    id: 'github-ecosystem',
+    title: 'GitHub Enterprise Adoption & Collaboration',
+    description: 'Core GitHub features and collaboration practices',
+    weight: 0.35,
+    questions: [
+      {
+        id: 'codeowners',
+        text: 'Do you enforce CODEOWNERS for critical directories?',
+        tooltipTerm: 'CODEOWNERS',
+        stages: ['pre-seed', 'seed', 'series-a'],
+        options: [
+          { value: 1, text: 'No CODEOWNERS file' },
+          { value: 2, text: 'Basic CODEOWNERS setup' },
+          { value: 3, text: 'CODEOWNERS with team assignments' },
+          { value: 4, text: 'Full CODEOWNERS with automation' }
+        ]
+      },
+      {
+        id: 'branch-protection',
+        text: 'Are main branches protected from direct pushes?',
+        tooltipTerm: 'branch protection',
+        stages: ['pre-seed', 'seed', 'series-a'],
+        options: [
+          { value: 1, text: 'No protection rules' },
+          { value: 2, text: 'Basic branch protection' },
+          { value: 3, text: 'Required reviews enabled' },
+          { value: 4, text: 'Full protection with status checks' }
+        ]
+      },
+      {
+        id: 'project-management',
+        text: 'Do you use GitHub Projects for sprint planning?',
+        tooltipTerm: 'GitHub Projects',
+        stages: ['seed', 'series-a'],
+        options: [
+          { value: 1, text: 'Not using Projects' },
+          { value: 2, text: 'Basic usage' },
+          { value: 3, text: 'Integrated with issues/PRs' },
+          { value: 4, text: 'Fully embedded in workflow' }
+        ]
+      }
+    ]
+  },
+  'security': {
+    id: 'security',
+    title: 'Advanced Security & Compliance',
+    description: 'Security features and vulnerability management',
+    weight: 0.4,
+    questions: [
+      {
+        id: 'secret-scanning',
+        text: 'Are you alerted to exposed API keys and secrets?',
+        tooltipTerm: 'secret scanning',
+        stages: ['seed', 'series-a'],
+        options: [
+          { value: 1, text: 'Not using secret scanning' },
+          { value: 2, text: 'Basic alerts enabled' },
+          { value: 3, text: 'Alerts with manual review' },
+          { value: 4, text: 'Automated secret revocation' }
+        ]
+      },
+      {
+        id: 'dependabot',
+        text: 'Do you monitor dependencies using Dependabot?',
+        tooltipTerm: 'Dependabot',
+        stages: ['pre-seed', 'seed', 'series-a'],
+        options: [
+          { value: 1, text: 'Not enabled' },
+          { value: 2, text: 'Security updates only' },
+          { value: 3, text: 'Version updates enabled' },
+          { value: 4, text: 'Fully automated with auto-merge' }
+        ]
+      }
+    ]
+  },
+  'ai-adoption': {
+    id: 'ai-adoption',
+    title: 'Copilot & AI Adoption',
+    description: 'Usage of AI tools like GitHub Copilot',
+    weight: 0.3,
+    questions: [
+      {
+        id: 'copilot-usage',
+        text: 'Do developers use GitHub Copilot?',
+        tooltipTerm: 'GitHub Copilot',
+        stages: ['seed', 'series-a'],
+        options: [
+          { value: 1, text: 'No AI assistance' },
+          { value: 2, text: 'Minimal use' },
+          { value: 3, text: 'Regular usage' },
+          { value: 4, text: 'Fully integrated in workflow' }
+        ]
+      },
+      {
+        id: 'copilot-testing',
+        text: 'Do you use AI for test generation?',
+        tooltipTerm: 'Copilot for testing',
+        stages: ['series-a'],
+        options: [
+          { value: 1, text: 'No AI for testing' },
+          { value: 2, text: 'Basic test suggestions' },
+          { value: 3, text: 'Regular test generation' },
+          { value: 4, text: 'Advanced test automation' }
+        ]
+      }
+    ]
+  },
+  'automation': {
+    id: 'automation',
+    title: 'CI/CD & Automation',
+    description: 'Automation in deployments and workflows',
+    weight: 0.3,
+    questions: [
+      {
+        id: 'deployment-automation',
+        text: 'How automated is your deployment process?',
+        stages: ['pre-seed', 'seed', 'series-a'],
+        options: [
+          { value: 1, text: 'Manual deployments' },
+          { value: 2, text: 'Basic CI pipeline' },
+          { value: 3, text: 'Automated staging' },
+          { value: 4, text: 'Full CI/CD automation' }
+        ]
+      },
+      {
+        id: 'pr-automation',
+        text: 'Are PRs automatically assigned to reviewers?',
+        tooltipTerm: 'auto assign',
+        stages: ['seed', 'series-a'],
+        options: [
+          { value: 1, text: 'No auto-assignment' },
+          { value: 2, text: 'Basic assignment rules' },
+          { value: 3, text: 'CODEOWNERS integration' },
+          { value: 4, text: 'Full workflow automation' }
+        ]
+      }
+    ]
+  }
+};
+
+export const getStageQuestions = (stage) => {
+  return Object.values(categories).reduce((acc, category) => {
+    const stageQuestions = category.questions.filter(q => q.stages.includes(stage));
+    if (stageQuestions.length > 0) {
+      acc.push({
+        ...category,
+        questions: stageQuestions
+      });
+    }
+    return acc;
+  }, []);
+};
+
+export const getCategoryWeight = (categoryId) => {
+  return categories[categoryId]?.weight || 0;
+};
+
 export const stages = [
   {
     id: "pre-seed",
@@ -18,7 +177,13 @@ export const stages = [
     benchmarks: {
       deploymentFreq: "2/week",
       securityLevel: 1,
-      costEfficiency: 0.8
+      costEfficiency: 0.8,
+      expectedScores: {
+        'github-ecosystem': 2.0,
+        'security': 1.5,
+        'ai-adoption': 1.0,
+        'automation': 1.5
+      }
     }
   },
   {
@@ -28,7 +193,13 @@ export const stages = [
     benchmarks: {
       deploymentFreq: "1/day",
       securityLevel: 2,
-      costEfficiency: 0.7
+      costEfficiency: 0.7,
+      expectedScores: {
+        'github-ecosystem': 2.5,
+        'security': 2.5,
+        'ai-adoption': 2.0,
+        'automation': 2.5
+      }
     }
   },
   {
@@ -38,134 +209,13 @@ export const stages = [
     benchmarks: {
       deploymentFreq: "multiple/day",
       securityLevel: 3,
-      costEfficiency: 0.6
+      costEfficiency: 0.6,
+      expectedScores: {
+        'github-ecosystem': 3.5,
+        'security': 3.0,
+        'ai-adoption': 2.5,
+        'automation': 3.0
+      }
     }
   }
 ];
-
-export const categories = [
-  {
-    id: 'github-ecosystem',
-    title: 'GitHub Usage & Ecosystem',
-    description: 'Evaluate your team\'s GitHub adoption and best practices',
-    weight: 0.3,
-    questions: [
-      {
-        id: 'eco-1',
-        text: 'Do you enforce',
-        tooltipTerm: 'CODEOWNERS',
-        textAfter: 'for critical directories?',
-        options: [
-          { value: 1, label: 'No CODEOWNERS file' },
-          { value: 2, label: 'Basic CODEOWNERS setup' },
-          { value: 3, label: 'CODEOWNERS with team assignments' },
-          { value: 4, label: 'Full CODEOWNERS with automation' }
-        ],
-        minStage: 'seed'
-      },
-      {
-        id: 'eco-2',
-        text: 'How do you use',
-        tooltipTerm: 'GitHub Actions',
-        textAfter: 'for automation?',
-        options: [
-          { value: 1, label: 'Not using Actions' },
-          { value: 2, label: 'Basic CI workflows' },
-          { value: 3, label: 'CI/CD and custom workflows' },
-          { value: 4, label: 'Advanced automation ecosystem' }
-        ]
-      }
-    ]
-  },
-  {
-    id: 'security',
-    title: 'Security & Compliance',
-    description: 'Assess your security practices and tools adoption',
-    weight: 0.4,
-    questions: [
-      {
-        id: 'sec-1',
-        text: 'Do you enforce',
-        tooltipTerm: 'branch protection',
-        textAfter: 'rules on main branches?',
-        options: [
-          { value: 1, label: 'No protection rules' },
-          { value: 2, label: 'Basic branch protection' },
-          { value: 3, label: 'Required reviews and CI checks' },
-          { value: 4, label: 'Full protection with status checks' }
-        ]
-      },
-      {
-        id: 'sec-2',
-        text: 'How do you use',
-        tooltipTerm: 'Dependabot',
-        textAfter: 'for dependency management?',
-        options: [
-          { value: 1, label: 'Not enabled' },
-          { value: 2, label: 'Security updates only' },
-          { value: 3, label: 'Version updates enabled' },
-          { value: 4, label: 'Custom configuration with auto-merge' }
-        ],
-        minStage: 'seed'
-      }
-    ]
-  },
-  {
-    id: 'automation',
-    title: 'CI/CD & Automation',
-    description: 'Review your development workflow automation',
-    weight: 0.3,
-    questions: [
-      {
-        id: 'auto-1',
-        text: 'How automated is your deployment process?',
-        options: [
-          { value: 1, label: 'Manual deployments' },
-          { value: 2, label: 'Basic CI pipeline' },
-          { value: 3, label: 'Automated staging deployments' },
-          { value: 4, label: 'Full CI/CD with automated production deployments' }
-        ]
-      }
-    ]
-  }
-];
-
-export const stageConfiguration = {
-  'pre-seed': {
-    focusCategories: ['github-enterprise', 'automation'],
-    questionFilter: (question) => !question.advancedOnly,
-    benchmarks: {
-      deploymentFrequency: '2-3 times per week',
-      securityScore: 2.5,
-      automationScore: 2.0
-    }
-  },
-  'series-a': {
-    focusCategories: ['advanced-security', 'automation'],
-    questionFilter: () => true,
-    benchmarks: {
-      deploymentFrequency: '2-3 times per day',
-      securityScore: 3.5,
-      automationScore: 3.0
-    }
-  },
-  'series-b': {
-    focusCategories: ['advanced-security', 'copilot-ai'],
-    questionFilter: () => true,
-    benchmarks: {
-      deploymentFrequency: '5+ times per day',
-      securityScore: 3.8,
-      automationScore: 3.5
-    }
-  }
-};
-
-export const getStageQuestions = (stage) => {
-  const config = stageConfiguration[stage];
-  if (!config) return categories;
-
-  return categories.map(category => ({
-    ...category,
-    questions: category.questions.filter(config.questionFilter)
-  }));
-};

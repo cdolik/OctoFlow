@@ -1,4 +1,3 @@
-// Questions data structure with categories, weights, and stage-specific content
 export const categories = {
   GITHUB_ENTERPRISE: {
     id: 'github-ecosystem',

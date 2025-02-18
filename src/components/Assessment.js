@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { getStageQuestions } from '../data/questions';
+import { updateAssessmentResponse, getAssessmentResponses, saveAssessmentResponses } from '../utils/storage';
+import { trackQuestionAnswer, trackAssessmentComplete } from '../utils/analytics';
 import GitHubTooltip from './GitHubTooltip';
 import ProgressTracker from './ProgressTracker';
 import './styles.css';
@@ -9,17 +11,40 @@ export default function Assessment({ stage, onComplete }) {
   const [responses, setResponses] = useState({});
   const questions = getStageQuestions(stage);
 
+  // Load saved responses on mount
+  useEffect(() => {
+    const savedResponses = getAssessmentResponses();
+    if (Object.keys(savedResponses).length > 0) {
+      setResponses(savedResponses);
+    }
+  }, []);
+
+  // Auto-save timer
+  useEffect(() => {
+    const autoSaveInterval = setInterval(() => {
+      if (Object.keys(responses).length > 0) {
+        saveAssessmentResponses(responses);
+      }
+    }, 30000); // Auto-save every 30 seconds
+
+    return () => clearInterval(autoSaveInterval);
+  }, [responses]);
+
   const handleAnswer = (questionId, value) => {
-    setResponses(prev => ({
-      ...prev,
+    const newResponses = {
+      ...responses,
       [questionId]: value
-    }));
+    };
+    setResponses(newResponses);
+    updateAssessmentResponse(questionId, value);
+    trackQuestionAnswer(questionId, value);
   };
 
   const handleNext = () => {
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
     } else {
+      trackAssessmentComplete(responses);
       onComplete(responses);
     }
   };

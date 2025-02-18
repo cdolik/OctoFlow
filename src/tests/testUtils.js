@@ -1,4 +1,5 @@
 import { categories } from '../data/categories';
+import { fireEvent } from '@testing-library/react';
 
 /**
  * Generates mock assessment responses for testing

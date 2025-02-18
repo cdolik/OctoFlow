@@ -1,36 +1,10 @@
 import React from 'react';
 import GitHubTooltip from './GitHubTooltip';
+import { stages } from '../data/questions';
 import { trackStageSelect } from '../utils/analytics';
 import './styles.css';
 
 export default function StageSelector({ onSelect }) {
-  const stages = [
-    {
-      id: 'pre-seed',
-      title: 'Pre-Seed',
-      description: 'Building MVP • 1-10 developers',
-      benefit: 'Eligible for 20 free GitHub Enterprise seats',
-      benchmark: '2 deployments/week (Octoverse 2024)',
-      focusAreas: ['CI Setup', 'Branch Protection', 'Basic Security']
-    },
-    {
-      id: 'series-a',
-      title: 'Series A',
-      description: 'Growing teams • 10-50 developers',
-      benefit: 'Advanced security features included',
-      benchmark: '12 deployments/week (Octoverse 2024)',
-      focusAreas: ['Advanced Security', 'Workflow Automation', 'Team Scaling']
-    },
-    {
-      id: 'series-b',
-      title: 'Series B+',
-      description: 'Scaling teams • 50+ developers',
-      benefit: 'Enterprise-grade security and compliance',
-      benchmark: '25+ deployments/week (Octoverse 2024)',
-      focusAreas: ['Enterprise Security', 'Custom Workflows', 'Compliance']
-    }
-  ];
-
   const handleStageSelect = (stageId) => {
     trackStageSelect(stageId);
     onSelect(stageId);
@@ -48,24 +22,30 @@ export default function StageSelector({ onSelect }) {
             className="stage-card"
             onClick={() => handleStageSelect(stage.id)}
           >
-            <h3>{stage.title}</h3>
+            <h3>{stage.label}</h3>
             <p>{stage.description}</p>
             
             <div className="benchmark">
-              <GitHubTooltip term="Octoverse">
-                <span>📈 {stage.benchmark}</span>
+              <GitHubTooltip term="deployment-frequency">
+                <span>📈 {stage.benchmarks.deploymentFreq} deployments</span>
               </GitHubTooltip>
             </div>
             
             <div className="focus-areas">
-              {stage.focusAreas.map(area => (
-                <span key={area} className="focus-tag">{area}</span>
-              ))}
+              <GitHubTooltip term="github-ecosystem">
+                <span className="focus-tag">GitHub Score: {stage.benchmarks.expectedScores['github-ecosystem']}</span>
+              </GitHubTooltip>
+              <GitHubTooltip term="security">
+                <span className="focus-tag">Security Score: {stage.benchmarks.expectedScores['security']}</span>
+              </GitHubTooltip>
+              <GitHubTooltip term="automation">
+                <span className="focus-tag">Automation Score: {stage.benchmarks.expectedScores['automation']}</span>
+              </GitHubTooltip>
             </div>
             
             <div className="benefit">
-              <GitHubTooltip term="GitHub for Startups">
-                <span className="benefit-text">✨ {stage.benefit}</span>
+              <GitHubTooltip term="cost-efficiency">
+                <span className="benefit-text">✨ Cost Efficiency: {(stage.benchmarks.costEfficiency * 100).toFixed(0)}%</span>
               </GitHubTooltip>
             </div>
           </div>

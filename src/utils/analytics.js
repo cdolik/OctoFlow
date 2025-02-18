@@ -1,25 +1,49 @@
-const ANALYTICS_VERSION = '1.0.0';
 
 // Base logging function
 const logEvent = (eventName, data) => {
-  const event = {
-    version: ANALYTICS_VERSION,
-    event: eventName,
-    data: data
+  const baseData = {
+    timestamp: Date.now(),
+    sessionId: getSessionId(),
+    flowState: getCurrentFlowState(),
+    userAgent: navigator.userAgent
   };
-  
-  // For MVP, log to console
-  console.log('[OctoFlow Analytics]', event);
-  
-  // Store events in sessionStorage for analysis
-  const events = JSON.parse(sessionStorage.getItem('octoflow_analytics') || '[]');
-  events.push(event);
-  sessionStorage.setItem('octoflow_analytics', JSON.stringify(events));
+
+  console.log(`[Analytics] ${eventName}:`, {
+    ...baseData,
+    ...data
+  });
+  // Future integration point for real analytics service
+};
+
+const getSessionId = () => {
+  let sessionId = sessionStorage.getItem('octoflow_session');
+  if (!sessionId) {
+    sessionId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    sessionStorage.setItem('octoflow_session', sessionId);
+  }
+  return sessionId;
+};
+
+const getCurrentFlowState = () => {
+  try {
+    const state = JSON.parse(sessionStorage.getItem('octoflow')) || {};
+    return {
+      stage: state.stage,
+      currentState: state.currentState,
+      progress: state.metadata?.questionCount || 0,
+      lastInteraction: state.metadata?.lastInteraction
+    };
+  } catch {
+    return {};
+  }
 };
 
 // Track assessment flow events
 export const trackStageSelect = (stage) => {
-  logEvent('stage_selected', { stage });
+  logEvent('stage_selected', { 
+    stage,
+    source: window.location.pathname
+  });
 };
 
 export const trackAssessmentStart = (stage) => {
@@ -35,21 +59,20 @@ export const trackCategoryComplete = (categoryId, averageScore) => {
 };
 
 export const trackQuestionAnswer = (questionId, answer, timeSpent) => {
-  logEvent('question_answered', {
-    questionId,
+  logEvent('question_answered', { 
+    questionId, 
     answer,
     timeSpent,
-    timestamp: Date.now()
+    isCorrection: isAnswerCorrection(questionId)
   });
 };
 
 export const trackAssessmentComplete = (scores, stage) => {
-  logEvent('assessment_completed', {
+  logEvent('assessment_completed', { 
+    scores,
     stage,
-    overallScore: scores.overallScore,
-    categoryScores: scores.categoryScores,
-    completionRate: scores.completionRate,
-    timestamp: Date.now()
+    completionTime: getAssessmentDuration(),
+    questionCount: Object.keys(scores).length
   });
 };
 
@@ -79,8 +102,139 @@ export const submitFeedback = async (feedback) => {
 // Error tracking
 export const trackError = (errorType, details) => {
   logEvent('error_occurred', {
-    errorType,
+    type: errorType,
     details,
+    currentRoute: window.location.pathname,
+    errorCount: getErrorCount()
+  });
+};
+
+export const trackNavigation = (from, to) => {
+  logEvent('navigation', {
+    from,
+    to,
     timestamp: Date.now()
   });
+};
+
+export const trackRecommendationClick = (recommendationId, category) => {
+  logEvent('recommendation_clicked', {
+    recommendationId,
+    category,
+    context: getCurrentAssessmentContext()
+  });
+};
+
+export const trackInteractionPattern = (questionId, interactionType, details) => {
+  logEvent('user_interaction', {
+    questionId,
+    type: interactionType,
+    details,
+    durationSinceLastInteraction: getTimeSinceLastInteraction()
+  });
+  updateLastInteraction();
+};
+
+export const trackTimeOnQuestion = (questionId, timeSpent, wasModified) => {
+  logEvent('question_time', {
+    questionId,
+    timeSpent,
+    wasModified,
+    averageTimeForStage: getAverageTimeForCurrentStage()
+  });
+};
+
+export const trackNavigationFlow = (from, to, trigger) => {
+  logEvent('navigation', {
+    from,
+    to,
+    trigger,
+    totalAssessmentTime: getTotalAssessmentTime()
+  });
+};
+
+const isAnswerCorrection = (questionId) => {
+  try {
+    const responses = JSON.parse(sessionStorage.getItem('octoflow'))?.responses || {};
+    return questionId in responses;
+  } catch (e) {
+    return false;
+  }
+};
+
+const getAssessmentDuration = () => {
+  try {
+    const metadata = JSON.parse(sessionStorage.getItem('octoflow'))?.metadata || {};
+    return metadata.startTime ? Date.now() - metadata.startTime : 0;
+  } catch (e) {
+    return 0;
+  }
+};
+
+const getErrorCount = () => {
+  try {
+    const metadata = JSON.parse(sessionStorage.getItem('octoflow'))?.metadata || {};
+    return (metadata.errorCount || 0) + 1;
+  } catch (e) {
+    return 1;
+  }
+};
+
+const getCurrentAssessmentContext = () => {
+  try {
+    const state = JSON.parse(sessionStorage.getItem('octoflow')) || {};
+    return {
+      stage: state.stage,
+      progress: state.metadata?.questionCount || 0,
+      lastAction: state.metadata?.lastAction
+    };
+  } catch (e) {
+    return {};
+  }
+};
+
+const getTimeSinceLastInteraction = () => {
+  try {
+    const state = JSON.parse(sessionStorage.getItem('octoflow'));
+    return state?.metadata?.lastInteraction ? 
+      Date.now() - state.metadata.lastInteraction : 
+      null;
+  } catch {
+    return null;
+  }
+};
+
+const updateLastInteraction = () => {
+  try {
+    const state = JSON.parse(sessionStorage.getItem('octoflow')) || {};
+    state.metadata = {
+      ...state.metadata,
+      lastInteraction: Date.now()
+    };
+    sessionStorage.setItem('octoflow', JSON.stringify(state));
+  } catch {
+    // Fail silently - analytics should not break the app
+  }
+};
+
+const getAverageTimeForCurrentStage = () => {
+  try {
+    const state = JSON.parse(sessionStorage.getItem('octoflow')) || {};
+    const times = state.metadata?.questionTimes || [];
+    if (times.length === 0) return null;
+    return times.reduce((a, b) => a + b, 0) / times.length;
+  } catch {
+    return null;
+  }
+};
+
+const getTotalAssessmentTime = () => {
+  try {
+    const state = JSON.parse(sessionStorage.getItem('octoflow'));
+    return state?.metadata?.startTime ? 
+      Date.now() - state.metadata.startTime : 
+      null;
+  } catch {
+    return null;
+  }
 };

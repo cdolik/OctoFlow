@@ -1,6 +1,9 @@
 import { getAssessmentResponses, getStoredScores } from '../utils/storage';
 import { categories, stageConfiguration } from '../data/categories';
 import { GITHUB_GLOSSARY } from '../data/GITHUB_GLOSSARY';
+import { render, fireEvent } from '@testing-library/react';
+import { stages } from '../data/categories';
+import { FLOW_STATES } from '../utils/flowValidator';
 
 // Testing utilities for OctoFlow
 export const mockAssessmentResponse = {
@@ -137,4 +140,143 @@ export const simulateAssessmentFlow = async (stage = 'pre-seed') => {
   }
 
   return flowResults;
+};
+
+export const renderWithStage = (component, stage = 'pre-seed') => {
+  const utils = render(component);
+  return {
+    stage,
+    ...utils,
+  };
+};
+
+export const mockAssessmentState = ({
+  stage = 'pre-seed',
+  responses = {},
+  flowState = FLOW_STATES.ASSESSMENT,
+  metadata = {}
+} = {}) => {
+  const state = {
+    stage,
+    responses,
+    currentState: flowState,
+    metadata: {
+      startTime: Date.now() - 300000, // 5 minutes ago
+      lastInteraction: Date.now() - 60000, // 1 minute ago
+      questionCount: Object.keys(responses).length,
+      ...metadata
+    }
+  };
+
+  sessionStorage.setItem('octoflow', JSON.stringify(state));
+  return state;
+};
+
+export const expectScoreInRange = (score, stage) => {
+  const stageBenchmarks = stages.find(s => s.id === stage)?.benchmarks;
+  if (!stageBenchmarks) {
+    throw new Error(`Invalid stage: ${stage}`);
+  }
+
+  const { expectedScores } = stageBenchmarks;
+  Object.entries(expectedScores).forEach(([category, benchmark]) => {
+    expect(score[category]).toBeDefined();
+    expect(score[category]).toBeGreaterThanOrEqual(0);
+    expect(score[category]).toBeLessThanOrEqual(4);
+    // Should be within reasonable range of benchmark
+    expect(Math.abs(score[category] - benchmark)).toBeLessThanOrEqual(2);
+  });
+};
+
+export const mockAnalytics = () => ({
+  trackStageSelect: jest.fn(),
+  trackQuestionAnswer: jest.fn(),
+  trackAssessmentComplete: jest.fn(),
+  trackError: jest.fn(),
+  trackResourceClick: jest.fn()
+});
+
+export const simulateUserJourney = async (component, { stage = 'pre-seed', answers = {} } = {}) => {
+  const utils = render(component);
+
+  // Select stage
+  const stageButton = utils.getByText(new RegExp(stage, 'i'));
+  fireEvent.click(stageButton);
+
+  // Answer questions
+  for (const [, answer] of Object.entries(answers)) {
+    const options = utils.getAllByRole('button', { name: /option/i });
+    fireEvent.click(options[answer - 1]);
+    
+    const nextButton = utils.getByText(/next|complete/i);
+    fireEvent.click(nextButton);
+  }
+
+  return utils;
+};
+
+export const createTimingContext = (timestamps = {}) => {
+  let currentTime = Date.now();
+  const timeLog = new Map();
+
+  return {
+    advanceTime: (ms) => {
+      currentTime += ms;
+      jest.spyOn(Date, 'now').mockImplementation(() => currentTime);
+    },
+    logTime: (marker) => {
+      timeLog.set(marker, currentTime);
+    },
+    getTimeSpent: (start, end) => {
+      return timeLog.get(end) - timeLog.get(start);
+    },
+    reset: () => {
+      jest.restoreAllMocks();
+      timeLog.clear();
+    }
+  };
+};
+
+export const expectValidScores = (scores, stage) => {
+  expect(scores.overallScore).toBeGreaterThan(0);
+  expect(scores.overallScore).toBeLessThanOrEqual(4);
+  expect(scores.completionRate).toBeGreaterThan(0);
+  expect(scores.completionRate).toBeLessThanOrEqual(1);
+  
+  Object.entries(scores.categoryScores).forEach(([category, score]) => {
+    expect(score).toBeGreaterThanOrEqual(0);
+    expect(score).toBeLessThanOrEqual(4);
+  });
+};
+
+export const mockAnalyticsEvents = () => {
+  const events = [];
+  jest.spyOn(console, 'log').mockImplementation((prefix, data) => {
+    if (prefix.startsWith('[Analytics]')) {
+      events.push({
+        type: prefix.replace('[Analytics] ', '').replace(':', ''),
+        data
+      });
+    }
+  });
+  return {
+    getEvents: () => events,
+    getEventsByType: (type) => events.filter(e => e.type === type),
+    clear: () => {
+      events.length = 0;
+    }
+  };
+};
+
+export const expectStateTransition = (from, to) => {
+  const state = JSON.parse(sessionStorage.getItem('octoflow') || '{}');
+  expect(state.currentState).toBe(to);
+  
+  const events = mockAnalyticsEvents().getEvents();
+  const navEvent = events.find(e => 
+    e.type === 'navigation' && 
+    e.data.from === from && 
+    e.data.to === to
+  );
+  expect(navEvent).toBeTruthy();
 };

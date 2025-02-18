@@ -102,5 +102,18 @@ export const RECOMMENDATIONS = {
     impact: 'High',
     effort: 'Medium',
     details: 'Automates build, test, and deployment processes with GitHub Actions workflows.'
+  },
+  AUTO_ASSIGN: {
+    title: 'Enable Auto Assignment for Pull Requests',
+    steps: [
+      '1. Go to repository Settings > Branches',
+      '2. Add rule for main/master branch',
+      '3. Enable: Required reviews, Status checks, Force push block',
+      '4. Save changes'
+    ],
+    resource: 'https://docs.github.com/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches',
+    impact: 'High',
+    effort: 'Medium',
+    details: 'Prevents accidental force pushes and ensures quality through mandatory reviews and checks.'
   }
 };

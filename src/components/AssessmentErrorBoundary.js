@@ -1,11 +1,12 @@
 import React from 'react';
-import { trackError } from '../utils/analytics';
+import { clearAssessment } from '../utils/storage';
+import { trackCTAClick } from '../utils/analytics';
 
-export class AssessmentErrorBoundary extends React.Component {
+class AssessmentErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
     this.state = { 
-      hasError: false, 
+      hasError: false,
       error: null,
       errorInfo: null
     };
@@ -16,47 +17,40 @@ export class AssessmentErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
+    console.error('Assessment Flow Error:', error, errorInfo);
     this.setState({
       error,
       errorInfo
     });
-
-    // Track error for analysis
-    trackError('assessment_error', {
-      message: error.message,
-      stack: error.stack,
-      componentStack: errorInfo.componentStack
-    });
+    trackCTAClick('assessment_error');
   }
 
-  handleRetry = () => {
-    // Clear any stored state that might be causing issues
-    sessionStorage.removeItem('octoflow');
-    this.setState({ hasError: false, error: null, errorInfo: null });
-    window.location.reload();
+  handleReset = () => {
+    clearAssessment();
+    trackCTAClick('assessment_reset');
+    window.location.href = '/stage-select';
   };
 
   render() {
     if (this.state.hasError) {
       return (
-        <div className="error-state">
-          <h2>Something went wrong</h2>
-          <p>We apologize for the inconvenience. Your progress has been saved.</p>
+        <div className="error-state assessment-error">
+          <h2>Assessment Error</h2>
+          <p>We encountered an issue during your assessment.</p>
           <div className="error-actions">
             <button 
-              onClick={this.handleRetry}
-              className="retry-button"
+              onClick={this.handleReset}
+              className="cta-button"
             >
-              Retry Assessment
+              Restart Assessment
             </button>
-            {process.env.NODE_ENV === 'development' && (
-              <details className="error-details">
-                <summary>Error Details</summary>
-                <pre>{this.state.error?.toString()}</pre>
-                <pre>{this.state.errorInfo?.componentStack}</pre>
-              </details>
-            )}
+            <small>Your progress will be cleared</small>
           </div>
+          {process.env.NODE_ENV === 'development' && (
+            <pre className="error-details">
+              {this.state.errorInfo?.componentStack}
+            </pre>
+          )}
         </div>
       );
     }
@@ -64,3 +58,5 @@ export class AssessmentErrorBoundary extends React.Component {
     return this.props.children;
   }
 }
+
+export default AssessmentErrorBoundary;

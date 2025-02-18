@@ -1,21 +1,36 @@
-import React, { useEffect } from 'react';
-import { validateUserFlow, validateResponses } from '../utils/flowValidator';
+import React from 'react';
+import PropTypes from 'prop-types';
+import { useSessionGuard } from '../hooks/useSessionGuard';
 
-// Higher-order component to validate flow
+/**
+ * Higher-order component that adds flow validation to a component
+ * @template P
+ * @param {React.ComponentType<P>} WrappedComponent - The component to wrap
+ * @returns {React.ComponentType<P & { requiredStage: import('../hooks/useSessionGuard').StageType }>}
+ */
 export const withFlowValidation = (WrappedComponent) => {
-  return function WithFlowValidation(props) {
-    useEffect(() => {
-      const { issues, hasErrors } = validateUserFlow();
-      if (hasErrors) {
-        console.error('Flow validation issues:', issues);
-      }
+  function WithFlowValidation({ requiredStage, ...props }) {
+    const { isLoading, isAuthorized } = useSessionGuard(requiredStage);
 
-      const { isComplete, responses } = validateResponses();
-      if (!isComplete) {
-        console.warn('Incomplete responses detected');
-      }
-    }, []);
+    if (isLoading) {
+      return <div className="loading-spinner">Loading...</div>;
+    }
+
+    if (!isAuthorized) {
+      return null; // Route guard will handle redirection
+    }
 
     return <WrappedComponent {...props} />;
+  }
+
+  WithFlowValidation.propTypes = {
+    requiredStage: PropTypes.oneOf(['assessment', 'summary', 'results']).isRequired,
+    ...WrappedComponent.propTypes
   };
+
+  WithFlowValidation.displayName = `WithFlowValidation(${
+    WrappedComponent.displayName || WrappedComponent.name || 'Component'
+  })`;
+
+  return WithFlowValidation;
 };

@@ -1,6 +1,19 @@
-// Utility functions for managing assessment data in session storage
-
 const STORAGE_KEY = 'octoflow';
+const STATE_VERSION = '1.0';
+
+const validateResponses = (responses) => {
+  if (!responses || typeof responses !== 'object') return {};
+  return responses;
+};
+
+const migrateState = (oldState) => {
+  // Handle future state migrations here
+  // For now, just validate the responses
+  return {
+    ...oldState,
+    responses: validateResponses(oldState.responses)
+  };
+};
 
 export const getAssessmentData = () => {
   try {
@@ -25,10 +38,18 @@ export const persistResponse = (questionId, value) => {
   }
 };
 
-// Storage utilities for persisting assessment responses
 export const saveAssessmentResponses = (responses) => {
   try {
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(responses));
+    const state = {
+      version: STATE_VERSION,
+      responses: validateResponses(responses),
+      timestamp: Date.now(),
+      metadata: {
+        lastSaved: new Date().toISOString(),
+        questionCount: Object.keys(responses).length
+      }
+    };
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     return true;
   } catch (error) {
     console.error('Error saving assessment responses:', error);
@@ -39,9 +60,21 @@ export const saveAssessmentResponses = (responses) => {
 export const getAssessmentResponses = () => {
   try {
     const saved = sessionStorage.getItem(STORAGE_KEY);
-    return saved ? JSON.parse(saved) : {};
+    if (!saved) return {};
+    
+    const state = JSON.parse(saved);
+    if (state.version !== STATE_VERSION) {
+      return migrateState(state).responses;
+    }
+    return validateResponses(state.responses);
   } catch (error) {
     console.error('Error retrieving assessment responses:', error);
+    // Attempt to recover partial state
+    try {
+      sessionStorage.removeItem(STORAGE_KEY);
+    } catch (e) {
+      // Ignore cleanup errors
+    }
     return {};
   }
 };
@@ -71,23 +104,41 @@ export const updateAssessmentResponse = (questionId, value) => {
 };
 
 export const saveScores = (scores) => {
-  const existing = JSON.parse(sessionStorage.getItem('octoflow') || '{}');
-  sessionStorage.setItem('octoflow', JSON.stringify({
+  const existing = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || '{}');
+  sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
     ...existing,
     scores
   }));
 };
 
 export const getStoredScores = () => {
-  const data = JSON.parse(sessionStorage.getItem('octoflow') || '{}');
+  const data = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || '{}');
   return data.scores;
 };
 
 export const clearAssessment = () => {
-  sessionStorage.removeItem('octoflow');
+  try {
+    sessionStorage.removeItem(STORAGE_KEY);
+    return true;
+  } catch (error) {
+    console.error('Error clearing assessment:', error);
+    return false;
+  }
 };
 
 export const getProgress = () => {
   const data = getAssessmentData();
   return Object.keys(data).length;
+};
+
+export const getAssessmentMetadata = () => {
+  try {
+    const saved = sessionStorage.getItem(STORAGE_KEY);
+    if (!saved) return null;
+    
+    const state = JSON.parse(saved);
+    return state.metadata;
+  } catch (error) {
+    return null;
+  }
 };

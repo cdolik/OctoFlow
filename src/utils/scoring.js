@@ -1,4 +1,4 @@
-import { categories, questions, getCategoryWeight } from '../data/questions';
+import { categories, questions, getCategoryWeight, stages } from '../data/questions';
 import { RECOMMENDATIONS } from '../data/recommendations';
 
 const STAGE_BENCHMARKS = {
@@ -25,7 +25,16 @@ const STAGE_BENCHMARKS = {
   }
 };
 
+const validateStage = (stage) => {
+  if (!stages.find(s => s.id === stage)) {
+    console.error(`Invalid stage: ${stage}`);
+    return 'pre-seed'; // Default fallback
+  }
+  return stage;
+};
+
 export const calculateWeightedScore = (responses, stage) => {
+  stage = validateStage(stage);
   const categoryScores = {};
   let totalWeightedScore = 0;
   let totalWeight = 0;
@@ -111,14 +120,13 @@ export const getRecommendations = (scores, stage) => {
 const getRecommendationKeys = (categoryId, currentScore, targetScore) => {
   const gap = targetScore - currentScore;
   const categoryRecommendations = {
-    'github-ecosystem': ['CODEOWNERS', 'BRANCH_PROTECTION'],
+    'github-ecosystem': ['CODEOWNERS', 'BRANCH_PROTECTION', 'ISSUE_TEMPLATES'],
     'security': ['SECRET_SCANNING', 'DEPENDABOT', 'CODE_SCANNING'],
     'ai-adoption': ['COPILOT'],
-    'automation': ['ACTIONS_WORKFLOW', 'ISSUE_TEMPLATES']
+    'automation': ['ACTIONS_WORKFLOW', 'AUTO_ASSIGN']
   };
-
+  
   // Return more recommendations for larger gaps
   const recs = categoryRecommendations[categoryId] || [];
-  return gap > 1.5 ? recs : recs.slice(0, 1);
+  return gap > 1.5 ? recs : recs.slice(0, Math.ceil(gap * 2));
 };
-

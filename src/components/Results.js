@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useMemo, useCallback } from 'react';
 import { Radar } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -11,8 +11,9 @@ import {
 } from 'chart.js';
 import { getAssessmentResponses } from '../utils/storage';
 import { calculateWeightedScore, getScoreLevel, getRecommendations } from '../utils/scoring';
-import { categories } from '../data/questions';
+import { categories } from '../data/categories';
 import GitHubTooltip from './GitHubTooltip';
+import { trackRecommendationClick } from '../utils/analytics';
 import './styles.css';
 
 ChartJS.register(
@@ -25,11 +26,15 @@ ChartJS.register(
 );
 
 export default function Results({ stage }) {
-  const responses = getAssessmentResponses();
-  const scores = calculateWeightedScore(responses, stage);
-  const recommendations = getRecommendations(scores, stage);
-  
-  const chartData = {
+  const chartRef = useRef(null);
+  const chartInstanceRef = useRef(null);
+
+  const responses = useMemo(() => getAssessmentResponses(), []);
+  const scores = useMemo(() => calculateWeightedScore(responses, stage), [responses, stage]);
+  const recommendations = useMemo(() => getRecommendations(scores, stage), [scores, stage]);
+  const scoreLevel = useMemo(() => getScoreLevel(scores.overallScore), [scores.overallScore]);
+
+  const chartData = useMemo(() => ({
     labels: Object.values(categories).map(cat => cat.title),
     datasets: [
       {
@@ -47,33 +52,51 @@ export default function Results({ stage }) {
         borderWidth: 1,
       }
     ]
-  };
+  }), [scores]);
 
-  const chartOptions = {
+  const chartOptions = useMemo(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
     scales: {
       r: {
         angleLines: { display: true },
         suggestedMin: 0,
         suggestedMax: 4,
-        ticks: {
-          stepSize: 1
-        }
+        ticks: { stepSize: 1 }
       }
     },
     plugins: {
       tooltip: {
         callbacks: {
-          label: (context) => {
-            const label = context.dataset.label;
-            const value = context.raw.toFixed(1);
-            return `${label}: ${value}/4.0`;
-          }
+          label: (context) => `${context.dataset.label}: ${context.raw.toFixed(1)}/4.0`
         }
       }
+    },
+    animation: {
+      duration: 750,
+      easing: 'easeInOutQuart'
     }
-  };
+  }), []);
 
-  const scoreLevel = getScoreLevel(scores.overallScore);
+  const handleRecommendationClick = useCallback((recId, category) => {
+    trackRecommendationClick(recId, category);
+  }, []);
+
+  // Chart cleanup and instance management
+  useEffect(() => {
+    const chartInstance = chartInstanceRef.current;
+    return () => {
+      if (chartInstance) {
+        chartInstance.destroy();
+      }
+    };
+  }, []);
+
+
+  // Render prevention for invalid state
+  if (!scores || !recommendations) {
+    return <div className="error-state">Unable to calculate assessment results</div>;
+  }
 
   return (
     <div className="results">
@@ -99,7 +122,22 @@ export default function Results({ stage }) {
 
       <div className="score-visualization">
         <h3>Category Performance vs. Benchmarks</h3>
-        <Radar data={chartData} options={chartOptions} />
+        <div style={{ height: '400px', width: '100%' }}>
+          <Radar 
+            ref={chartRef}
+            data={chartData}
+            options={chartOptions}
+            onElementsClick={(elems) => {
+              if (elems[0]) {
+                const categoryIndex = elems[0].index;
+                const categoryId = Object.values(categories)[categoryIndex]?.id;
+                if (categoryId) {
+                  handleRecommendationClick(`chart_${categoryId}`, categoryId);
+                }
+              }
+            }}
+          />
+        </div>
       </div>
 
       <div className="category-scores">
@@ -145,7 +183,7 @@ export default function Results({ stage }) {
         <h3>Priority Recommendations</h3>
         <div className="recommendations-grid">
           {recommendations.map((rec, index) => (
-            <div key={index} className="action-card">
+            <div key={index} className="action-card" onClick={() => handleRecommendationClick(rec.id, rec.category)}>
               <div className="recommendation-header">
                 <h4>{rec.title}</h4>
                 <div className="recommendation-meta">
