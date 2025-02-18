@@ -784,48 +784,53 @@
 .recommendation-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
+  align-items: flex-start;
+  margin-bottom: 12px;
 }
 
-.maturity-level {
-  padding: 0.25rem 0.75rem;
-  border-radius: 999px;
-  font-size: 0.875rem;
-  font-weight: 500;
+.recommendation-meta {
+  display: flex;
+  gap: 12px;
+  font-size: 0.9em;
 }
 
-.maturity-level.emerging {
-  background: var(--warning-color);
-  color: #000;
+.impact, .effort {
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: #f6f8fa;
 }
 
-.maturity-level.developing {
-  background: var(--primary-color);
-  color: white;
+.recommendation-details {
+  color: #57606a;
+  margin-bottom: 16px;
 }
 
-.maturity-level.optimizing {
-  background: var(--success-color);
-  color: white;
+.implementation-steps {
+  background: #f6f8fa;
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 12px;
 }
 
-.recommendation-links ul {
+.steps-list {
   list-style: none;
-  padding: 0;
-  margin: 0.5rem 0 0;
+  padding-left: 0;
+  margin: 8px 0;
 }
 
-.recommendation-links li {
-  margin: 0.5rem 0;
+.steps-list li {
+  padding: 4px 0;
+  font-family: monospace;
 }
 
-.recommendation-links a {
-  color: var(--primary-color);
+.resource-link {
+  display: inline-block;
+  color: #0969da;
   text-decoration: none;
+  font-size: 0.9em;
 }
 
-.recommendation-links a:hover {
+.resource-link:hover {
   text-decoration: underline;
 }
 
@@ -1869,3 +1874,52 @@ button:disabled {
 .score-level-proactive { color: #1F883D; }
 .score-level-basic { color: #FCA000; }
 .score-level-initial { color: #CB2431; }
+
+/* GitHub-themed tooltip styles */
+.tooltip-wrapper {
+  display: inline-block;
+  position: relative;
+}
+
+.tooltip-trigger {
+  cursor: help;
+}
+
+.tooltip-icon {
+  font-size: 0.8em;
+  margin-left: 4px;
+  opacity: 0.7;
+}
+
+.github-tooltip {
+  position: absolute;
+  bottom: 125%;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #2d333b;
+  color: #e6edf3;
+  padding: 0.75rem;
+  border-radius: 6px;
+  z-index: 1000;
+  width: 240px;
+  text-align: left;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border: 1px solid #444c56;
+}
+
+.tooltip-text {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.tooltip-link {
+  color: #2da44e;
+  text-decoration: none;
+  font-size: 0.85rem;
+  display: block;
+}
+
+.tooltip-link:hover {
+  text-decoration: underline;
+}

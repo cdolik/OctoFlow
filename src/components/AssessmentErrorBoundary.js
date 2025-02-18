@@ -1,7 +1,7 @@
 import React from 'react';
 import { trackError } from '../utils/analytics';
 
-class AssessmentErrorBoundary extends React.Component {
+export class AssessmentErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
     this.state = { 

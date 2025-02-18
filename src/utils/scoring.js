@@ -1,57 +1,76 @@
-// Scoring utilities for weighted calculations
-export const calculateWeightedScore = (responses, categories) => {
+import { categories, questions, getCategoryWeight } from '../data/questions';
+import { RECOMMENDATIONS } from '../data/recommendations';
+
+const STAGE_BENCHMARKS = {
+  'pre-seed': {
+    'github-ecosystem': 2.0,
+    'security': 1.5,
+    'ai-adoption': 1.0,
+    'automation': 1.5,
+    overall: 1.5
+  },
+  'seed': {
+    'github-ecosystem': 2.5,
+    'security': 2.5,
+    'ai-adoption': 2.0,
+    'automation': 2.5,
+    overall: 2.5
+  },
+  'series-a': {
+    'github-ecosystem': 3.5,
+    'security': 3.0,
+    'ai-adoption': 2.5,
+    'automation': 3.0,
+    overall: 3.0
+  }
+};
+
+export const calculateWeightedScore = (responses, stage) => {
   const categoryScores = {};
   let totalWeightedScore = 0;
   let totalWeight = 0;
 
   // Calculate scores for each category
-  categories.forEach(category => {
-    const categoryQuestions = category.questions;
-    const answeredQuestions = categoryQuestions.filter(q => responses[q.id]);
+  Object.values(categories).forEach(category => {
+    const categoryResponses = Object.entries(responses)
+      .filter(([questionId, _]) => questions.find(q => q.id === questionId)?.category === category.id);
     
-    if (answeredQuestions.length > 0) {
-      const categoryTotal = answeredQuestions.reduce((sum, q) => sum + responses[q.id], 0);
-      const categoryAverage = categoryTotal / answeredQuestions.length;
-      categoryScores[category.id] = categoryAverage;
+    if (categoryResponses.length > 0) {
+      const categoryTotal = categoryResponses.reduce((sum, [_, value]) => sum + value, 0);
+      const categoryAverage = categoryTotal / categoryResponses.length;
+      const categoryWeight = getCategoryWeight(category.id);
       
-      // Add to weighted total
-      totalWeightedScore += categoryAverage * category.weight;
-      totalWeight += category.weight;
+      categoryScores[category.id] = categoryAverage;
+      totalWeightedScore += categoryAverage * categoryWeight;
+      totalWeight += categoryWeight;
     }
   });
 
-  // Calculate stage-specific benchmarks
-  const stageScores = calculateStageBenchmarks(categoryScores, responses.stage);
+  const overallScore = totalWeight > 0 ? totalWeightedScore / totalWeight : 0;
+  const benchmarks = STAGE_BENCHMARKS[stage] || STAGE_BENCHMARKS['pre-seed'];
 
   return {
     categoryScores,
-    overallScore: totalWeightedScore / totalWeight,
-    maxScore: 4,
-    stageBenchmarks: stageScores,
-    completionRate: calculateCompletionRate(responses, categories)
+    overallScore,
+    benchmarks,
+    completionRate: calculateCompletionRate(responses),
+    gaps: calculateScoreGaps(categoryScores, benchmarks)
   };
 };
 
-const calculateStageBenchmarks = (scores, stage) => {
-  const stageBenchmarks = stageConfiguration[stage] || stageConfiguration['pre-seed'];
-  return {
-    current: scores,
-    expected: stageBenchmarks.benchmarks,
-    gap: calculateBenchmarkGap(scores, stageBenchmarks.benchmarks)
-  };
-};
-
-const calculateBenchmarkGap = (current, expected) => {
+const calculateScoreGaps = (scores, benchmarks) => {
   const gaps = {};
-  Object.keys(expected).forEach(metric => {
-    gaps[metric] = expected[metric] - (current[metric] || 0);
+  Object.entries(benchmarks).forEach(([category, benchmark]) => {
+    if (category !== 'overall') {
+      gaps[category] = benchmark - (scores[category] || 0);
+    }
   });
   return gaps;
 };
 
-const calculateCompletionRate = (responses, categories) => {
-  const totalQuestions = categories.reduce((sum, cat) => sum + cat.questions.length, 0);
+const calculateCompletionRate = (responses) => {
   const answeredQuestions = Object.keys(responses).length;
+  const totalQuestions = questions.length;
   return answeredQuestions / totalQuestions;
 };
 
@@ -63,49 +82,43 @@ export const getScoreLevel = (score) => {
 };
 
 export const getRecommendations = (scores, stage) => {
-  const stageConfig = stageConfiguration[stage] || stageConfiguration['pre-seed'];
   const recommendations = [];
+  const benchmarks = STAGE_BENCHMARKS[stage] || STAGE_BENCHMARKS['pre-seed'];
 
-  // Add category-specific recommendations
+  // Get recommendations based on score gaps
   Object.entries(scores.categoryScores).forEach(([categoryId, score]) => {
-    const category = categories.find(c => c.id === categoryId);
-    if (score < stageConfig.benchmarks[`${categoryId}Score`] || score < 3) {
-      recommendations.push({
+    if (score < benchmarks[categoryId]) {
+      const categoryRecs = getRecommendationKeys(categoryId, score, benchmarks[categoryId]);
+      const detailedRecs = categoryRecs.map(key => ({
+        ...RECOMMENDATIONS[key],
         category: categoryId,
-        priority: score < 2 ? 'high' : 'medium',
-        actions: getActionsByCategory(categoryId, stage),
+        priority: score < benchmarks[categoryId] - 1 ? 'high' : 'medium',
         currentScore: score,
-        targetScore: stageConfig.benchmarks[`${categoryId}Score`]
-      });
+        targetScore: benchmarks[categoryId]
+      }));
+      recommendations.push(...detailedRecs);
     }
   });
 
-  // Sort by priority and gap to benchmark
+  // Sort recommendations by priority and impact
   return recommendations.sort((a, b) => {
     if (a.priority === 'high' && b.priority !== 'high') return -1;
     if (b.priority === 'high' && a.priority !== 'high') return 1;
-    return (b.targetScore - b.currentScore) - (a.targetScore - a.currentScore);
+    return a.impact === 'High' ? -1 : 1;
   });
 };
 
-const getActionsByCategory = (categoryId, stage) => {
-  const actionMap = {
-    'github-ecosystem': [
-      'Enable CODEOWNERS for critical directories',
-      'Set up GitHub Actions for CI/CD',
-      'Implement branch protection rules'
-    ],
-    'security': [
-      'Enable Dependabot alerts',
-      'Configure CodeQL scanning',
-      'Set up secret scanning'
-    ],
-    'automation': [
-      'Implement automated testing',
-      'Set up deployment workflows',
-      'Configure environment protection rules'
-    ]
+const getRecommendationKeys = (categoryId, currentScore, targetScore) => {
+  const gap = targetScore - currentScore;
+  const categoryRecommendations = {
+    'github-ecosystem': ['CODEOWNERS', 'BRANCH_PROTECTION'],
+    'security': ['SECRET_SCANNING', 'DEPENDABOT', 'CODE_SCANNING'],
+    'ai-adoption': ['COPILOT'],
+    'automation': ['ACTIONS_WORKFLOW', 'ISSUE_TEMPLATES']
   };
 
-  return actionMap[categoryId] || [];
+  // Return more recommendations for larger gaps
+  const recs = categoryRecommendations[categoryId] || [];
+  return gap > 1.5 ? recs : recs.slice(0, 1);
 };
+

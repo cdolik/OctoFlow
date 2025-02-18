@@ -1,97 +1,89 @@
 import React, { useState } from 'react';
+import { getStageQuestions } from '../data/questions';
 import GitHubTooltip from './GitHubTooltip';
 import ProgressTracker from './ProgressTracker';
-import TimeEstimator from './TimeEstimator';
-import { getStageQuestions } from '../data/categories';
-import { saveAssessmentResponse, getAssessmentResponses } from '../utils/storage';
-import { trackQuestionAnswer } from '../utils/analytics';
 import './styles.css';
 
-export default function Assessment({ stage, onStepChange }) {
-  const [categoryIndex, setCategoryIndex] = useState(0);
-  const [questionIndex, setQuestionIndex] = useState(0);
-  const [responses, setResponses] = useState(getAssessmentResponses());
+export default function Assessment({ stage, onComplete }) {
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [responses, setResponses] = useState({});
+  const questions = getStageQuestions(stage);
 
-  // Get stage-specific questions
-  const categories = getStageQuestions(stage);
-  const currentCategory = categories[categoryIndex];
-  const currentQuestion = currentCategory?.questions[questionIndex];
-  const totalQuestions = categories.reduce((sum, cat) => sum + cat.questions.length, 0);
-  const questionsAnswered = Object.keys(responses).length;
-  const progress = (questionsAnswered / totalQuestions) * 100;
+  const handleAnswer = (questionId, value) => {
+    setResponses(prev => ({
+      ...prev,
+      [questionId]: value
+    }));
+  };
 
-  const handleAnswer = (value) => {
-    if (!currentQuestion) return;
-
-    const questionId = currentQuestion.id;
-    setResponses(prev => ({ ...prev, [questionId]: value }));
-    saveAssessmentResponse(questionId, value);
-    trackQuestionAnswer(questionId, value);
-
-    // Navigation logic
-    if (questionIndex < currentCategory.questions.length - 1) {
-      setQuestionIndex(questionIndex + 1);
-    } else if (categoryIndex < categories.length - 1) {
-      setCategoryIndex(categoryIndex + 1);
-      setQuestionIndex(0);
+  const handleNext = () => {
+    if (currentQuestionIndex < questions.length - 1) {
+      setCurrentQuestionIndex(prev => prev + 1);
     } else {
-      onStepChange(3); // Move to Summary
+      onComplete(responses);
     }
   };
 
-  if (!currentCategory || !currentQuestion) {
-    return <div>Loading...</div>;
-  }
+  const handleBack = () => {
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex(prev => prev - 1);
+    }
+  };
+
+  const currentQuestion = questions[currentQuestionIndex];
+  const progress = (currentQuestionIndex + 1) / questions.length;
+  const canProceed = responses[currentQuestion?.id] !== undefined;
 
   return (
-    <div className="assessment">
-      <div className="stage-indicator">
-        <span className="stage-label">{stage} Stage Assessment</span>
-        <span className="stage-focus">Focus: {currentCategory.title}</span>
-      </div>
-
-      <ProgressTracker progress={progress} />
-      <TimeEstimator 
-        totalQuestions={totalQuestions} 
-        questionsAnswered={questionsAnswered} 
+    <div className="assessment-container">
+      <ProgressTracker 
+        progress={progress}
+        currentQuestion={currentQuestionIndex + 1}
+        totalQuestions={questions.length}
       />
 
-      <div className="question-container">
-        <h3>
-          {currentQuestion.text}{' '}
-          {currentQuestion.tooltipTerm && (
+      <div className="question-card">
+        <div className="question-header">
+          {currentQuestion?.tooltipTerm && (
             <GitHubTooltip term={currentQuestion.tooltipTerm}>
-              <span className="tooltip-trigger">{currentQuestion.tooltipTerm}</span>
+              <h3 className="question-text">{currentQuestion?.text}</h3>
             </GitHubTooltip>
           )}
-          {currentQuestion.textAfter}
-        </h3>
+          {!currentQuestion?.tooltipTerm && (
+            <h3 className="question-text">{currentQuestion?.text}</h3>
+          )}
+        </div>
 
         <div className="options-grid">
-          {currentQuestion.options.map(option => (
+          {currentQuestion?.options.map((option) => (
             <button
               key={option.value}
               className={`option-button ${responses[currentQuestion.id] === option.value ? 'selected' : ''}`}
-              onClick={() => handleAnswer(option.value)}
+              onClick={() => handleAnswer(currentQuestion.id, option.value)}
             >
-              {option.label}
+              <div className="option-content">
+                <span className="option-label">{option.text}</span>
+              </div>
             </button>
           ))}
         </div>
 
-        {currentQuestion.recommendation && (
-          <div className="question-hint">
-            <small>
-              <a 
-                href={currentQuestion.recommendation.link} 
-                target="_blank" 
-                rel="noopener noreferrer"
-              >
-                Learn more about this practice →
-              </a>
-            </small>
-          </div>
-        )}
+        <div className="navigation-buttons">
+          <button 
+            className="back-button"
+            onClick={handleBack}
+            disabled={currentQuestionIndex === 0}
+          >
+            Back
+          </button>
+          <button 
+            className="next-button"
+            onClick={handleNext}
+            disabled={!canProceed}
+          >
+            {currentQuestionIndex === questions.length - 1 ? 'Complete' : 'Next'}
+          </button>
+        </div>
       </div>
     </div>
   );

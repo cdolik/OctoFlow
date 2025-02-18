@@ -25,17 +25,49 @@ export const persistResponse = (questionId, value) => {
   }
 };
 
-// Storage utilities with score persistence
-export const saveAssessmentResponse = (questionId, value) => {
-  const existing = JSON.parse(sessionStorage.getItem('octoflow') || '{}');
-  const updatedResponses = {
-    ...existing,
-    responses: {
-      ...(existing.responses || {}),
+// Storage utilities for persisting assessment responses
+export const saveAssessmentResponses = (responses) => {
+  try {
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(responses));
+    return true;
+  } catch (error) {
+    console.error('Error saving assessment responses:', error);
+    return false;
+  }
+};
+
+export const getAssessmentResponses = () => {
+  try {
+    const saved = sessionStorage.getItem(STORAGE_KEY);
+    return saved ? JSON.parse(saved) : {};
+  } catch (error) {
+    console.error('Error retrieving assessment responses:', error);
+    return {};
+  }
+};
+
+export const clearAssessmentResponses = () => {
+  try {
+    sessionStorage.removeItem(STORAGE_KEY);
+    return true;
+  } catch (error) {
+    console.error('Error clearing assessment responses:', error);
+    return false;
+  }
+};
+
+export const updateAssessmentResponse = (questionId, value) => {
+  try {
+    const current = getAssessmentResponses();
+    const updated = {
+      ...current,
       [questionId]: value
-    }
-  };
-  sessionStorage.setItem('octoflow', JSON.stringify(updatedResponses));
+    };
+    return saveAssessmentResponses(updated);
+  } catch (error) {
+    console.error('Error updating assessment response:', error);
+    return false;
+  }
 };
 
 export const saveScores = (scores) => {
@@ -44,11 +76,6 @@ export const saveScores = (scores) => {
     ...existing,
     scores
   }));
-};
-
-export const getAssessmentResponses = () => {
-  const data = JSON.parse(sessionStorage.getItem('octoflow') || '{}');
-  return data.responses || {};
 };
 
 export const getStoredScores = () => {

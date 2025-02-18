@@ -49,3 +49,51 @@ export const WAF_PILLARS = [
     ]
   }
 ];
+
+export const stages = [
+  {
+    id: "pre-seed",
+    label: "Pre-Seed Startup",
+    description: "Just starting out with a small team",
+    benchmarks: {
+      deploymentFreq: "2/week",
+      securityLevel: 1,
+      costEfficiency: 0.8,
+      expectedScores: {
+        'github-ecosystem': 2.0,
+        'security': 1.5,
+        'automation': 1.5
+      }
+    }
+  },
+  {
+    id: "seed",
+    label: "Seed Stage",
+    description: "Raised seed funding, building MVP",
+    benchmarks: {
+      deploymentFreq: "1/day",
+      securityLevel: 2,
+      costEfficiency: 0.7,
+      expectedScores: {
+        'github-ecosystem': 2.5,
+        'security': 2.5,
+        'automation': 2.0
+      }
+    }
+  },
+  {
+    id: "series-a",
+    label: "Series A",
+    description: "Scaling operations and team",
+    benchmarks: {
+      deploymentFreq: "multiple/day",
+      securityLevel: 3,
+      costEfficiency: 0.6,
+      expectedScores: {
+        'github-ecosystem': 3.5,
+        'security': 3.0,
+        'automation': 3.0
+      }
+    }
+  }
+];
