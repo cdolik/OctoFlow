@@ -1,14 +1,17 @@
-import {
-  saveAssessmentResponses,
-  getAssessmentResponses,
-  updateAssessmentResponse,
-  clearAssessment,
-  getAssessmentMetadata
+import { 
+  saveAssessmentResponses, 
+  getAssessmentResponses, 
+  updateAssessmentResponse, 
+  clearAssessment, 
+  getAssessmentMetadata,
+  backupState, 
+  restoreFromBackup 
 } from '../utils/storage';
 
 describe('Storage Utility', () => {
   beforeEach(() => {
     sessionStorage.clear();
+    localStorage.clear();
   });
 
   describe('Assessment Response Storage', () => {
@@ -105,6 +108,66 @@ describe('Storage Utility', () => {
       const retrieved = getAssessmentResponses();
       expect(retrieved).toEqual({});
       expect(sessionStorage.getItem('octoflow')).toBeNull();
+    });
+
+    it('should handle saving and retrieving responses with versioning', () => {
+      const testResponses = {
+        'q1': 2,
+        'q2': 3
+      };
+
+      saveAssessmentResponses(testResponses);
+      const retrieved = getAssessmentResponses();
+      
+      expect(retrieved).toEqual(testResponses);
+    });
+
+    it('should migrate old schema to new version', () => {
+      // Set up old version state
+      const oldState = {
+        version: '1.0',
+        responses: { 'q1': 1 },
+        metadata: {
+          lastSaved: '2024-02-17T00:00:00.000Z',
+          questionCount: 1
+        }
+      };
+      
+      sessionStorage.setItem('octoflow', JSON.stringify(oldState));
+      
+      // Retrieve - this should trigger migration
+      const responses = getAssessmentResponses();
+      const rawState = JSON.parse(sessionStorage.getItem('octoflow'));
+      
+      expect(responses).toEqual({ 'q1': 1 });
+      expect(rawState.version).toBe('1.1');
+      expect(rawState.progress).toBeDefined();
+      expect(rawState.metadata.timeSpent).toBeDefined();
+    });
+
+    it('should backup and restore state', () => {
+      const testResponses = { 'q1': 1 };
+      saveAssessmentResponses(testResponses);
+      
+      // Create backup
+      backupState();
+      
+      // Clear session storage
+      sessionStorage.clear();
+      
+      // Restore from backup
+      const restored = restoreFromBackup();
+      const retrievedResponses = getAssessmentResponses();
+      
+      expect(restored).toBe(true);
+      expect(retrievedResponses).toEqual(testResponses);
+    });
+
+    it('should handle invalid states gracefully', () => {
+      sessionStorage.setItem('octoflow', 'invalid json');
+      
+      const responses = getAssessmentResponses();
+      expect(responses).toEqual({});
     });
   });
 

@@ -1,0 +1,101 @@
+import React from 'react';
+import { render, screen, fireEvent } from '@testing-library/react';
+import AssessmentErrorBoundary from '../components/AssessmentErrorBoundary';
+import { trackCTAClick, trackError } from '../utils/analytics';
+import { clearAssessment, getAssessmentState } from '../utils/storage';
+
+// Mock dependencies
+jest.mock('../utils/analytics', () => ({
+  trackCTAClick: jest.fn(),
+  trackError: jest.fn()
+}));
+
+jest.mock('../utils/storage', () => ({
+  clearAssessment: jest.fn(),
+  getAssessmentState: jest.fn()
+}));
+
+describe('AssessmentErrorBoundary', () => {
+  const ThrowError = ({ message }: { message: string }) => {
+    throw new Error(message);
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (getAssessmentState as jest.Mock).mockReturnValue({
+      currentStage: 'seed',
+      responses: { 'pre-seed': { complete: true } }
+    });
+  });
+
+  it('renders children when there is no error', () => {
+    render(
+      <AssessmentErrorBoundary>
+        <div>Test Content</div>
+      </AssessmentErrorBoundary>
+    );
+
+    expect(screen.getByText('Test Content')).toBeInTheDocument();
+  });
+
+  it('shows error UI when an error occurs', () => {
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+    
+    render(
+      <AssessmentErrorBoundary>
+        <ThrowError message="Test error" />
+      </AssessmentErrorBoundary>
+    );
+
+    expect(screen.getByText('Assessment Error')).toBeInTheDocument();
+    expect(trackError).toHaveBeenCalledWith('assessment_error', expect.any(Object));
+    
+    consoleError.mockRestore();
+  });
+
+  it('handles retry action correctly', () => {
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+    
+    render(
+      <AssessmentErrorBoundary>
+        <ThrowError message="Test error" />
+      </AssessmentErrorBoundary>
+    );
+
+    fireEvent.click(screen.getByText('Try Again'));
+    expect(trackCTAClick).toHaveBeenCalledWith('assessment_retry');
+    
+    consoleError.mockRestore();
+  });
+
+  it('handles reset action correctly', () => {
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+    
+    render(
+      <AssessmentErrorBoundary>
+        <ThrowError message="Test error" />
+      </AssessmentErrorBoundary>
+    );
+
+    fireEvent.click(screen.getByText('Restart Assessment'));
+    expect(clearAssessment).toHaveBeenCalled();
+    expect(trackCTAClick).toHaveBeenCalledWith('assessment_reset');
+    
+    consoleError.mockRestore();
+  });
+
+  it('shows data corruption message for storage-related errors', () => {
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+    
+    render(
+      <AssessmentErrorBoundary>
+        <ThrowError message="storage corrupted" />
+      </AssessmentErrorBoundary>
+    );
+
+    expect(screen.getByText(/due to a data issue/i)).toBeInTheDocument();
+    expect(screen.queryByText('Try Again')).not.toBeInTheDocument();
+    
+    consoleError.mockRestore();
+  });
+});

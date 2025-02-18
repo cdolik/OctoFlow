@@ -4,9 +4,13 @@ import { updateAssessmentResponse, getAssessmentResponses, saveAssessmentRespons
 import { trackQuestionAnswer, trackAssessmentComplete } from '../utils/analytics';
 import GitHubTooltip from './GitHubTooltip';
 import ProgressTracker from './ProgressTracker';
+import AutoSave from './AutoSave';
+import withFlowValidation from './withFlowValidation';
+import AssessmentErrorBoundary from './AssessmentErrorBoundary';
 import './styles.css';
+import PropTypes from 'prop-types';
 
-export default function Assessment({ stage, onComplete }) {
+const Assessment = ({ stage, onComplete }) => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [responses, setResponses] = useState({});
   const questions = getStageQuestions(stage);
@@ -19,16 +23,9 @@ export default function Assessment({ stage, onComplete }) {
     }
   }, []);
 
-  // Auto-save timer
-  useEffect(() => {
-    const autoSaveInterval = setInterval(() => {
-      if (Object.keys(responses).length > 0) {
-        saveAssessmentResponses(responses);
-      }
-    }, 30000); // Auto-save every 30 seconds
-
-    return () => clearInterval(autoSaveInterval);
-  }, [responses]);
+  const handleSave = (data) => {
+    saveAssessmentResponses(data);
+  };
 
   const handleAnswer = (questionId, value) => {
     const newResponses = {
@@ -60,56 +57,65 @@ export default function Assessment({ stage, onComplete }) {
   const canProceed = responses[currentQuestion?.id] !== undefined;
 
   return (
-    <div className="assessment-container">
-      <ProgressTracker 
-        progress={progress}
-        currentQuestion={currentQuestionIndex + 1}
-        totalQuestions={questions.length}
-      />
+    <AssessmentErrorBoundary>
+      <AutoSave data={responses} onSave={handleSave} interval={30000} />
+      <div className="assessment-container">
+        <ProgressTracker 
+          progress={progress}
+          currentQuestion={currentQuestionIndex + 1}
+          totalQuestions={questions.length}
+        />
 
-      <div className="question-card">
-        <div className="question-header">
-          {currentQuestion?.tooltipTerm && (
-            <GitHubTooltip term={currentQuestion.tooltipTerm}>
+        <div className="question-card">
+          <div className="question-header">
+            {currentQuestion?.tooltipTerm && (
+              <GitHubTooltip term={currentQuestion.tooltipTerm}>
+                <h3 className="question-text">{currentQuestion?.text}</h3>
+              </GitHubTooltip>
+            )}
+            {!currentQuestion?.tooltipTerm && (
               <h3 className="question-text">{currentQuestion?.text}</h3>
-            </GitHubTooltip>
-          )}
-          {!currentQuestion?.tooltipTerm && (
-            <h3 className="question-text">{currentQuestion?.text}</h3>
-          )}
-        </div>
+            )}
+          </div>
 
-        <div className="options-grid">
-          {currentQuestion?.options.map((option) => (
-            <button
-              key={option.value}
-              className={`option-button ${responses[currentQuestion.id] === option.value ? 'selected' : ''}`}
-              onClick={() => handleAnswer(currentQuestion.id, option.value)}
+          <div className="options-grid">
+            {currentQuestion?.options.map((option) => (
+              <button
+                key={option.value}
+                className={`option-button ${responses[currentQuestion.id] === option.value ? 'selected' : ''}`}
+                onClick={() => handleAnswer(currentQuestion.id, option.value)}
+              >
+                <div className="option-content">
+                  <span className="option-label">{option.text}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          <div className="navigation-buttons">
+            <button 
+              className="back-button"
+              onClick={handleBack}
+              disabled={currentQuestionIndex === 0}
             >
-              <div className="option-content">
-                <span className="option-label">{option.text}</span>
-              </div>
+              Back
             </button>
-          ))}
-        </div>
-
-        <div className="navigation-buttons">
-          <button 
-            className="back-button"
-            onClick={handleBack}
-            disabled={currentQuestionIndex === 0}
-          >
-            Back
-          </button>
-          <button 
-            className="next-button"
-            onClick={handleNext}
-            disabled={!canProceed}
-          >
-            {currentQuestionIndex === questions.length - 1 ? 'Complete' : 'Next'}
-          </button>
+            <button 
+              className="next-button"
+              onClick={handleNext}
+              disabled={!canProceed}
+            >
+              {currentQuestionIndex === questions.length - 1 ? 'Complete' : 'Next'}
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </AssessmentErrorBoundary>
   );
-}
+};
+Assessment.propTypes = {
+  stage: PropTypes.string.isRequired,
+  onComplete: PropTypes.func.isRequired,
+};
+
+export default withFlowValidation(Assessment);

@@ -1,5 +1,52 @@
 const STORAGE_KEY = 'octoflow';
-const STATE_VERSION = '1.0';
+const STATE_VERSION = '1.1'; // Increment version for schema changes
+
+// Schema definitions for different versions
+const SCHEMA_VERSIONS = {
+  '1.0': {
+    responses: {},
+    scores: null,
+    metadata: {
+      lastSaved: null,
+      questionCount: 0
+    }
+  },
+  '1.1': {
+    version: '1.1',
+    responses: {},
+    scores: null,
+    currentStage: null,
+    progress: {
+      completed: [],
+      lastAccessed: null
+    },
+    metadata: {
+      lastSaved: null,
+      questionCount: 0,
+      timeSpent: 0,
+      attemptCount: 0
+    }
+  }
+};
+
+const validateSchema = (state, version) => {
+  const schema = SCHEMA_VERSIONS[version];
+  if (!schema) return SCHEMA_VERSIONS[STATE_VERSION];
+
+  // Deep merge with default schema
+  return {
+    ...schema,
+    ...state,
+    metadata: {
+      ...schema.metadata,
+      ...state.metadata
+    },
+    progress: {
+      ...schema.progress,
+      ...(state.progress || {})
+    }
+  };
+};
 
 const validateResponses = (responses) => {
   if (!responses || typeof responses !== 'object') return {};
@@ -7,12 +54,40 @@ const validateResponses = (responses) => {
 };
 
 const migrateState = (oldState) => {
-  // Handle future state migrations here
-  // For now, just validate the responses
-  return {
-    ...oldState,
-    responses: validateResponses(oldState.responses)
+  const currentVersion = oldState.version || '1.0';
+  
+  // Migration paths
+  const migrations = {
+    '1.0': (state) => ({
+      ...SCHEMA_VERSIONS['1.1'],
+      responses: validateResponses(state.responses),
+      scores: state.scores,
+      currentStage: null,
+      progress: {
+        completed: [],
+        lastAccessed: new Date().toISOString()
+      },
+      metadata: {
+        ...state.metadata,
+        timeSpent: 0,
+        attemptCount: 1
+      }
+    })
   };
+
+  // Apply migrations sequentially
+  let migratedState = { ...oldState };
+  const versions = Object.keys(SCHEMA_VERSIONS);
+  const startIdx = versions.indexOf(currentVersion);
+
+  for (let i = startIdx; i < versions.length - 1; i++) {
+    const fromVersion = versions[i];
+    if (migrations[fromVersion]) {
+      migratedState = migrations[fromVersion](migratedState);
+    }
+  }
+
+  return validateSchema(migratedState, STATE_VERSION);
 };
 
 export const getAssessmentData = () => {
@@ -40,15 +115,19 @@ export const persistResponse = (questionId, value) => {
 
 export const saveAssessmentResponses = (responses) => {
   try {
-    const state = {
+    const currentState = getAssessmentData();
+    const state = validateSchema({
+      ...currentState,
       version: STATE_VERSION,
       responses: validateResponses(responses),
-      timestamp: Date.now(),
       metadata: {
+        ...(currentState.metadata || {}),
         lastSaved: new Date().toISOString(),
-        questionCount: Object.keys(responses).length
+        questionCount: Object.keys(responses).length,
+        attemptCount: (currentState.metadata?.attemptCount || 0) + 1
       }
-    };
+    }, STATE_VERSION);
+
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     return true;
   } catch (error) {
@@ -64,17 +143,14 @@ export const getAssessmentResponses = () => {
     
     const state = JSON.parse(saved);
     if (state.version !== STATE_VERSION) {
-      return migrateState(state).responses;
+      const migrated = migrateState(state);
+      // Save migrated state
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
+      return migrated.responses;
     }
     return validateResponses(state.responses);
   } catch (error) {
     console.error('Error retrieving assessment responses:', error);
-    // Attempt to recover partial state
-    try {
-      sessionStorage.removeItem(STORAGE_KEY);
-    } catch (e) {
-      // Ignore cleanup errors
-    }
     return {};
   }
 };
@@ -140,5 +216,35 @@ export const getAssessmentMetadata = () => {
     return state.metadata;
   } catch (error) {
     return null;
+  }
+};
+
+export const backupState = () => {
+  try {
+    const state = sessionStorage.getItem(STORAGE_KEY);
+    if (state) {
+      localStorage.setItem(`${STORAGE_KEY}_backup`, state);
+      localStorage.setItem(`${STORAGE_KEY}_backup_time`, new Date().toISOString());
+    }
+    return true;
+  } catch (error) {
+    console.error('Error backing up state:', error);
+    return false;
+  }
+};
+
+export const restoreFromBackup = () => {
+  try {
+    const backup = localStorage.getItem(`${STORAGE_KEY}_backup`);
+    if (backup) {
+      const state = JSON.parse(backup);
+      const migrated = migrateState(state);
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error('Error restoring from backup:', error);
+    return false;
   }
 };

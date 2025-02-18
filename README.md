@@ -73,3 +73,49 @@ Deploys the app to GitHub Pages. This will:
 ---
 
 🚀 OctoFlow is just the beginning – let's scale engineering together! 🔥🐙
+
+# OctoFlow Documentation
+
+## User Flow
+1. Landing Page (Hero)
+2. Stage Selection
+3. Assessment
+4. Summary
+5. Results
+
+## Core Features
+- Persistent state management using sessionStorage
+- Error boundary implementation for graceful error handling
+- Responsive radar chart visualization
+- Automated test suite
+
+## Known Issues
+- [ ] Session storage limitations
+- [ ] Mobile responsiveness improvements needed
+
+## Future Improvements
+- [ ] PDF export functionality
+- [ ] Enhanced GitHub API integration
+- [ ] Automated saving mechanism
+- [ ] User analytics dashboard
+- [ ] Custom scoring algorithms
+
+## Development
+
+### Installation
+```bash
+npm install
+```
+
+### Running Tests
+```bash
+npm test
+```
+
+### Starting Development Server
+```bash
+npm start
+```
+
+## Contributing
+Please see CONTRIBUTING.md for guidelines.

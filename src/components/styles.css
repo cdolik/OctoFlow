@@ -1923,3 +1923,34 @@ button:disabled {
 .tooltip-link:hover {
   text-decoration: underline;
 }
+
+.error-boundary-container {
+  padding: 2rem;
+  margin: 1rem;
+  border: 1px solid #ff6b6b;
+  border-radius: 4px;
+  background-color: #fff5f5;
+  text-align: center;
+}
+
+.error-boundary-container button {
+  margin-top: 1rem;
+  padding: 0.5rem 1rem;
+  background-color: #4a90e2;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.error-boundary-container button:hover {
+  background-color: #357abd;
+}
+
+.validation-error {
+  padding: 1rem;
+  margin: 1rem 0;
+  background-color: #fff3f3;
+  border-left: 4px solid #ff4444;
+  color: #e41e3f;
+}
