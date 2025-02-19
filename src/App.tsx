@@ -14,19 +14,23 @@ interface Stage {
 
 interface AppFlowProps extends FlowValidationProps {
   stage: Stage;
+  onStepChange?: (step: string) => void;
 }
 
-const Assessment = lazy(() => import('./components/Assessment'));
+const Assessment: React.FC<AppFlowProps> = ({ stage, onStepChange }) => {
+  // Assessment component implementation
+};
+
 const Summary = lazy(() => import('./components/Summary'));
 const Results = lazy(() => import('./components/Results'));
 
 const ValidatedAssessment = withFlowValidation<AppFlowProps>(Assessment);
-const ValidatedSummary = withFlowValidation<AppFlowProps>(Summary);
+const ValidatedSummary = withFlowValidation<AppFlowProps & { onStepChange: (step: string) => void }>(Summary);
 const ValidatedResults = withFlowValidation<AppFlowProps>(Results);
 
 const App: React.FC = () => {
   const [stage, setStage] = useState<Stage | null>(null);
-  const [responses, setResponses] = useState<Record<FlowStage, unknown>>({});
+  const [responses, setResponses] = useState<Record<string, unknown>>({});
 
   const handleStageSelect = (selectedStage: Stage) => {
     setStage(selectedStage);
@@ -102,3 +106,4 @@ const App: React.FC = () => {
 };
 
 export default App;
+

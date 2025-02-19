@@ -1,4 +1,4 @@
-import { renderHook } from '@testing-library/react-hooks';
+import { renderHook } from '@testing-library/react';
 import { useSessionGuard } from './useSessionGuard';
 import { MemoryRouter, useNavigate } from 'react-router-dom';
 

@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom';
-import { Chart as ChartJS } from 'chart.js';
+// import { Chart as ChartJS } from 'chart.js';
 import 'jest-canvas-mock';
 
 // Type-safe Chart.js mock
@@ -13,7 +13,7 @@ const mockChart = {
       labels: []
     },
     options: {}
-  })) as unknown as typeof ChartJS,
+  })),
   Radar: jest.fn()
 };
 
@@ -25,16 +25,16 @@ jest.mock('chart.js', () => ({
 }));
 
 // Mock sessionStorage
-const mockStorage = new Map<string, string>();
+const mockStorage = new Map();
 
 Object.defineProperty(window, 'sessionStorage', {
   value: {
-    getItem: jest.fn((key: string) => mockStorage.get(key)),
-    setItem: jest.fn((key: string, value: string) => mockStorage.set(key, value)),
-    removeItem: jest.fn((key: string) => mockStorage.delete(key)),
+    getItem: jest.fn((key) => mockStorage.get(key)),
+    setItem: jest.fn((key, value) => mockStorage.set(key, value)),
+    removeItem: jest.fn((key) => mockStorage.delete(key)),
     clear: jest.fn(() => mockStorage.clear()),
     length: mockStorage.size,
-    key: jest.fn((index: number) => Array.from(mockStorage.keys())[index])
+    key: jest.fn((index) => Array.from(mockStorage.keys())[index])
   }
 });
 

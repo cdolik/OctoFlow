@@ -13,7 +13,7 @@
     "react-chartjs-2": "^5.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.29.0",
-    "react-scripts": "5.0.1",
+    "react-scripts": "^5.0.1",
     "web-vitals": "^2.1.4"
   },
   "resolutions": {
@@ -80,7 +80,6 @@
     "@babel/preset-typescript": "^7.23.9",
     "@pmmmwh/react-refresh-webpack-plugin": "^0.5.15",
     "@testing-library/jest-dom": "^6.6.3",
-    "@testing-library/react-hooks": "^8.0.1",
     "@testing-library/user-event": "^14.6.1",
     "@types/babel__core": "^7.20.5",
     "@types/babel__generator": "^7.6.8",

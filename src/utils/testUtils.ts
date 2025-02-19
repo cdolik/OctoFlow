@@ -44,14 +44,14 @@ export const renderRadarChart = (Component: React.ComponentType<any>, props = {}
   return {
     ...utils,
     canvas,
-    getChartInstance: () => Chart.getChart(canvas),
+    getChartInstance: () => Chart.getChart(canvas as HTMLCanvasElement),
     // Additional radar chart specific assertions
     assertDatasetCount: (expected: number) => {
-      const chart = Chart.getChart(canvas);
+      const chart = Chart.getChart(canvas as HTMLCanvasElement);
       expect(chart?.data.datasets.length).toBe(expected);
     },
     assertLabelsMatch: (expected: string[]) => {
-      const chart = Chart.getChart(canvas);
+      const chart = Chart.getChart(canvas as HTMLCanvasElement);
       expect(chart?.data.labels).toEqual(expected);
     }
   };
@@ -92,7 +92,7 @@ export const renderWithRouter = (
 
   return {
     ...render(ui, {
-      wrapper: ({ children }) => <MemoryRouter initialEntries={[route]}>{children}</MemoryRouter>
+      wrapper: ({ children }: { children?: React.ReactNode }) => <MemoryRouter initialEntries={[route]}>{children}</MemoryRouter>
     })
   };
 };
