@@ -1,38 +1,90 @@
-import { useEffect, useRef } from 'react';
-import Chart from 'chart.js/auto';
-import type { ChartData } from 'chart.js';
+import React, { useEffect, useRef } from 'react';
+import { Chart as ChartJS, RadialLinearScale, PointElement, LineElement, Filler, Tooltip, Legend } from 'chart.js';
+import { Stage } from './withFlowValidation';
 
-interface RadarChartProps {
-  data: ChartData;
+ChartJS.register(
+  RadialLinearScale,
+  PointElement,
+  LineElement,
+  Filler,
+  Tooltip,
+  Legend
+);
+
+interface DataPoint {
+  category: string;
+  score: number;
 }
 
-const RadarChart = ({ data }: RadarChartProps) => {
+interface RadarChartProps {
+  data: DataPoint[];
+  stage: Stage;
+}
+
+export default function RadarChart({ data, stage }: RadarChartProps): JSX.Element {
   const chartRef = useRef<HTMLCanvasElement>(null);
-  const chartInstance = useRef<Chart | null>(null);
+  const chartInstance = useRef<ChartJS | null>(null);
 
   useEffect(() => {
-    if (chartRef.current) {
-      chartInstance.current?.destroy();
-      chartInstance.current = new Chart(chartRef.current, {
-        type: 'radar',
-        data,
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-        }
-      });
+    if (!chartRef.current) return;
+
+    const ctx = chartRef.current.getContext('2d');
+    if (!ctx) return;
+
+    // Cleanup previous instance
+    if (chartInstance.current) {
+      chartInstance.current.destroy();
     }
 
+    const labels = data.map(item => item.category);
+    const scores = data.map(item => item.score);
+
+    chartInstance.current = new ChartJS(ctx, {
+      type: 'radar',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: `${stage} Assessment Results`,
+            data: scores,
+            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+            borderColor: 'rgb(54, 162, 235)',
+            borderWidth: 2,
+            pointBackgroundColor: 'rgb(54, 162, 235)',
+            pointBorderColor: '#fff',
+            pointHoverBackgroundColor: '#fff',
+            pointHoverBorderColor: 'rgb(54, 162, 235)'
+          }
+        ]
+      },
+      options: {
+        scales: {
+          r: {
+            min: 0,
+            max: 100,
+            ticks: {
+              stepSize: 20
+            }
+          }
+        },
+        plugins: {
+          legend: {
+            display: false
+          }
+        }
+      }
+    });
+
     return () => {
-      chartInstance.current?.destroy();
+      if (chartInstance.current) {
+        chartInstance.current.destroy();
+      }
     };
-  }, [data]);
+  }, [data, stage]);
 
   return (
-    <div style={{ width: '100%', height: '400px' }}>
+    <div className="radar-chart-container">
       <canvas ref={chartRef} />
     </div>
   );
-};
-
-export default RadarChart;
+}

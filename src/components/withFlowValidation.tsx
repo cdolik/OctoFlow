@@ -1,42 +1,38 @@
-import React from 'react';
+import React, { ComponentType } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useSessionGuard } from '../hooks/useSessionGuard';
 
 export type Stage = 'pre-seed' | 'seed' | 'series-a';
-export type Responses = Record<Stage, unknown>;
 
 export interface FlowValidationProps {
   currentStage: Stage;
-  responses: Responses;
+  responses: Record<Stage, unknown>;
   stages: Stage[];
 }
 
-interface ValidationResult {
-  isValid: boolean;
-  error?: string;
-  redirectTo?: string;
-}
+export function withFlowValidation<P extends FlowValidationProps>(
+  WrappedComponent: ComponentType<P>
+) {
+  return function WithFlowValidationComponent(props: P) {
+    const { currentStage, responses, stages } = props;
 
-export const withFlowValidation = <P extends FlowValidationProps>(
-  WrappedComponent: React.ComponentType<P>
-): React.FC<P> => {
-  const WithFlowValidation: React.FC<P> = (props: P) => {
-    const validateFlow = (): ValidationResult => {
-      const { currentStage, responses, stages } = props;
-      
-      // Validate stage exists
+    // Validate the flow
+    const validateFlow = (): { isValid: boolean; redirectTo?: string; error?: string } => {
       if (!stages.includes(currentStage)) {
-        throw new Error(`Invalid stage: ${currentStage}`);
+        return {
+          isValid: false,
+          error: `Invalid stage: ${currentStage}`,
+          redirectTo: '/stage-select'
+        };
       }
 
-      // Validate stage order
       const currentIndex = stages.indexOf(currentStage);
       const previousStage = stages[currentIndex - 1];
       
       if (previousStage && !responses[previousStage]) {
         return {
           isValid: false,
-          error: `Please complete ${previousStage} before proceeding`,
+          error: `Please complete ${previousStage} stage first`,
           redirectTo: `/assessment/${previousStage}`
         };
       }
@@ -44,37 +40,36 @@ export const withFlowValidation = <P extends FlowValidationProps>(
       return { isValid: true };
     };
 
-    try {
-      const validation = validateFlow();
-      
-      if (!validation.isValid) {
-        return (
-          <Navigate 
-            to={validation.redirectTo!} 
-            state={{ error: validation.error }} 
-            replace 
-          />
-        );
-      }
+    // Use the session guard hook
+    const { isLoading, isAuthorized } = useSessionGuard(currentStage);
 
-      return <WrappedComponent {...props} />;
-    } catch (error) {
-      console.error('Flow validation error:', error);
+    if (isLoading) {
+      return <div>Loading...</div>;
+    }
+
+    if (!isAuthorized) {
       return (
         <Navigate 
-          to="/error" 
-          state={{ error: (error as Error).message }} 
+          to="/stage-select" 
+          replace 
+          state={{ error: "Please complete previous stages first" }}
+        />
+      );
+    }
+
+    const validation = validateFlow();
+    if (!validation.isValid && validation.redirectTo) {
+      return (
+        <Navigate 
+          to={validation.redirectTo} 
+          state={{ error: validation.error }} 
           replace 
         />
       );
     }
+
+    return <WrappedComponent {...props} />;
   };
-
-  WithFlowValidation.displayName = `WithFlowValidation(${
-    WrappedComponent.displayName || WrappedComponent.name || 'Component'
-  })`;
-
-  return WithFlowValidation;
-};
+}
 
 export default withFlowValidation;

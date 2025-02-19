@@ -1,37 +1,39 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { StageType, SessionGuardResult } from './useSessionGuard.d';
 
-/**
- * Hook to protect routes based on assessment state
- * @param {StageType} requiredStage - The stage being accessed
- * @returns {SessionGuardResult} The session guard state
- */
+export type StageType = 'assessment' | 'summary' | 'results';
+
+export interface SessionGuardResult {
+  isLoading: boolean;
+  isAuthorized: boolean;
+}
+
 export function useSessionGuard(requiredStage: StageType): SessionGuardResult {
-  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const checkSession = () => {
       try {
         const currentStage = sessionStorage.getItem('currentStage');
-        const hasCompletedPreviousStage = sessionStorage.getItem('completedStages');
+        const completedStages = sessionStorage.getItem('completedStages');
         
         if (!currentStage) {
           setIsAuthorized(false);
+          navigate('/stage-select', { replace: true });
           return;
         }
 
-        const completedStages = hasCompletedPreviousStage 
-          ? JSON.parse(hasCompletedPreviousStage) 
-          : [];
-
         const stages: StageType[] = ['assessment', 'summary', 'results'];
+        const completedArray = completedStages ? JSON.parse(completedStages) as StageType[] : [];
         const currentIndex = stages.indexOf(currentStage as StageType);
         const requiredIndex = stages.indexOf(requiredStage);
 
-        setIsAuthorized(currentIndex >= requiredIndex && completedStages.includes(stages[requiredIndex - 1]));
+        setIsAuthorized(
+          currentIndex >= requiredIndex && 
+          (requiredIndex === 0 || completedArray.includes(stages[requiredIndex - 1]))
+        );
       } catch (error) {
         console.error('Session check failed:', error);
         setIsAuthorized(false);
@@ -41,7 +43,7 @@ export function useSessionGuard(requiredStage: StageType): SessionGuardResult {
     };
 
     checkSession();
-  }, [requiredStage]);
+  }, [requiredStage, navigate]);
 
   return { isLoading, isAuthorized };
 }

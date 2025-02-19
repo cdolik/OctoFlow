@@ -5,31 +5,37 @@ import { trackQuestionAnswer, trackAssessmentComplete } from '../utils/analytics
 import GitHubTooltip from './GitHubTooltip';
 import ProgressTracker from './ProgressTracker';
 import AutoSave from './AutoSave';
-import withFlowValidation, { Stage, Responses } from './withFlowValidation';
+import { withFlowValidation, Stage } from './withFlowValidation';
 import AssessmentErrorBoundary from './AssessmentErrorBoundary';
 import './styles.css';
+
+interface Option {
+  value: number;
+  text: string;
+}
 
 interface Question {
   id: string;
   text: string;
   tooltipTerm?: string;
-  options: Array<{
-    value: string;
-    text: string;
-  }>;
+  options: Option[];
 }
 
 interface AssessmentProps {
-  stage: Stage;
-  onComplete: (responses: Responses) => void;
+  stage: {
+    id: Stage;
+    name: string;
+  };
+  onComplete: (responses: Record<string, number>) => void;
 }
 
-const Assessment: React.FC<AssessmentProps> = ({ stage, onComplete }) => {
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
-  const [responses, setResponses] = useState<Record<string, string>>({});
-  const questions = getStageQuestions(stage) as Question[];
+type Responses = Record<string, number>;
 
-  // Load saved responses on mount
+const Assessment: React.FC<AssessmentProps> = ({ stage, onComplete }) => {
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [responses, setResponses] = useState<Responses>({});
+  const questions = getStageQuestions(stage.id);
+
   useEffect(() => {
     const savedResponses = getAssessmentResponses();
     if (Object.keys(savedResponses).length > 0) {
@@ -37,11 +43,11 @@ const Assessment: React.FC<AssessmentProps> = ({ stage, onComplete }) => {
     }
   }, []);
 
-  const handleSave = (data: Record<string, string>): void => {
+  const handleSave = (data: Responses) => {
     saveAssessmentResponses(data);
   };
 
-  const handleAnswer = (questionId: string, value: string): void => {
+  const handleAnswer = (questionId: string, value: number) => {
     const newResponses = {
       ...responses,
       [questionId]: value
@@ -51,28 +57,22 @@ const Assessment: React.FC<AssessmentProps> = ({ stage, onComplete }) => {
     trackQuestionAnswer(questionId, value);
   };
 
-  const handleNext = (): void => {
+  const handleNext = () => {
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
     } else {
       trackAssessmentComplete(responses);
-      onComplete(responses as unknown as Responses);
+      onComplete(responses);
     }
   };
 
-  const handleBack = (): void => {
+  const handleBack = () => {
     if (currentQuestionIndex > 0) {
       setCurrentQuestionIndex(prev => prev - 1);
     }
   };
 
-  const currentQuestion = questions[currentQuestionIndex];
-  const progress = (currentQuestionIndex + 1) / questions.length;
-  const canProceed = responses[currentQuestion?.id] !== undefined;
-
-  return (
-    <AssessmentErrorBoundary>
-      <AutoSave data={responses} onSave={handleSave} interval={30000} />
+  const currentQuestion = questions[currentQuestionIndex] as Question;
       <div className="assessment-container">
         <ProgressTracker 
           progress={progress}

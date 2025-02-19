@@ -67,3 +67,39 @@ describe('useSessionGuard', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true });
   });
 });
+
+import { renderHook } from '@testing-library/react-hooks';
+import { useSessionGuard } from './useSessionGuard';
+
+describe('useSessionGuard', () => {
+  beforeEach(() => {
+    sessionStorage.clear();
+  });
+
+  it('should return unauthorized when no session exists', () => {
+    const { result } = renderHook(() => useSessionGuard('assessment'));
+    
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.isAuthorized).toBe(false);
+  });
+
+  it('should authorize user for current stage', () => {
+    sessionStorage.setItem('currentStage', 'assessment');
+    sessionStorage.setItem('completedStages', JSON.stringify(['assessment']));
+    
+    const { result } = renderHook(() => useSessionGuard('assessment'));
+    
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.isAuthorized).toBe(true);
+  });
+
+  it('should not authorize user for future stages', () => {
+    sessionStorage.setItem('currentStage', 'assessment');
+    sessionStorage.setItem('completedStages', JSON.stringify(['assessment']));
+    
+    const { result } = renderHook(() => useSessionGuard('results'));
+    
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.isAuthorized).toBe(false);
+  });
+});

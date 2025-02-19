@@ -1,88 +1,54 @@
 import '@testing-library/jest-dom';
+import { Chart as ChartJS } from 'chart.js';
 import 'jest-canvas-mock';
 
-// Enhanced storage mock with validation and error simulation
-class StorageMock {
-  constructor() {
-    this.store = new Map();
-    this.quotaError = false;
-    this.maxSize = 5242880; // 5MB limit
-    this.currentSize = 0;
-  }
-
-  getItem(key) {
-    return this.store.get(key) || null;
-  }
-
-  setItem(key, value) {
-    const size = new Blob([value]).size;
-    if (this.quotaError || (this.currentSize + size > this.maxSize)) {
-    if (this.quotaError || (this.currentSize + size > this.maxSize)) {
-      throw new DOMException('Quota exceeded', 'QuotaExceededError');
-    }
-    this.currentSize += size;
-  }
-
-  removeItem(key) {
-    const value = this.store.get(key);
-    if (value) {
-      const size = new Blob([value]).size;
-      this.currentSize -= size;
-    }
-    this.store.delete(key);
-  }
-  clear() {
-    this.store.clear();
-    this.currentSize = 0;
-    this.quotaError = false;
-  }
-  }
-
-  get length() {
-    return this.store.size;
-  }
-
-  key(n) {
-    return [...this.store.keys()][n];
-  }
-
-  // Test helper methods
-  simulateQuotaError(enable = true) {
-    this.quotaError = enable;
-  }
-}
-
-// Create storage instances
-const localStorage = new StorageMock();
-const sessionStorage = new StorageMock();
-
-// Mock storage
-Object.defineProperty(window, 'localStorage', { value: localStorage });
-Object.defineProperty(window, 'sessionStorage', { value: sessionStorage });
-
-// Define the mock before using it
+// Type-safe Chart.js mock
 const mockChart = {
   register: jest.fn(),
   Chart: jest.fn(() => ({
     destroy: jest.fn(),
     update: jest.fn(),
-  })),
+    data: {
+      datasets: [],
+      labels: []
+    },
+    options: {}
+  })) as unknown as typeof ChartJS,
+  Radar: jest.fn()
 };
 
-// Mock chart.js module
-jest.mock('chart.js', () => mockChart);
+jest.mock('chart.js', () => ({
+  ...mockChart,
+  Chart: mockChart.Chart,
+  register: mockChart.register,
+  Radar: mockChart.Radar
+}));
+
+// Mock sessionStorage
+const mockStorage = new Map<string, string>();
+
+Object.defineProperty(window, 'sessionStorage', {
+  value: {
+    getItem: jest.fn((key: string) => mockStorage.get(key)),
+    setItem: jest.fn((key: string, value: string) => mockStorage.set(key, value)),
+    removeItem: jest.fn((key: string) => mockStorage.delete(key)),
+    clear: jest.fn(() => mockStorage.clear()),
+    length: mockStorage.size,
+    key: jest.fn((index: number) => Array.from(mockStorage.keys())[index])
+  }
+});
 
 // Mock fetch API
 global.fetch = jest.fn(() =>
   Promise.resolve({
     ok: true,
     json: () => Promise.resolve({}),
-    text: () => Promise.resolve(""),
+    text: () => Promise.resolve(''),
     blob: () => Promise.resolve(new Blob()),
     arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
     headers: new Headers(),
     status: 200,
-    statusText: "OK"
+    statusText: 'OK'
   })
 );
 
@@ -213,18 +179,18 @@ global.IntersectionObserver = IntersectionObserverMock;
 
 // Test cleanup
 beforeEach(() => {
-  localStorage.clear();
-  sessionStorage.clear();
+  mockStorage.clear();
   jest.resetModules();
   document.body.innerHTML = '';
   fetch.mockClear();
   jest.useFakeTimers();
+  jest.clearAllMocks();
+  global.fetch.mockClear();
 });
 
 afterEach(() => {
   document.body.innerHTML = '';
   jest.clearAllMocks();
-  Chart.register.mockClear();
   
   // Clear all timers
   jest.runOnlyPendingTimers();

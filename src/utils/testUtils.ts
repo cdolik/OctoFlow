@@ -1,5 +1,7 @@
 import { Chart } from 'chart.js';
 import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import type { Stage, StageInfo } from 'octoflow';
 
 // Chart.js test utilities
 export const mockChartInstance = (chartConfig = {}) => {
@@ -65,4 +67,54 @@ export const cleanupChartTests = () => {
   // Clean up any chart instances that might be left over
   const charts = Object.values(Chart.instances);
   charts.forEach(chart => chart.destroy());
+};
+
+// Mock data for stages
+export const mockStages: Stage[] = ['pre-seed', 'seed', 'series-a'];
+
+export const mockStageInfo: StageInfo = {
+  id: 'pre-seed',
+  name: 'Pre-seed Stage'
+};
+
+export const mockResponses = {
+  'pre-seed': { q1: 1, q2: 2 },
+  'seed': { q1: 3, q2: 4 },
+  'series-a': { q1: 5, q2: 6 }
+};
+
+// Render with router utility
+export const renderWithRouter = (
+  ui: React.ReactElement,
+  { route = '/' } = {}
+) => {
+  window.history.pushState({}, 'Test page', route);
+
+  return {
+    ...render(ui, {
+      wrapper: ({ children }) => <MemoryRouter initialEntries={[route]}>{children}</MemoryRouter>
+    })
+  };
+};
+
+// Mock local storage utility
+export const mockLocalStorage = () => {
+  const storage = new Map();
+  
+  const mockImpl = {
+    getItem: (key: string) => storage.get(key),
+    setItem: (key: string, value: string) => storage.set(key, value),
+    removeItem: (key: string) => storage.delete(key),
+    clear: () => storage.clear(),
+    length: storage.size,
+    key: (index: number) => Array.from(storage.keys())[index],
+  };
+
+  beforeEach(() => {
+    storage.clear();
+    Object.defineProperty(window, 'localStorage', { value: mockImpl });
+    Object.defineProperty(window, 'sessionStorage', { value: mockImpl });
+  });
+
+  return mockImpl;
 };

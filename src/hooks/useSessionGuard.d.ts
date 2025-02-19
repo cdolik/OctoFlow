@@ -1,13 +1,8 @@
-/**
- * @typedef {'assessment' | 'summary' | 'results'} StageType
- */
+export type StageType = 'assessment' | 'summary' | 'results';
 
-/**
- * @typedef {Object} SessionGuardResult
- * @property {boolean} isLoading - Whether the guard is still checking the session
- * @property {boolean} isAuthorized - Whether the user is authorized to access the route
- */
-
-declare module 'hooks/useSessionGuard' {
-  export function useSessionGuard(requiredStage: StageType): SessionGuardResult;
+export interface SessionGuardResult {
+  isLoading: boolean;
+  isAuthorized: boolean;
 }
+
+export function useSessionGuard(requiredStage: StageType): SessionGuardResult;
