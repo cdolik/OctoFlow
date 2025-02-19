@@ -1,11 +1,13 @@
 import '@testing-library/jest-dom';
 import 'jest-canvas-mock';
-import { Chart } from 'chart.js';
 
-// Enhanced storage mock with persistence
+// Enhanced storage mock with validation and error simulation
 class StorageMock {
   constructor() {
     this.store = new Map();
+    this.quotaError = false;
+    this.maxSize = 5242880; // 5MB limit
+    this.currentSize = 0;
   }
 
   getItem(key) {
@@ -13,15 +15,27 @@ class StorageMock {
   }
 
   setItem(key, value) {
-    this.store.set(key, String(value));
+    const size = new Blob([value]).size;
+    if (this.quotaError || (this.currentSize + size > this.maxSize)) {
+    if (this.quotaError || (this.currentSize + size > this.maxSize)) {
+      throw new DOMException('Quota exceeded', 'QuotaExceededError');
+    }
+    this.currentSize += size;
   }
 
   removeItem(key) {
+    const value = this.store.get(key);
+    if (value) {
+      const size = new Blob([value]).size;
+      this.currentSize -= size;
+    }
     this.store.delete(key);
   }
-
   clear() {
     this.store.clear();
+    this.currentSize = 0;
+    this.quotaError = false;
+  }
   }
 
   get length() {
@@ -30,6 +44,11 @@ class StorageMock {
 
   key(n) {
     return [...this.store.keys()][n];
+  }
+
+  // Test helper methods
+  simulateQuotaError(enable = true) {
+    this.quotaError = enable;
   }
 }
 
@@ -41,22 +60,17 @@ const sessionStorage = new StorageMock();
 Object.defineProperty(window, 'localStorage', { value: localStorage });
 Object.defineProperty(window, 'sessionStorage', { value: sessionStorage });
 
-// Mock Chart.js
-jest.mock('chart.js', () => ({
-  Chart: {
-    register: jest.fn(),
-    defaults: {
-      responsive: true,
-      maintainAspectRatio: false
-    }
-  },
-  RadialLinearScale: jest.fn(),
-  PointElement: jest.fn(),
-  LineElement: jest.fn(),
-  Filler: jest.fn(),
-  Tooltip: jest.fn(),
-  Legend: jest.fn()
-}));
+// Define the mock before using it
+const mockChart = {
+  register: jest.fn(),
+  Chart: jest.fn(() => ({
+    destroy: jest.fn(),
+    update: jest.fn(),
+  })),
+};
+
+// Mock chart.js module
+jest.mock('chart.js', () => mockChart);
 
 // Mock fetch API
 global.fetch = jest.fn(() =>
@@ -82,8 +96,11 @@ beforeAll(() => {
       typeof args[0] === 'string' &&
       (args[0].includes('React does not recognize the') ||
        args[0].includes('Warning: An update to') ||
-       args[0].includes('Warning: Cannot update a component'))
-    ) {
+       args[0].includes('Warning: Cannot update a component') ||
+       args[0]?.includes?.('React will try to recreate this component tree') ||
+       args[0]?.includes?.('ErrorBoundary') ||
+       /Error occurred in the error boundary/i.test(args[0] || '')
+    )) {
       return;
     }
     originalError.call(console, ...args);
@@ -201,6 +218,7 @@ beforeEach(() => {
   jest.resetModules();
   document.body.innerHTML = '';
   fetch.mockClear();
+  jest.useFakeTimers();
 });
 
 afterEach(() => {
@@ -208,18 +226,22 @@ afterEach(() => {
   jest.clearAllMocks();
   Chart.register.mockClear();
   
-  // Reset all timers and provide better error context
-  if (jest.getTimerCount() > 0) {
-    console.warn(`Test completed with ${jest.getTimerCount()} timers still running`);
-    jest.useRealTimers();
-  }
+  // Clear all timers
+  jest.runOnlyPendingTimers();
+  jest.useRealTimers();
   
-  // Clear any queued microtasks and provide error context for async operations
-  return Promise.resolve().then(() => {
-    const pendingTimers = jest.getTimerCount();
-    if (pendingTimers > 0) {
-      console.warn(`Clean up completed with ${pendingTimers} timers still pending`);
-    }
+  // Verify no timers are leaked
+  return new Promise(resolve => {
+    setImmediate(() => {
+      const pendingTimers = jest.getTimerCount();
+      if (pendingTimers > 0) {
+        console.warn(
+          `Test completed with ${pendingTimers} timer(s) still pending. ` +
+          'This may cause test instability. Please ensure all timers are cleared.'
+        );
+      }
+      resolve();
+    });
   });
 });
 
@@ -279,4 +301,23 @@ expect.extend({
       pass
     };
   }
+});
+
+// Enhanced error boundary testing
+const originalConsoleError = console.error;
+beforeAll(() => {
+  console.error = (...args) => {
+    if (
+      args[0]?.includes?.('React will try to recreate this component tree') ||
+      args[0]?.includes?.('ErrorBoundary') ||
+      /Error occurred in the error boundary/i.test(args[0] || '')
+    ) {
+      return; // Suppress expected error boundary messages
+    }
+    originalConsoleError.apply(console, args);
+  };
+});
+
+afterAll(() => {
+  console.error = originalConsoleError;
 });

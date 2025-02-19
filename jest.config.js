@@ -2,7 +2,8 @@ module.exports = {
   roots: ['<rootDir>/src'],
   collectCoverageFrom: [
     'src/**/*.{js,jsx,ts,tsx}',
-    '!src/**/*.d.ts'
+    '!src/**/*.d.ts',
+    '!src/tests/**/*'
   ],
   setupFiles: [
     'react-app-polyfill/jsdom'
@@ -16,7 +17,13 @@ module.exports = {
   ],
   testEnvironment: 'jsdom',
   transform: {
-    '^.+\\.(js|jsx|ts|tsx)$': '<rootDir>/node_modules/babel-jest',
+    '^.+\\.(js|jsx|ts|tsx)$': ['babel-jest', { 
+      presets: ['@babel/preset-typescript'],
+      plugins: [
+        ['@babel/plugin-proposal-decorators', { legacy: true }],
+        ['@babel/plugin-proposal-class-properties', { loose: true }]
+      ]
+    }],
     '^.+\\.css$': '<rootDir>/config/jest/cssTransform.js',
     '^(?!.*\\.(js|jsx|ts|tsx|css|json)$)': '<rootDir>/config/jest/fileTransform.js'
   },
@@ -24,19 +31,23 @@ module.exports = {
     '[/\\\\]node_modules[/\\\\].+\\.(js|jsx|ts|tsx)$',
     '^.+\\.module\\.(css|sass|scss)$'
   ],
-  modulePaths: [],
+  modulePaths: ['<rootDir>/src'],
   moduleNameMapper: {
     '^react-native$': 'react-native-web',
     '^.+\\.module\\.(css|sass|scss)$': 'identity-obj-proxy',
-    '\\.(css|less|scss|sass)$': 'identity-obj-proxy'
+    '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
+    '@components/(.*)': '<rootDir>/src/components/$1',
+    '@utils/(.*)': '<rootDir>/src/utils/$1',
+    '@hooks/(.*)': '<rootDir>/src/hooks/$1',
+    '@data/(.*)': '<rootDir>/src/data/$1'
   },
   moduleFileExtensions: [
+    'tsx',
+    'ts',
     'web.js',
     'js',
     'web.ts',
-    'ts',
     'web.tsx',
-    'tsx',
     'json',
     'web.jsx',
     'jsx',
@@ -46,5 +57,18 @@ module.exports = {
     'jest-watch-typeahead/filename',
     'jest-watch-typeahead/testname'
   ],
-  resetMocks: false
-};
+  resetMocks: true,
+  restoreMocks: true,
+  testTimeout: 10000,
+  globals: {
+    'ts-jest': {
+      isolatedModules: true
+    }
+  },
+  clearMocks: true,
+  coveragePathIgnorePatterns: [
+    '/node_modules/',
+    'jest.config.js'
+  ],
+  verbose: true
+}

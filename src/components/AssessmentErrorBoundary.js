@@ -1,4 +1,5 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import { clearAssessment, getAssessmentState } from '../utils/storage';
 import { trackCTAClick, trackError } from '../utils/analytics';
 
@@ -10,7 +11,7 @@ class AssessmentErrorBoundary extends React.Component {
     canRecover: true
   };
 
-  static getDerivedStateFromError(error: Error) {
+  static getDerivedStateFromError(error) {
     // Check if error is related to data corruption
     const isDataError = error.message.includes('storage') || 
                        error.message.includes('assessment state');
@@ -22,7 +23,7 @@ class AssessmentErrorBoundary extends React.Component {
     };
   }
 
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+  componentDidCatch(error, errorInfo) {
     const assessmentState = getAssessmentState();
     
     this.setState({
@@ -101,5 +102,8 @@ class AssessmentErrorBoundary extends React.Component {
     return this.props.children;
   }
 }
+AssessmentErrorBoundary.propTypes = {
+  children: PropTypes.node
+};
 
 export default AssessmentErrorBoundary;
