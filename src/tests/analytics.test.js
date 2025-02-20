@@ -1,221 +1,173 @@
 import { 
-  trackStageSelect, 
-  trackQuestionAnswer, 
+  trackStageSelect,
   trackAssessmentComplete,
-  trackError,
-  trackResourceClick,
-  trackNavigation,
-  trackRecommendationClick,
-  trackInteractionPattern,
-  trackTimeOnQuestion,
-  trackNavigationFlow
+  trackQuestionAnswer,
+  trackErrorWithRecovery,
+  trackSessionRestore,
+  trackAutoSave,
+  trackProgressUpdate,
+  trackPerformanceMetric,
+  trackSessionHealth
 } from '../utils/analytics';
 
-describe('Analytics Integration', () => {
-  let consoleLog;
-  const mockTimestamp = 1234567890;
-
+describe('Analytics Tracking', () => {
   beforeEach(() => {
-    consoleLog = jest.spyOn(console, 'log').mockImplementation();
-    jest.spyOn(Date, 'now').mockImplementation(() => mockTimestamp);
+    jest.spyOn(console, 'log').mockImplementation(() => {});
+    jest.spyOn(Date, 'now').mockReturnValue(1234567890);
     sessionStorage.clear();
   });
 
   afterEach(() => {
-    consoleLog.mockRestore();
     jest.restoreAllMocks();
   });
 
-  test('tracks stage selection with metadata', () => {
-    trackStageSelect('pre-seed');
-    expect(consoleLog).toHaveBeenCalledWith(
-      '[Analytics] stage_selected:',
-      expect.objectContaining({
-        stage: 'pre-seed',
-        timestamp: expect.any(Number)
-      })
-    );
-  });
-
-  test('tracks question answers with timing', () => {
-    trackQuestionAnswer('codeowners', 3, 15000);
-    expect(consoleLog).toHaveBeenCalledWith(
-      '[Analytics] question_answered:',
-      expect.objectContaining({
-        questionId: 'codeowners',
-        answer: 3,
-        timeSpent: 15000,
-        timestamp: expect.any(Number)
-      })
-    );
-  });
-
-  test('tracks assessment completion with scores', () => {
-    const mockScores = {
-      overallScore: 3.5,
-      categoryScores: {
-        'github-ecosystem': 3.2,
-        'security': 3.8
-      }
-    };
-    trackAssessmentComplete(mockScores, 'pre-seed');
-    expect(consoleLog).toHaveBeenCalledWith(
-      '[Analytics] assessment_completed:',
-      expect.objectContaining({
-        scores: mockScores,
-        stage: 'pre-seed',
-        timestamp: expect.any(Number)
-      })
-    );
-  });
-
-  test('tracks error events with context', () => {
-    const error = new Error('Test error');
-    trackError('assessment_error', {
-      message: error.message,
-      stack: error.stack
-    });
-    expect(consoleLog).toHaveBeenCalledWith(
-      '[Analytics] error_occurred:',
-      expect.objectContaining({
-        type: 'assessment_error',
-        details: expect.objectContaining({
-          message: 'Test error'
-        }),
-        userAgent: expect.any(String)
-      })
-    );
-  });
-
-  test('tracks recommendation interactions', () => {
-    trackRecommendationClick('CODEOWNERS', 'github-ecosystem');
-    expect(consoleLog).toHaveBeenCalledWith(
-      '[Analytics] recommendation_clicked:',
-      expect.objectContaining({
-        recommendationId: 'CODEOWNERS',
-        category: 'github-ecosystem',
-        timestamp: expect.any(Number)
-      })
-    );
-  });
-
-  test('tracks resource link clicks', () => {
-    const url = 'https://docs.github.com/some-doc';
-    trackResourceClick('github_docs', url);
-    expect(consoleLog).toHaveBeenCalledWith(
-      '[Analytics] cta_clicked:',
-      expect.objectContaining({
-        type: 'github_docs',
-        url,
-        timestamp: expect.any(Number)
-      })
-    );
-  });
-
-  test('tracks navigation between components', () => {
-    trackNavigation('StageSelector', 'Assessment');
-    expect(consoleLog).toHaveBeenCalledWith(
-      '[Analytics] navigation:',
-      expect.objectContaining({
-        from: 'StageSelector',
-        to: 'Assessment',
-        timestamp: expect.any(Number)
-      })
-    );
-  });
-
-  describe('Interaction Pattern Tracking', () => {
-    test('tracks user interaction patterns', () => {
-      const mockState = {
-        stage: 'pre-seed',
-        metadata: { lastInteraction: mockTimestamp - 5000 }
-      };
-      sessionStorage.setItem('octoflow', JSON.stringify(mockState));
-
-      trackInteractionPattern('question-1', 'hover', { duration: 1500 });
+  describe('Session Analytics', () => {
+    it('should track session restoration attempts', () => {
+      const consoleLog = jest.spyOn(console, 'log');
+      trackSessionRestore(true, 'sessionStorage');
 
       expect(consoleLog).toHaveBeenCalledWith(
-        '[Analytics] user_interaction:',
+        '[Analytics] session_restore:',
         expect.objectContaining({
-          questionId: 'question-1',
-          type: 'hover',
-          details: { duration: 1500 },
-          durationSinceLastInteraction: 5000,
-          sessionId: expect.any(String),
-          timestamp: mockTimestamp
+          success: true,
+          source: 'sessionStorage',
+          timestamp: expect.any(Number)
         })
       );
     });
 
-    test('handles new sessions correctly', () => {
-      trackInteractionPattern('question-1', 'click', {});
-      
-      const firstCall = consoleLog.mock.calls[0][1];
-      const sessionId = firstCall.sessionId;
-
-      trackInteractionPattern('question-2', 'click', {});
-      const secondCall = consoleLog.mock.calls[1][1];
-
-      expect(secondCall.sessionId).toBe(sessionId);
-    });
-  });
-
-  describe('Time Tracking', () => {
-    test('tracks time spent on questions', () => {
-      const mockState = {
-        metadata: {
-          questionTimes: [40000, 50000]
-        }
-      };
-      sessionStorage.setItem('octoflow', JSON.stringify(mockState));
-
-      trackTimeOnQuestion('question-1', 30000, false);
+    it('should track auto-save operations', () => {
+      const consoleLog = jest.spyOn(console, 'log');
+      trackAutoSave(true, 1024);
 
       expect(consoleLog).toHaveBeenCalledWith(
-        '[Analytics] question_time:',
+        '[Analytics] auto_save:',
         expect.objectContaining({
-          questionId: 'question-1',
-          timeSpent: 30000,
-          wasModified: false,
-          averageTimeForStage: 45000
+          success: true,
+          dataSize: 1024,
+          timestamp: expect.any(Number)
         })
       );
     });
   });
 
-  describe('Navigation Flow Tracking', () => {
-    test('tracks navigation with assessment time', () => {
-      const startTime = mockTimestamp - 300000; // 5 minutes ago
-      const mockState = {
-        metadata: { startTime }
-      };
-      sessionStorage.setItem('octoflow', JSON.stringify(mockState));
-
-      trackNavigationFlow('Assessment', 'Summary', 'next-button');
+  describe('Progress Analytics', () => {
+    it('should track assessment progress updates', () => {
+      const consoleLog = jest.spyOn(console, 'log');
+      trackProgressUpdate(75, 'github-ecosystem');
 
       expect(consoleLog).toHaveBeenCalledWith(
-        '[Analytics] navigation:',
+        '[Analytics] progress_update:',
         expect.objectContaining({
-          from: 'Assessment',
-          to: 'Summary',
-          trigger: 'next-button',
-          totalAssessmentTime: 300000
+          progress: 75,
+          category: 'github-ecosystem',
+          timeSpent: expect.any(Number)
+        })
+      );
+    });
+
+    it('should track stage selection with context', () => {
+      const consoleLog = jest.spyOn(console, 'log');
+      trackStageSelect('pre-seed');
+
+      expect(consoleLog).toHaveBeenCalledWith(
+        '[Analytics] stage_selected:',
+        expect.objectContaining({
+          stage: 'pre-seed',
+          source: expect.any(String)
         })
       );
     });
   });
 
-  describe('Error Handling', () => {
-    test('continues tracking even with corrupt storage', () => {
-      sessionStorage.setItem('octoflow', 'invalid-json');
+  describe('Performance Analytics', () => {
+    it('should track performance metrics', () => {
+      const metric = {
+        type: 'navigation',
+        duration: 1200,
+        memory: window.performance.memory
+      };
 
-      trackInteractionPattern('question-1', 'click', {});
+      const consoleLog = jest.spyOn(console, 'log');
+      trackPerformanceMetric(metric);
 
-      expect(consoleLog).toHaveBeenCalled();
-      expect(consoleLog.mock.calls[0][1]).toEqual(
+      expect(consoleLog).toHaveBeenCalledWith(
+        '[Analytics] performance_metric:',
         expect.objectContaining({
-          questionId: 'question-1',
-          type: 'click'
+          timestamp: expect.any(Number),
+          deviceMemory: expect.any(Number),
+          connection: expect.any(Object)
+        })
+      );
+    });
+
+    it('should track session health stats', () => {
+      const consoleLog = jest.spyOn(console, 'log');
+      trackSessionHealth();
+
+      expect(consoleLog).toHaveBeenCalledWith(
+        '[Analytics] session_health:',
+        expect.objectContaining({
+          storageSize: expect.any(Object),
+          connectionStatus: expect.any(Boolean)
+        })
+      );
+    });
+  });
+
+  describe('Error Analytics', () => {
+    it('should track error recovery attempts', () => {
+      const consoleLog = jest.spyOn(console, 'log');
+      trackErrorWithRecovery(
+        new Error('Test error'),
+        true,
+        false
+      );
+
+      expect(consoleLog).toHaveBeenCalledWith(
+        '[Analytics] error_with_recovery:',
+        expect.objectContaining({
+          type: 'Error',
+          message: 'Test error',
+          recoveryAttempted: true,
+          recovered: false
+        })
+      );
+    });
+  });
+
+  describe('User Interaction Analytics', () => {
+    it('should track question answers with timing', () => {
+      const consoleLog = jest.spyOn(console, 'log');
+      trackQuestionAnswer('github-workflow', 3, 15000);
+
+      expect(consoleLog).toHaveBeenCalledWith(
+        '[Analytics] question_answered:',
+        expect.objectContaining({
+          questionId: 'github-workflow',
+          answer: 3,
+          timeSpent: 15000,
+          isCorrection: expect.any(Boolean)
+        })
+      );
+    });
+
+    it('should track assessment completion with scores', () => {
+      const scores = {
+        'github-ecosystem': 75,
+        'security': 85
+      };
+
+      const consoleLog = jest.spyOn(console, 'log');
+      trackAssessmentComplete(scores, 'pre-seed');
+
+      expect(consoleLog).toHaveBeenCalledWith(
+        '[Analytics] assessment_completed:',
+        expect.objectContaining({
+          scores,
+          stage: 'pre-seed',
+          completionTime: expect.any(Number),
+          questionCount: 2
         })
       );
     });

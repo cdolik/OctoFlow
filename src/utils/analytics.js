@@ -1,4 +1,3 @@
-
 // Base logging function
 const logEvent = (eventName, data) => {
   const baseData = {
@@ -153,6 +152,68 @@ export const trackNavigationFlow = (from, to, trigger) => {
   });
 };
 
+// Enhanced error tracking
+export const trackErrorWithRecovery = (error, recoveryAttempted, recovered) => {
+  logEvent('error_with_recovery', {
+    type: error.name,
+    message: error.message,
+    stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+    recoveryAttempted,
+    recovered,
+    sessionContext: getCurrentSessionContext(),
+    errorCount: getErrorCount()
+  });
+};
+
+// Session management tracking
+export const trackSessionRestore = (success, source) => {
+  logEvent('session_restore', {
+    success,
+    source, // 'sessionStorage' or 'localStorage'
+    timestamp: Date.now(),
+    sessionAge: getSessionAge()
+  });
+};
+
+export const trackAutoSave = (success, dataSize) => {
+  logEvent('auto_save', {
+    success,
+    dataSize,
+    timestamp: Date.now(),
+    saveDuration: getLastSaveDuration()
+  });
+};
+
+// Enhanced progress tracking
+export const trackProgressUpdate = (progress, category) => {
+  logEvent('progress_update', {
+    progress,
+    category,
+    timeSpent: getTimeInCategory(category),
+    totalTime: getTotalAssessmentTime()
+  });
+};
+
+// Performance metrics
+export const trackPerformanceMetric = (metric) => {
+  logEvent('performance_metric', {
+    ...metric,
+    timestamp: Date.now(),
+    deviceMemory: navigator.deviceMemory,
+    connection: getConnectionInfo()
+  });
+};
+
+// Session health checks
+export const trackSessionHealth = () => {
+  logEvent('session_health', {
+    storageSize: getStorageSize(),
+    lastSaveTime: getLastSaveTime(),
+    sessionErrors: getSessionErrors(),
+    connectionStatus: navigator.onLine
+  });
+};
+
 const isAnswerCorrection = (questionId) => {
   try {
     const responses = JSON.parse(sessionStorage.getItem('octoflow'))?.responses || {};
@@ -237,4 +298,81 @@ const getTotalAssessmentTime = () => {
   } catch {
     return null;
   }
+};
+
+const getSessionAge = () => {
+  try {
+    const session = JSON.parse(sessionStorage.getItem('octoflow_session'));
+    return session?.timestamp ? Date.now() - session.timestamp : null;
+  } catch {
+    return null;
+  }
+};
+
+const getLastSaveDuration = () => {
+  try {
+    const state = JSON.parse(sessionStorage.getItem('octoflow')) || {};
+    return state.metadata?.lastSaveDuration || null;
+  } catch {
+    return null;
+  }
+};
+
+const getTimeInCategory = (category) => {
+  try {
+    const state = JSON.parse(sessionStorage.getItem('octoflow')) || {};
+    const categoryTimes = state.metadata?.categoryTimes || {};
+    return categoryTimes[category] || 0;
+  } catch {
+    return 0;
+  }
+};
+
+const getConnectionInfo = () => {
+  if (!navigator.connection) return null;
+  return {
+    type: navigator.connection.effectiveType,
+    downlink: navigator.connection.downlink,
+    rtt: navigator.connection.rtt
+  };
+};
+
+const getStorageSize = () => {
+  try {
+    const octoflowSize = new Blob([sessionStorage.getItem('octoflow') || '']).size;
+    const responsesSize = new Blob([sessionStorage.getItem('assessment_responses') || '']).size;
+    return {
+      octoflow: octoflowSize,
+      responses: responsesSize,
+      total: octoflowSize + responsesSize
+    };
+  } catch {
+    return null;
+  }
+};
+
+const getLastSaveTime = () => {
+  try {
+    const state = JSON.parse(sessionStorage.getItem('octoflow')) || {};
+    return state.metadata?.lastSave || null;
+  } catch {
+    return null;
+  }
+};
+
+const getSessionErrors = () => {
+  try {
+    return JSON.parse(localStorage.getItem('octoflow_errors') || '[]');
+  } catch {
+    return [];
+  }
+};
+
+const getCurrentSessionContext = () => {
+  return {
+    ...getCurrentFlowState(),
+    storageHealth: getStorageSize() !== null,
+    hasLocalStorageBackup: !!localStorage.getItem('octoflow_session_backup'),
+    errorCount: getSessionErrors().length
+  };
 };

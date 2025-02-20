@@ -1,64 +1,170 @@
 import React from 'react';
-import { render, act, waitFor } from '@testing-library/react';
+import { render, act } from '@testing-library/react';
 import AutoSave from '../components/AutoSave';
+
+// Mock storage utility
+jest.mock('../utils/storage', () => ({
+  saveAssessmentResponses: jest.fn()
+}));
 
 describe('AutoSave', () => {
   beforeEach(() => {
     jest.useFakeTimers();
+    jest.clearAllMocks();
   });
 
   afterEach(() => {
     jest.useRealTimers();
-    jest.clearAllMocks();
   });
 
-  it('should call onSave after the specified interval', async () => {
+  const mockData = {
+    responses: { 'question-1': 3 },
+    timestamp: Date.now()
+  };
+
+  const defaultProps = {
+    data: mockData,
+    onSave: jest.fn(),
+    interval: 5000,
+    onError: jest.fn()
+  };
+
+  it('should auto-save data at specified intervals', async () => {
     const mockSave = jest.fn().mockResolvedValue(undefined);
-    const mockError = jest.fn();
-    const testData = { test: 'data' };
-
+    const mockData = { test: 'data' };
+    
     render(
-      <AutoSave 
-        data={testData} 
-        onSave={mockSave} 
-        interval={1000} 
-        onError={mockError} 
+      <AutoSave
+        data={mockData}
+        onSave={mockSave}
+        interval={5000}
+        onError={jest.fn()}
       />
     );
 
-    // Fast-forward timers
+    expect(mockSave).not.toHaveBeenCalled();
+
+    // Advance timers by the interval
     await act(async () => {
-      jest.advanceTimersByTime(1000);
+      jest.advanceTimersByTime(5000);
     });
 
-    await waitFor(() => {
-      expect(mockSave).toHaveBeenCalledWith(testData);
-    });
-    expect(mockError).not.toHaveBeenCalled();
+    expect(mockSave).toHaveBeenCalledWith(mockData);
   });
 
-  it('should handle save errors correctly', async () => {
-    const error = new Error('Save failed');
-    const mockSave = jest.fn().mockRejectedValue(error);
-    const mockError = jest.fn();
-    const testData = { test: 'data' };
+  it('should save immediately when data changes', async () => {
+    const mockSave = jest.fn().mockResolvedValue(undefined);
+    const mockData = { test: 'data' };
+    
+    const { rerender } = render(
+      <AutoSave
+        data={mockData}
+        onSave={mockSave}
+        interval={5000}
+        onError={jest.fn()}
+      />
+    );
 
-    render(
-      <AutoSave 
-        data={testData} 
-        onSave={mockSave} 
-        interval={1000} 
-        onError={mockError} 
+    // Change the data
+    const newData = { test: 'updated' };
+    rerender(
+      <AutoSave
+        data={newData}
+        onSave={mockSave}
+        interval={5000}
+        onError={jest.fn()}
       />
     );
 
     await act(async () => {
-      jest.advanceTimersByTime(1000);
+      jest.advanceTimersByTime(5000);
     });
 
-    await waitFor(() => {
-      expect(mockError).toHaveBeenCalledWith(error);
+    expect(mockSave).toHaveBeenCalledWith(newData);
+  });
+
+  it('should handle save errors', async () => {
+    const mockError = new Error('Save failed');
+    const mockSave = jest.fn().mockRejectedValue(mockError);
+    const mockOnError = jest.fn();
+    
+    render(
+      <AutoSave
+        data={{ test: 'data' }}
+        onSave={mockSave}
+        interval={5000}
+        onError={mockOnError}
+      />
+    );
+
+    await act(async () => {
+      jest.advanceTimersByTime(5000);
     });
+
+    expect(mockOnError).toHaveBeenCalledWith(mockError);
+  });
+
+  it('should cleanup timer on unmount', () => {
+    const mockSave = jest.fn();
+    const { unmount } = render(
+      <AutoSave
+        data={{ test: 'data' }}
+        onSave={mockSave}
+        interval={5000}
+        onError={jest.fn()}
+      />
+    );
+
+    unmount();
+
+    // Advance timers after unmount
+    act(() => {
+      jest.advanceTimersByTime(5000);
+    });
+
+    // Verify save wasn't called after unmount
+    expect(mockSave).not.toHaveBeenCalled();
+  });
+
+  it('should not save if data is unchanged', () => {
+    const { rerender } = render(<AutoSave {...defaultProps} />);
+    
+    // Rerender with same data
+    rerender(<AutoSave {...defaultProps} data={mockData} />);
+    
+    expect(defaultProps.onSave).not.toHaveBeenCalled();
+  });
+
+  it('should debounce rapid data changes', async () => {
+    const mockSave = jest.fn().mockResolvedValue(undefined);
+    const { rerender } = render(
+      <AutoSave
+        data={{ test: '1' }}
+        onSave={mockSave}
+        interval={5000}
+        onError={jest.fn()}
+      />
+    );
+
+    // Trigger multiple rapid data changes
+    for (let i = 2; i <= 5; i++) {
+      rerender(
+        <AutoSave
+          data={{ test: String(i) }}
+          onSave={mockSave}
+          interval={5000}
+          onError={jest.fn()}
+        />
+      );
+    }
+
+    await act(async () => {
+      jest.advanceTimersByTime(5000);
+    });
+
+    // Should only save the latest value
+    expect(mockSave).toHaveBeenCalledTimes(1);
+    expect(mockSave).toHaveBeenCalledWith({ test: '5' });
   });
 });
 

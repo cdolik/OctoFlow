@@ -1,6 +1,6 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { clearAssessmentData } from '../utils/storage';
-import { Stage } from './withFlowValidation';
+import { ErrorReporter } from '../utils/errorReporting';
+import LoadingSpinner from './LoadingSpinner';
 
 interface Props {
   children: ReactNode;
@@ -10,76 +10,95 @@ interface Props {
 
 interface State {
   hasError: boolean;
+  isRecovering: boolean;
   error: Error | null;
   errorInfo: ErrorInfo | null;
 }
 
 class AssessmentErrorBoundary extends Component<Props, State> {
-  public state: State = {
-    hasError: false,
-    error: null,
-    errorInfo: null
-  };
-
-  public static getDerivedStateFromError(error: Error): State {
-    return {
-      hasError: true,
-      error,
+  constructor(props: Props) {
+    super(props);
+    this.state = {
+      hasError: false,
+      isRecovering: false,
+      error: null,
       errorInfo: null
     };
   }
 
-  public componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    this.setState({
-      error,
-      errorInfo
-    });
-
-    // Clear only assessment data to preserve other app state
-    clearAssessmentData();
-
-    // Log error with context
-    console.error('Assessment Error:', {
-      error,
-      errorInfo,
-      stage: this.props.currentStage
-    });
+  static getDerivedStateFromError(error: Error): Partial<State> {
+    return { hasError: true, error };
   }
 
-  private handleRetry = (): void => {
-    this.setState({ hasError: false, error: null, errorInfo: null });
-    if (this.props.onReset) {
-      this.props.onReset();
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    this.setState({ errorInfo });
+    ErrorReporter.report(error, errorInfo.componentStack);
+  }
+
+  handleRetry = async () => {
+    this.setState({ isRecovering: true });
+    
+    if (this.state.error) {
+      const errorReport = {
+        timestamp: Date.now(),
+        stage: sessionStorage.getItem('currentStage') || 'assessment',
+        errorType: this.state.error.name,
+        message: this.state.error.message,
+        componentStack: this.state.errorInfo?.componentStack
+      };
+
+      const recovered = await ErrorReporter.attemptRecovery(errorReport);
+      
+      if (recovered) {
+        this.setState({
+          hasError: false,
+          isRecovering: false,
+          error: null,
+          errorInfo: null
+        });
+        return;
+      }
     }
+
+    // If recovery failed or wasn't possible, refresh the page
+    window.location.reload();
   };
 
-  public render(): ReactNode {
+  render() {
+    if (this.state.isRecovering) {
+      return (
+        <div className="error-recovery">
+          <LoadingSpinner 
+            message="Attempting to recover..." 
+            size="large"
+            showProgress={true}
+            progress={50}
+          />
+        </div>
+      );
+    }
+
     if (this.state.hasError) {
       return (
-        <div className="assessment-error">
-          <h2>Assessment Error</h2>
-          <p>We encountered an error while processing your assessment.</p>
+        <div className="error-boundary-container">
+          <h2>Something went wrong</h2>
+          <p>We've logged this error and are working to fix it.</p>
           {process.env.NODE_ENV === 'development' && (
-            <details style={{ whiteSpace: 'pre-wrap' }}>
-              {this.state.error && this.state.error.toString()}
-              <br />
+            <pre className="error-details">
+              {this.state.error?.toString()}
               {this.state.errorInfo?.componentStack}
-            </details>
+            </pre>
           )}
           <div className="error-actions">
-            <button 
-              onClick={this.handleRetry}
-              className="retry-button"
-              type="button"
-            >
-              Retry Assessment
+            <button onClick={this.handleRetry} className="retry-button">
+              Try to Recover
             </button>
-            <a 
-              href="/"
-              className="home-link"
+            <button 
+              onClick={() => window.location.reload()} 
+              className="reload-button"
             >
-              Return to Home
-            </a>
+              Reload Page
+            </button>
           </div>
         </div>
       );

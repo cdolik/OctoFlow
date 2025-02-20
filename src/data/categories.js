@@ -8,6 +8,11 @@ export const tooltips = {
   'code owners': 'Automatically request reviews from the right teams',
   'Dependabot': 'Automated dependency updates and security alerts',
   'issue templates': 'Standardized templates for bug reports and features',
+  'GitHub Codespaces': 'Cloud-powered development environments',
+  'GitHub Discussions': 'Collaborative space for team communication',
+  'Pull Request Templates': 'Standardized templates for code changes',
+  'GitHub CLI': 'Command-line tool for GitHub workflows',
+  'GitHub Team Sync': 'Sync team membership with identity providers'
 };
 
 export const categories = {
@@ -83,6 +88,106 @@ export const categories = {
           { value: 2, text: 'Security updates only' },
           { value: 3, text: 'Version updates enabled' },
           { value: 4, text: 'Fully automated with auto-merge' }
+        ]
+      },
+      {
+        id: 'code-scanning',
+        text: 'Do you use code scanning for security vulnerabilities?',
+        tooltipTerm: 'GitHub Advanced Security',
+        stages: ['seed', 'series-a'],
+        options: [
+          { value: 1, text: 'No code scanning' },
+          { value: 2, text: 'Basic CodeQL setup' },
+          { value: 3, text: 'Custom scanning rules' },
+          { value: 4, text: 'Advanced security automation' }
+        ]
+      },
+      {
+        id: 'compliance-checks',
+        text: 'Do you have automated compliance checks?',
+        tooltipTerm: 'GitHub Actions',
+        stages: ['series-a'],
+        options: [
+          { value: 1, text: 'Manual compliance' },
+          { value: 2, text: 'Basic automated checks' },
+          { value: 3, text: 'Integrated compliance tests' },
+          { value: 4, text: 'Full compliance automation' }
+        ]
+      }
+    ]
+  },
+  'team-growth': {
+    id: 'team-growth',
+    title: 'Team Scaling & Onboarding',
+    description: 'Developer onboarding and team collaboration',
+    weight: 0.35,
+    questions: [
+      {
+        id: 'dev-onboarding',
+        text: 'How streamlined is your developer onboarding?',
+        tooltipTerm: 'GitHub Codespaces',
+        stages: ['seed', 'series-a'],
+        options: [
+          { value: 1, text: 'Manual setup process' },
+          { value: 2, text: 'Basic documentation' },
+          { value: 3, text: 'Automated environment setup' },
+          { value: 4, text: 'Codespaces with custom config' }
+        ]
+      },
+      {
+        id: 'team-collaboration',
+        text: 'How do you manage team discussions and knowledge sharing?',
+        tooltipTerm: 'GitHub Discussions',
+        stages: ['pre-seed', 'seed', 'series-a'],
+        options: [
+          { value: 1, text: 'Ad-hoc communication' },
+          { value: 2, text: 'Basic issue discussions' },
+          { value: 3, text: 'Structured discussions' },
+          { value: 4, text: 'Full knowledge management' }
+        ]
+      },
+      {
+        id: 'team-permissions',
+        text: 'How do you manage team access and permissions?',
+        tooltipTerm: 'GitHub Team Sync',
+        stages: ['seed', 'series-a'],
+        options: [
+          { value: 1, text: 'Manual permission management' },
+          { value: 2, text: 'Basic team structure' },
+          { value: 3, text: 'Role-based access' },
+          { value: 4, text: 'Automated team sync' }
+        ]
+      }
+    ]
+  },
+  'developer-experience': {
+    id: 'developer-experience',
+    title: 'Developer Experience & Productivity',
+    description: 'Tools and practices for developer productivity',
+    weight: 0.3,
+    questions: [
+      {
+        id: 'cli-automation',
+        text: 'Do developers use GitHub CLI for workflow automation?',
+        tooltipTerm: 'GitHub CLI',
+        stages: ['seed', 'series-a'],
+        options: [
+          { value: 1, text: 'No CLI usage' },
+          { value: 2, text: 'Basic commands' },
+          { value: 3, text: 'Custom aliases' },
+          { value: 4, text: 'Advanced automation' }
+        ]
+      },
+      {
+        id: 'pr-templates',
+        text: 'How structured are your pull request templates?',
+        tooltipTerm: 'Pull Request Templates',
+        stages: ['pre-seed', 'seed', 'series-a'],
+        options: [
+          { value: 1, text: 'No templates' },
+          { value: 2, text: 'Basic template' },
+          { value: 3, text: 'Custom checklists' },
+          { value: 4, text: 'Advanced validation' }
         ]
       }
     ]

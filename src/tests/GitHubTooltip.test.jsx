@@ -1,9 +1,18 @@
 import React from 'react';
 import renderer from 'react-test-renderer';
-import { render, fireEvent, screen } from '@testing-library/react';
+import { render, fireEvent, screen, act } from '@testing-library/react';
 import GitHubTooltip from '../components/GitHubTooltip';
+import { GITHUB_GLOSSARY } from '../data/GITHUB_GLOSSARY';
 
 describe('GitHubTooltip', () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   describe('Snapshot Tests', () => {
     it('renders correctly when closed', () => {
       const tree = renderer
@@ -105,5 +114,90 @@ describe('GitHubTooltip', () => {
       const tooltip = screen.getByRole('dialog');
       expect(tooltip).toHaveTextContent('Definition not found');
     });
+  });
+
+  it('renders children correctly', () => {
+    render(
+      <GitHubTooltip term="codeowners">
+        <div>Tooltip trigger</div>
+      </GitHubTooltip>
+    );
+
+    expect(screen.getByText('Tooltip trigger')).toBeInTheDocument();
+  });
+
+  it('shows tooltip on hover', () => {
+    render(
+      <GitHubTooltip term="codeowners">
+        <div>Hover me</div>
+      </GitHubTooltip>
+    );
+
+    fireEvent.mouseEnter(screen.getByText('Hover me'));
+    
+    expect(screen.getByText(GITHUB_GLOSSARY.codeowners.description)).toBeInTheDocument();
+    expect(screen.getByText('Learn more')).toHaveAttribute('href', GITHUB_GLOSSARY.codeowners.url);
+  });
+
+  it('hides tooltip on mouse leave', () => {
+    render(
+      <GitHubTooltip term="codeowners">
+        <div>Hover me</div>
+      </GitHubTooltip>
+    );
+
+    const trigger = screen.getByText('Hover me');
+    fireEvent.mouseEnter(trigger);
+    fireEvent.mouseLeave(trigger);
+
+    act(() => {
+      jest.advanceTimersByTime(200); // Account for fade-out animation
+    });
+
+    expect(screen.queryByText(GITHUB_GLOSSARY.codeowners.description)).not.toBeInTheDocument();
+  });
+
+  it('handles undefined terms gracefully', () => {
+    render(
+      <GitHubTooltip term="nonexistent">
+        <div>Invalid term</div>
+      </GitHubTooltip>
+    );
+
+    fireEvent.mouseEnter(screen.getByText('Invalid term'));
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+  });
+
+  it('shows tooltip on focus and hides on blur', () => {
+    render(
+      <GitHubTooltip term="codeowners">
+        <button>Focus me</button>
+      </GitHubTooltip>
+    );
+
+    const trigger = screen.getByText('Focus me');
+    trigger.focus();
+    expect(screen.getByText(GITHUB_GLOSSARY.codeowners.description)).toBeInTheDocument();
+
+    trigger.blur();
+    act(() => {
+      jest.advanceTimersByTime(200);
+    });
+    expect(screen.queryByText(GITHUB_GLOSSARY.codeowners.description)).not.toBeInTheDocument();
+  });
+
+  it('has correct ARIA attributes', () => {
+    render(
+      <GitHubTooltip term="codeowners">
+        <button>ARIA test</button>
+      </GitHubTooltip>
+    );
+
+    fireEvent.mouseEnter(screen.getByText('ARIA test'));
+    
+    const tooltip = screen.getByRole('tooltip');
+    expect(tooltip).toHaveAttribute('role', 'tooltip');
+    expect(tooltip).toHaveAttribute('id', expect.stringContaining('tooltip-'));
+    expect(screen.getByText('ARIA test')).toHaveAttribute('aria-describedby', tooltip.id);
   });
 });
