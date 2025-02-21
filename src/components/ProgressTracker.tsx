@@ -3,24 +3,26 @@ import './styles.css';
 
 interface ProgressTrackerProps {
   progress: number;
-  timeRemaining: number;
+  currentQuestion: number;
+  totalQuestions: number;
 }
 
-export const ProgressTracker: React.FC<ProgressTrackerProps> = ({ progress, timeRemaining }) => {
-  const minutes = Math.floor(timeRemaining / 60);
-  const seconds = timeRemaining % 60;
-
+export const ProgressTracker: React.FC<ProgressTrackerProps> = ({ 
+  progress, 
+  currentQuestion, 
+  totalQuestions 
+}) => {
   return (
-    <div className="progress-tracker">
+    <div className="progress-tracker" role="progressbar" aria-valuenow={progress}>
       <div className="progress-bar-container">
         <div 
           className="progress-bar"
           style={{ width: `${progress}%` }}
         />
       </div>
-      <div className="time-remaining">
-        ⏱️ {minutes}:{seconds.toString().padStart(2, '0')} remaining
-        <small>Based on Octoverse 2024 average completion time</small>
+      <div className="progress-info">
+        <span>Question {currentQuestion} of {totalQuestions}</span>
+        <span>{progress.toFixed(0)}% Complete</span>
       </div>
     </div>
   );

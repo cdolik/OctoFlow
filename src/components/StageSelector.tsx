@@ -21,15 +21,10 @@ interface Stage {
 }
 
 interface StageSelectorProps {
-  onSelect: (stageId: Stage['id']) => void;
+  onStageSelect: (stage: string) => void;
 }
 
-export const StageSelector: React.FC<StageSelectorProps> = ({ onSelect }) => {
-  const handleStageSelect = (stageId: Stage['id']) => {
-    trackStageSelect(stageId);
-    onSelect(stageId);
-  };
-
+const StageSelector: React.FC<StageSelectorProps> = ({ onStageSelect }) => {
   return (
     <div className="stage-selector">
       <h2>Select Your Startup Stage</h2>
@@ -40,7 +35,9 @@ export const StageSelector: React.FC<StageSelectorProps> = ({ onSelect }) => {
           <div 
             key={stage.id} 
             className="stage-card"
-            onClick={() => handleStageSelect(stage.id as Stage['id'])}
+            onClick={() => onStageSelect(stage.id)}
+            role="button"
+            tabIndex={0}
           >
             <h3>{stage.label}</h3>
             <p>{stage.description}</p>

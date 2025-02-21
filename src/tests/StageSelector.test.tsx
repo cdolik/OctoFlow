@@ -87,4 +87,24 @@ describe('StageSelector', () => {
       expect(card).toHaveAttribute('tabIndex', '0');
     });
   });
+
+  it('filters stages correctly based on user input', () => {
+    render(<StageSelector onSelect={mockOnSelect} />);
+
+    const searchInput = screen.getByPlaceholderText('Search stages');
+    fireEvent.change(searchInput, { target: { value: 'seed' } });
+
+    expect(screen.queryByText('Pre-Seed Startup')).not.toBeInTheDocument();
+    expect(screen.getByText('Seed Stage')).toBeInTheDocument();
+    expect(screen.queryByText('Series A')).not.toBeInTheDocument();
+  });
+
+  it('displays no results message when no stages match filter', () => {
+    render(<StageSelector onSelect={mockOnSelect} />);
+
+    const searchInput = screen.getByPlaceholderText('Search stages');
+    fireEvent.change(searchInput, { target: { value: 'nonexistent' } });
+
+    expect(screen.getByText('No stages found')).toBeInTheDocument();
+  });
 });

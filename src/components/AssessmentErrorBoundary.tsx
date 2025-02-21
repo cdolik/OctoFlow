@@ -1,6 +1,9 @@
 import React, { Component, ReactNode, ErrorInfo } from 'react';
 import { clearAssessmentData, getAssessmentResponses } from '../utils/storage';
 import { trackCTAClick, trackError } from '../utils/analytics';
+import { ErrorReporter } from '../utils/errorReporting';
+import { Stage } from './withFlowValidation';
+import LoadingSpinner from './LoadingSpinner';
 
 interface Props {
   children?: ReactNode;
@@ -11,10 +14,11 @@ interface State {
   error: Error | null;
   errorInfo: ErrorInfo | null;
   canRecover: boolean;
+  isRecovering: boolean;
 }
 
 interface AssessmentState {
-  currentStage?: string;
+  currentStage?: Stage;
   responses?: Record<string, number>;
 }
 
@@ -23,11 +27,11 @@ export class AssessmentErrorBoundary extends Component<Props, State> {
     hasError: false,
     error: null,
     errorInfo: null,
-    canRecover: true
+    canRecover: true,
+    isRecovering: false
   };
 
   static getDerivedStateFromError(error: Error): Partial<State> {
-    // Check if error is related to data corruption
     const isDataError = error.message.includes('storage') || 
                        error.message.includes('assessment state');
     
@@ -46,7 +50,8 @@ export class AssessmentErrorBoundary extends Component<Props, State> {
       errorInfo
     });
 
-    // Track error with context
+    ErrorReporter.report(error, errorInfo.componentStack || undefined);
+
     trackError('assessment_error', {
       error: error.message,
       componentStack: errorInfo.componentStack,
@@ -55,13 +60,40 @@ export class AssessmentErrorBoundary extends Component<Props, State> {
     });
   }
 
-  handleRetry = (): void => {
-    this.setState({
-      hasError: false,
-      error: null,
-      errorInfo: null
-    });
-    trackCTAClick('assessment_retry');
+  handleRetry = async (): Promise<void> => {
+    this.setState({ isRecovering: true });
+
+    try {
+      const currentStage = (getAssessmentResponses() as AssessmentState)?.currentStage || 'pre-seed';
+      const recovered = await ErrorReporter.attemptRecovery({
+        errorType: this.state.error?.name || 'Unknown',
+        message: this.state.error?.message || 'Unknown error',
+        timestamp: Date.now(),
+        stage: currentStage
+      });
+
+      if (recovered) {
+        this.setState({
+          hasError: false,
+          error: null,
+          errorInfo: null,
+          isRecovering: false
+        });
+        trackCTAClick('assessment_recovery_success');
+      } else {
+        this.setState({
+          isRecovering: false,
+          canRecover: false
+        });
+        trackCTAClick('assessment_recovery_failed');
+      }
+    } catch (error) {
+      this.setState({
+        isRecovering: false,
+        canRecover: false
+      });
+      trackCTAClick('assessment_recovery_error');
+    }
   };
 
   handleReset = (): void => {
@@ -78,28 +110,37 @@ export class AssessmentErrorBoundary extends Component<Props, State> {
           <p>We encountered an issue during your assessment.</p>
           
           <div className="error-actions">
-            {this.state.canRecover && (
-              <button 
-                onClick={this.handleRetry}
-                className="retry-button"
-              >
-                Try Again
-              </button>
-            )}
-            
-            <button 
-              onClick={this.handleReset}
-              className="cta-button"
-            >
-              Restart Assessment
-            </button>
-            
-            {!this.state.canRecover && (
-              <small className="error-notice">
-                Due to a data issue, you'll need to restart the assessment
-              </small>
+            {this.state.isRecovering ? (
+              <div className="recovery-status">
+                <LoadingSpinner size="small" message="Attempting to recover..." />
+              </div>
+            ) : (
+              <>
+                {this.state.canRecover && (
+                  <button 
+                    onClick={this.handleRetry}
+                    className="retry-button"
+                  >
+                    Try to Recover
+                  </button>
+                )}
+                
+                <button 
+                  onClick={this.handleReset}
+                  className="cta-button"
+                >
+                  {this.state.canRecover ? 'Restart Assessment' : 'Reload Page'}
+                </button>
+                
+                {!this.state.canRecover && (
+                  <small className="error-notice">
+                    Due to a data issue, you'll need to restart the assessment
+                  </small>
+                )}
+              </>
             )}
           </div>
+
           {process.env.NODE_ENV === 'development' && (
             <details className="error-details">
               <summary>Error Details</summary>

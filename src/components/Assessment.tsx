@@ -5,8 +5,9 @@ import { trackQuestionAnswer, trackAssessmentComplete } from '../utils/analytics
 import GitHubTooltip from './GitHubTooltip';
 import ProgressTracker from './ProgressTracker';
 import AutoSave from './AutoSave';
-import { withFlowValidation, FlowValidationProps } from './withFlowValidation';
+import { FlowValidationProps } from './withFlowValidation';
 import AssessmentErrorBoundary from './AssessmentErrorBoundary';
+import withFlowValidation from './withFlowValidation';
 import useKeyboardNavigation from '../hooks/useKeyboardNavigation';
 import NavigationGuard from './NavigationGuard';
 import './styles.css';
@@ -25,8 +26,8 @@ interface Question {
 }
 
 interface AssessmentProps extends FlowValidationProps {
-  stage: string;
-  onComplete: (responses: Responses) => void;
+  stage: import('../App').StageConfig;
+  onComplete: (responses: Record<string, number>) => void;
 }
 
 export type Responses = Record<string, number>;
@@ -233,4 +234,4 @@ const Assessment: React.FC<AssessmentProps> = ({ stage, onComplete }) => {
   );
 };
 
-export default withFlowValidation(Assessment);
+export default withFlowValidation<AssessmentProps>(Assessment);

@@ -2,6 +2,7 @@ import React from 'react';
 import GitHubTooltip from './GitHubTooltip';
 import { getAssessmentResponses } from '../utils/storage';
 import { getStageQuestions } from '../data/categories';
+import { FlowValidationProps } from './withFlowValidation';
 import './styles.css';
 
 interface Option {
@@ -38,29 +39,28 @@ interface QuestionResponse {
   recommendation?: Recommendation;
 }
 
-interface SummaryProps {
-  stage: string;
-  onStepChange: (step: number) => void;
+interface SummaryProps extends FlowValidationProps {
+  stage: import('../App').StageConfig;
+  onStepChange: (responses: Record<string, number>) => void;
 }
 
 export const Summary: React.FC<SummaryProps> = ({ stage, onStepChange }) => {
-  const responses = getAssessmentResponses();
-  const stageCategories = getStageQuestions(stage);
+  const responses = getAssessmentResponses() as Record<string, number>;
+  const stageCategories = getStageQuestions(stage.id) as Category[];
 
   const getCategoryQuestions = (categoryId: string): Question[] => {
-    const category = stageCategories.find(c => c.id === categoryId);
+    const category = stageCategories.find((c: Category) => c.id === categoryId);
     return category ? category.questions : [];
   };
 
   const getQuestionResponse = (questionId: string): QuestionResponse | null => {
     const response = responses[questionId];
-    if (!response) return null;
+    if (typeof response === 'undefined') return null;
 
-    // Find the question to get the option label
     for (const category of stageCategories) {
-      const question = category.questions.find(q => q.id === questionId);
+      const question = category.questions.find((q: Question) => q.id === questionId);
       if (question) {
-        const option = question.options.find(opt => opt.value === response);
+        const option = question.options.find((opt: Option) => opt.value === response);
         return {
           score: response,
           label: option?.text || 'Unknown',
@@ -75,7 +75,7 @@ export const Summary: React.FC<SummaryProps> = ({ stage, onStepChange }) => {
     <div className="summary-container">
       <div className="summary-header">
         <h2>Review Your Responses</h2>
-        <div className="stage-badge">{stage} Stage</div>
+        <div className="stage-badge">{stage.id} Stage</div>
       </div>
       
       {stageCategories.map((category: Category) => (
@@ -118,7 +118,7 @@ export const Summary: React.FC<SummaryProps> = ({ stage, onStepChange }) => {
                   <div className="no-answer">No response provided</div>
                 )}
                 <button 
-                  onClick={() => onStepChange(2)}
+                  onClick={() => onStepChange(responses)}
                   className="edit-button"
                 >
                   Edit Response
@@ -128,15 +128,16 @@ export const Summary: React.FC<SummaryProps> = ({ stage, onStepChange }) => {
           })}
         </div>
       ))}
+      
       <div className="summary-actions">
         <button 
-          onClick={() => onStepChange(2)} 
+          onClick={() => onStepChange(responses)} 
           className="back-button"
         >
           Back to Assessment
         </button>
         <button 
-          onClick={() => onStepChange(4)}
+          onClick={() => onStepChange(responses)}
           className="next-button"
         >
           View Results →
@@ -144,6 +145,6 @@ export const Summary: React.FC<SummaryProps> = ({ stage, onStepChange }) => {
       </div>
     </div>
   );
-};
+}
 
 export default Summary;

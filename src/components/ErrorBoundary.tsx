@@ -50,7 +50,7 @@ class ErrorBoundary extends Component<Props, State> {
               onClick={this.handleReset}
               className="cta-button"
             >
-              Start Over
+              Reset Application
             </button>
             <small>This will clear your progress</small>
           </div>
@@ -62,6 +62,7 @@ class ErrorBoundary extends Component<Props, State> {
         </div>
       );
     }
+
     return this.props.children;
   }
 }

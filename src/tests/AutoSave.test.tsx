@@ -166,5 +166,66 @@ describe('AutoSave', () => {
     expect(mockSave).toHaveBeenCalledTimes(1);
     expect(mockSave).toHaveBeenCalledWith({ test: '5' });
   });
-});
 
+  it('should save data when the save button is clicked', async () => {
+    const mockSave = jest.fn().mockResolvedValue(undefined);
+    const mockData = { test: 'data' };
+    
+    const { getByText } = render(
+      <AutoSave
+        data={mockData}
+        onSave={mockSave}
+        interval={5000}
+        onError={jest.fn()}
+      />
+    );
+
+    const saveButton = getByText('Save Now');
+    fireEvent.click(saveButton);
+
+    expect(mockSave).toHaveBeenCalledWith(mockData);
+  });
+
+  it('should display a save status message', async () => {
+    const mockSave = jest.fn().mockResolvedValue(undefined);
+    const mockData = { test: 'data' };
+    
+    const { getByText } = render(
+      <AutoSave
+        data={mockData}
+        onSave={mockSave}
+        interval={5000}
+        onError={jest.fn()}
+      />
+    );
+
+    const saveButton = getByText('Save Now');
+    fireEvent.click(saveButton);
+
+    await waitFor(() => {
+      expect(getByText('Save successful')).toBeInTheDocument();
+    });
+  });
+
+  it('should handle save errors and display an error message', async () => {
+    const mockError = new Error('Save failed');
+    const mockSave = jest.fn().mockRejectedValue(mockError);
+    const mockOnError = jest.fn();
+    
+    const { getByText } = render(
+      <AutoSave
+        data={{ test: 'data' }}
+        onSave={mockSave}
+        interval={5000}
+        onError={mockOnError}
+      />
+    );
+
+    const saveButton = getByText('Save Now');
+    fireEvent.click(saveButton);
+
+    await waitFor(() => {
+      expect(getByText('Save failed')).toBeInTheDocument();
+    });
+  });
+});

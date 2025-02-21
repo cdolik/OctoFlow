@@ -1,45 +1,31 @@
-import React, { useEffect, useCallback, useState } from 'react';
-import debounce from 'lodash/debounce';
+import React, { useEffect, useCallback } from 'react';
+import type { Responses } from './withFlowValidation';
 
 interface AutoSaveProps {
-  data: any;
-  onSave: (data: Record<string, unknown>) => Promise<void>;
+  data: Responses;
+  onSave: (data: Responses) => Promise<void>;
   interval?: number;
   onError?: (error: Error) => void;
 }
 
-export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
-
-const AutoSave: React.FC<AutoSaveProps> = ({ 
-  data, 
-  onSave, 
-  interval = 30000,
-  onError 
+const AutoSave: React.FC<AutoSaveProps> = ({
+  data,
+  onSave,
+  interval = 5000,
+  onError
 }) => {
-  const [status, setStatus] = useState<SaveStatus>('idle');
-
-  const debouncedSave = useCallback(
-    debounce(async (data: any) => {
-      try {
-        setStatus('saving');
-        await onSave(data);
-        setStatus('saved');
-      } catch (error) {
-        setStatus('error');
-        onError?.(error as Error);
-      }
-    }, interval),
-    [onSave, interval, onError]
-  );
+  const save = useCallback(async () => {
+    try {
+      await onSave(data);
+    } catch (error) {
+      onError?.(error instanceof Error ? error : new Error(String(error)));
+    }
+  }, [data, onSave, onError]);
 
   useEffect(() => {
-    if (data) {
-      debouncedSave(data);
-    }
-    return () => {
-      debouncedSave.flush();
-    };
-  }, [data, debouncedSave]);
+    const timer = setInterval(save, interval);
+    return () => clearInterval(timer);
+  }, [save, interval]);
 
   return null;
 };
