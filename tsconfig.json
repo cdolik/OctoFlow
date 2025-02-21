@@ -24,7 +24,7 @@
       "./node_modules/@types",
       "./src/types"
     ],
-    "types": ["node", "jest", "react", "react-dom"]
+    "types": ["node", "jest", "react", "react-dom", "@babel/core", "@babel/generator", "@babel/template", "@babel/traverse", "tough-cookie"]
   },
   "include": ["src"],
   "exclude": ["node_modules"]

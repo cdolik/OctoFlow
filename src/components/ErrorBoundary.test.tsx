@@ -56,4 +56,35 @@ describe('ErrorBoundary', () => {
 
     window.location = originalLocation;
   });
+
+  it('displays error details in development mode', () => {
+    const originalEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'development';
+
+    render(
+      <ErrorBoundary>
+        <ThrowError />
+      </ErrorBoundary>
+    );
+
+    expect(screen.getByText(/Error Details/i)).toBeInTheDocument();
+    expect(screen.getByText(/componentStack/i)).toBeInTheDocument();
+
+    process.env.NODE_ENV = originalEnv;
+  });
+
+  it('does not display error details in production mode', () => {
+    const originalEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+
+    render(
+      <ErrorBoundary>
+        <ThrowError />
+      </ErrorBoundary>
+    );
+
+    expect(screen.queryByText(/Error Details/i)).not.toBeInTheDocument();
+
+    process.env.NODE_ENV = originalEnv;
+  });
 });

@@ -1,8 +1,7 @@
 import '@testing-library/jest-dom';
-// import { Chart as ChartJS } from 'chart.js';
 import 'jest-canvas-mock';
 
-// Type-safe Chart.js mock
+// Chart.js mock
 const mockChart = {
   register: jest.fn(),
   Chart: jest.fn(() => ({
@@ -51,6 +50,11 @@ global.fetch = jest.fn(() =>
     statusText: 'OK'
   })
 );
+
+// Polyfill for setImmediate if needed
+if (typeof setImmediate === 'undefined') {
+  global.setImmediate = (fn, ...args) => setTimeout(fn, 0, ...args);
+}
 
 // Better console error handling
 const originalError = console.error;

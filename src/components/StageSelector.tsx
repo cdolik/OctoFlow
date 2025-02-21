@@ -4,10 +4,10 @@ import TimeEstimator from './TimeEstimator';
 import './styles.css';
 
 interface StageSelectorProps {
-  onStageSelect: (stage: string) => void;
+  onSelect: (stage: string) => void;
 }
 
-const StageSelector: React.FC<StageSelectorProps> = ({ onStageSelect }) => {
+const StageSelector: React.FC<StageSelectorProps> = ({ onSelect }) => {
   return (
     <div className="stage-selector">
       <h1>Welcome to OctoFlow</h1>
@@ -20,7 +20,7 @@ const StageSelector: React.FC<StageSelectorProps> = ({ onStageSelect }) => {
           <div
             key={stage.id}
             className="stage-card"
-            onClick={() => onStageSelect(stage.id)}
+            onClick={() => onSelect(stage.id)}
             role="button"
             tabIndex={0}
           >

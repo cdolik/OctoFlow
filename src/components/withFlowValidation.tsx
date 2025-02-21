@@ -10,6 +10,14 @@ export interface FlowValidationProps {
   stages: Stage[];
 }
 
+export interface WithFlowValidationProps {
+  stage: Stage;
+  currentStage: Stage;
+  responses: Record<Stage, unknown>;
+  stages: Stage[];
+  onStepChange?: (responses: Record<Stage, unknown>) => void;
+}
+
 export function withFlowValidation<P extends FlowValidationProps>(
   WrappedComponent: ComponentType<P>
 ) {
