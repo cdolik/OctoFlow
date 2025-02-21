@@ -3,14 +3,14 @@ import StageSelector from '../components/StageSelector';
 import { stages } from '../data/stages';
 
 describe('StageSelector', () => {
-  const mockOnSelect = jest.fn();
+  const mockOnStageSelect = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
   it('renders all available stages', () => {
-    render(<StageSelector onSelect={mockOnSelect} />);
+    render(<StageSelector onStageSelect={mockOnStageSelect} />);
 
     stages.forEach(stage => {
       expect(screen.getByText(stage.label)).toBeInTheDocument();
@@ -19,7 +19,7 @@ describe('StageSelector', () => {
   });
 
   it('shows correct team size for each stage', () => {
-    render(<StageSelector onSelect={mockOnSelect} />);
+    render(<StageSelector onStageSelect={mockOnStageSelect} />);
 
     expect(screen.getByText(/1-5 developers/)).toBeInTheDocument();
     expect(screen.getByText(/5-15 developers/)).toBeInTheDocument();
@@ -27,7 +27,7 @@ describe('StageSelector', () => {
   });
 
   it('shows correct focus areas for each stage', () => {
-    render(<StageSelector onSelect={mockOnSelect} />);
+    render(<StageSelector onStageSelect={mockOnStageSelect} />);
 
     // Pre-seed stage focus areas
     expect(screen.getByText('Basic Automation')).toBeInTheDocument();
@@ -43,23 +43,23 @@ describe('StageSelector', () => {
   });
 
   it('shows deployment frequency benchmarks', () => {
-    render(<StageSelector onSelect={mockOnSelect} />);
+    render(<StageSelector onStageSelect={mockOnStageSelect} />);
 
     stages.forEach(stage => {
       expect(screen.getByText(stage.benchmarks.deploymentFreq)).toBeInTheDocument();
     });
   });
 
-  it('calls onSelect with correct stage id when clicked', () => {
-    render(<StageSelector onSelect={mockOnSelect} />);
+  it('calls onStageSelect with correct stage id when clicked', () => {
+    render(<StageSelector onStageSelect={mockOnStageSelect} />);
 
     const preSeedCard = screen.getByRole('button', { name: /pre-seed/i });
     fireEvent.click(preSeedCard);
-    expect(mockOnSelect).toHaveBeenCalledWith('pre-seed');
+    expect(mockOnStageSelect).toHaveBeenCalledWith('pre-seed');
   });
 
   it('shows estimated time for each stage', () => {
-    render(<StageSelector onSelect={mockOnSelect} />);
+    render(<StageSelector onStageSelect={mockOnStageSelect} />);
 
     stages.forEach(stage => {
       const questionCount = Object.values(stage.benchmarks.expectedScores).length;
@@ -70,17 +70,17 @@ describe('StageSelector', () => {
   });
 
   it('supports keyboard navigation', () => {
-    render(<StageSelector onSelect={mockOnSelect} />);
+    render(<StageSelector onStageSelect={mockOnStageSelect} />);
 
     const firstStageCard = screen.getAllByRole('button')[0];
     firstStageCard.focus();
     fireEvent.keyDown(firstStageCard, { key: 'Enter' });
 
-    expect(mockOnSelect).toHaveBeenCalled();
+    expect(mockOnStageSelect).toHaveBeenCalled();
   });
 
   it('has correct accessibility attributes', () => {
-    render(<StageSelector onSelect={mockOnSelect} />);
+    render(<StageSelector onStageSelect={mockOnStageSelect} />);
 
     const stageCards = screen.getAllByRole('button');
     stageCards.forEach(card => {
@@ -89,7 +89,7 @@ describe('StageSelector', () => {
   });
 
   it('filters stages correctly based on user input', () => {
-    render(<StageSelector onSelect={mockOnSelect} />);
+    render(<StageSelector onStageSelect={mockOnStageSelect} />);
 
     const searchInput = screen.getByPlaceholderText('Search stages');
     fireEvent.change(searchInput, { target: { value: 'seed' } });
@@ -100,7 +100,7 @@ describe('StageSelector', () => {
   });
 
   it('displays no results message when no stages match filter', () => {
-    render(<StageSelector onSelect={mockOnSelect} />);
+    render(<StageSelector onStageSelect={mockOnStageSelect} />);
 
     const searchInput = screen.getByPlaceholderText('Search stages');
     fireEvent.change(searchInput, { target: { value: 'nonexistent' } });

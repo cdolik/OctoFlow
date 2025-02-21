@@ -290,6 +290,18 @@ export const Results: React.FC<ResultsProps> = ({ stage }) => {
           ))}
         </div>
       </div>
+
+      <div className="survey-container" style={{ marginTop: '2rem' }}>
+        <p>Help us improve by completing our brief survey:</p>
+        <a
+          href="https://forms.gle/your-google-form-url"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="survey-link"
+        >
+          Complete Survey
+        </a>
+      </div>
     </div>
   );
 };

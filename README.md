@@ -117,5 +117,11 @@ npm test
 npm start
 ```
 
+## Completion Survey
+
+After completing the assessment flow (Hero → StageSelector → Assessment → Summary → Results), please help us improve by filling out our brief survey. Your feedback is valuable!
+
+[Complete Survey](https://forms.gle/your-google-form-url) (opens in a new tab)
+
 ## Contributing
 Please see CONTRIBUTING.md for guidelines.

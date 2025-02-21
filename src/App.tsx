@@ -1,5 +1,5 @@
 import React, { useState, Suspense, lazy } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import ErrorBoundary from './components/ErrorBoundary';
 import StageSelector from './components/StageSelector';
 import { withFlowValidation, FlowValidationProps, Stage, Responses } from './components/withFlowValidation';
@@ -100,7 +100,7 @@ const App: React.FC<AppProps> = ({ initialStage, onStepChange }) => {
                 <Route path="/" element={<Home />} />
                 <Route path="/features" element={<Features />} />
                 <Route path="/signup" element={<SignUp />} />
-                <Route path="/stage-select" element={<StageSelector onStageSelect={(stage: string) => handleStageSelect(stage as Stage)} />} />
+                <Route path="/stage-select" element={<StageSelector onStageSelect={(stage: string) => handleStageSelect(stage as Stage)} onSelect={(value: string) => console.log(value)} />} />
                 <Route
                   path="/assessment"
                   element={
