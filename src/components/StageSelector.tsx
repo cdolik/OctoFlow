@@ -1,24 +1,7 @@
 import React from 'react';
 import GitHubTooltip from './GitHubTooltip';
 import { stages } from '../data/stages';
-import { trackStageSelect } from '../utils/analytics';
 import './styles.css';
-
-interface Stage {
-  id: 'pre-seed' | 'seed' | 'series-a';
-  label: string;
-  description: string;
-  benchmarks: {
-    deploymentFreq: string;
-    securityLevel: number;
-    costEfficiency: number;
-    expectedScores: {
-      'github-ecosystem': number;
-      'security': number;
-      'automation': number;
-    };
-  };
-}
 
 interface StageSelectorProps {
   onStageSelect: (stage: string) => void;

@@ -1,11 +1,26 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render } from '@testing-library/react';
 import RadarChart from '../components/RadarChart';
-import { Chart as ChartJS } from 'chart.js';
 
-// Mock Chart.js
+interface ChartConfig {
+  data: {
+    labels: string[];
+    datasets: Array<{
+      data: number[];
+      label?: string;
+    }>;
+  };
+}
+
+const MockChart = jest.fn((canvas: HTMLCanvasElement, config: ChartConfig) => ({
+  destroy: jest.fn(),
+  update: jest.fn(),
+  config
+}));
+
 jest.mock('chart.js', () => ({
-  Chart: jest.fn(),
+  __esModule: true,
+  Chart: MockChart,
   RadialLinearScale: jest.fn(),
   PointElement: jest.fn(),
   LineElement: jest.fn(),
@@ -23,16 +38,16 @@ describe('RadarChart', () => {
   ];
 
   beforeEach(() => {
-    // Clear mock calls between tests
-    (ChartJS as jest.Mock).mockClear();
+    MockChart.mockClear();
   });
 
   it('initializes Chart.js with correct data', () => {
     render(<RadarChart data={mockData} stage="pre-seed" />);
     
-    const chartConfig = (ChartJS as jest.Mock).mock.calls[0][1];
+    const call = MockChart.mock.calls[0];
+    expect(call).toBeDefined();
     
-    // Verify data transformation
+    const chartConfig = call[1] as ChartConfig;
     expect(chartConfig.data.labels).toEqual([
       'Github Ecosystem',
       'Security',
@@ -47,13 +62,14 @@ describe('RadarChart', () => {
     const newData = [...mockData, { category: 'ai-adoption', score: 90 }];
     rerender(<RadarChart data={newData} stage="pre-seed" />);
     
-    // Verify old instance was destroyed
-    const destroyMock = (ChartJS as jest.Mock).mock.instances[0].destroy;
+    const destroyMock = MockChart.mock.instances[0]?.destroy;
+    expect(destroyMock).toBeDefined();
     expect(destroyMock).toHaveBeenCalled();
     
-    // Verify new instance was created with updated data
-    const latestCall = (ChartJS as jest.Mock).mock.calls.length - 1;
-    const newChartConfig = (ChartJS as jest.Mock).mock.calls[latestCall][1];
+    const latestCall = MockChart.mock.calls[MockChart.mock.calls.length - 1];
+    expect(latestCall).toBeDefined();
+    
+    const newChartConfig = latestCall[1] as ChartConfig;
     expect(newChartConfig.data.datasets[0].data).toHaveLength(4);
   });
 
@@ -62,14 +78,18 @@ describe('RadarChart', () => {
     
     unmount();
     
-    const destroyMock = (ChartJS as jest.Mock).mock.instances[0].destroy;
+    const destroyMock = MockChart.mock.instances[0]?.destroy;
+    expect(destroyMock).toBeDefined();
     expect(destroyMock).toHaveBeenCalled();
   });
 
   it('renders with benchmark data for the selected stage', () => {
     render(<RadarChart data={mockData} stage="pre-seed" />);
     
-    const chartConfig = (ChartJS as jest.Mock).mock.calls[0][1];
+    const call = MockChart.mock.calls[0];
+    expect(call).toBeDefined();
+    
+    const chartConfig = call[1] as ChartConfig;
     expect(chartConfig.data.datasets).toHaveLength(2);
     expect(chartConfig.data.datasets[1].label).toContain('Pre Seed Benchmark');
   });

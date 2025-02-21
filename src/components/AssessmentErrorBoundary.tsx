@@ -1,5 +1,6 @@
 import React, { Component, ReactNode, ErrorInfo } from 'react';
-import { clearAssessmentData, getAssessmentResponses } from '../utils/storage';
+import { getAssessmentResponses } from '../utils/storage';
+import { clearAssessmentData } from '../utils/storage';
 import { trackCTAClick, trackError } from '../utils/analytics';
 import { ErrorReporter } from '../utils/errorReporting';
 import { Stage } from './withFlowValidation';

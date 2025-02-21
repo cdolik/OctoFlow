@@ -3,9 +3,10 @@ import './styles.css';
 
 interface HeroProps {
   onStageSelect: (stage: string) => void;
+  onSelect: (value: string) => void; // standardized prop for selection
 }
 
-const Hero: React.FC<HeroProps> = ({ onStageSelect }) => {
+const Hero: React.FC<HeroProps> = ({ onStageSelect, onSelect: _onSelect }) => {
   return (
     <section className="hero" role="banner">
       <h1>Engineering Health Check for Startups</h1>
