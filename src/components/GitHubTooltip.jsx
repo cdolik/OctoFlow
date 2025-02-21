@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import { GITHUB_GLOSSARY } from '../data/GITHUB_GLOSSARY';
 import { trackResourceClick } from '../utils/analytics';
 import './styles.css';
@@ -8,7 +9,7 @@ const DEFAULT_TERM = {
   learnMoreUrl: 'https://docs.github.com'
 };
 
-export default function GitHubTooltip({ term, children }) {
+const GitHubTooltip = ({ term, children }) => {
   const [isVisible, setVisible] = useState(false);
   const tooltipRef = useRef(null);
   const glossaryEntry = GITHUB_GLOSSARY[term] || DEFAULT_TERM;
@@ -78,3 +79,10 @@ export default function GitHubTooltip({ term, children }) {
     </div>
   );
 }
+
+GitHubTooltip.propTypes = {
+  term: PropTypes.string.isRequired,
+  children: PropTypes.node.isRequired
+};
+
+export default GitHubTooltip;

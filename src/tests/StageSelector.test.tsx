@@ -1,6 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import StageSelector from '../components/StageSelector';
-import { stages } from '../data/categories';
+import { stages } from '../data/stages';
 
 describe('StageSelector', () => {
   const mockOnSelect = jest.fn();
@@ -63,8 +63,9 @@ describe('StageSelector', () => {
 
     stages.forEach(stage => {
       const questionCount = Object.values(stage.benchmarks.expectedScores).length;
-      const estimatedTime = screen.getAllByText(new RegExp(`${questionCount} questions`, 'i'))[0];
-      expect(estimatedTime).toBeInTheDocument();
+      expect(screen.getByText((content, element) => {
+        return element?.textContent?.toLowerCase().includes(`${questionCount} questions`) || false;
+      })).toBeInTheDocument();
     });
   });
 
