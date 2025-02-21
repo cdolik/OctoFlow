@@ -1,11 +1,13 @@
 import React, { useState, Suspense, lazy } from 'react';
-import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import ErrorBoundary from './components/ErrorBoundary';
-import Hero from './components/Hero';
 import StageSelector from './components/StageSelector';
 import { withFlowValidation, FlowValidationProps, Stage, Responses } from './components/withFlowValidation';
 import LoadingSpinner from './components/LoadingSpinner';
 import './App.css';
+import Home from './pages/Home';
+import Features from './pages/Features';
+import SignUp from './pages/SignUp';
 
 export interface StageConfig {
   id: Stage;
@@ -85,62 +87,73 @@ const App: React.FC<AppProps> = ({ initialStage, onStepChange }) => {
     <div className="App">
       <ErrorBoundary>
         <Router>
-          <Suspense fallback={<LoadingSpinner />}>
-            <Routes>
-              <Route path="/" element={<Hero onStageSelect={(stage: string) => handleStageSelect(stage as Stage)} />} />
-              <Route path="/stage-select" element={<StageSelector onStageSelect={(stage: string) => handleStageSelect(stage as Stage)} />} />
-              <Route
-                path="/assessment"
-                element={
-                  currentStage ? (
-                    <ValidatedAssessment
-                      stage={currentStage}
-                      currentStage={currentStage.id}
-                      responses={responses}
-                      stages={stages}
-                      onStepChange={handleResponseChange}
-                      onComplete={handleComplete}
-                    />
-                  ) : (
-                    <Navigate to="/stage-select" replace />
-                  )
-                }
-              />
-              <Route
-                path="/summary"
-                element={
-                  currentStage ? (
-                    <ValidatedSummary
-                      stage={currentStage}
-                      currentStage={currentStage.id}
-                      responses={responses}
-                      stages={stages}
-                      onStepChange={handleResponseChange}
-                    />
-                  ) : (
-                    <Navigate to="/stage-select" replace />
-                  )
-                }
-              />
-              <Route
-                path="/results"
-                element={
-                  currentStage ? (
-                    <ValidatedResults
-                      stage={currentStage}
-                      currentStage={currentStage.id}
-                      responses={responses}
-                      stages={stages}
-                      onStepChange={handleResponseChange}
-                    />
-                  ) : (
-                    <Navigate to="/stage-select" replace />
-                  )
-                }
-              />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </Suspense>
+          <nav className="bg-gray-800 text-white p-4">
+            <ul className="flex space-x-4">
+              <li><Link to="/">Home</Link></li>
+              <li><Link to="/features">Features</Link></li>
+              <li><Link to="/signup">Sign Up</Link></li>
+            </ul>
+          </nav>
+          <div className="container mx-auto p-4">
+            <Suspense fallback={<LoadingSpinner />}>
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/features" element={<Features />} />
+                <Route path="/signup" element={<SignUp />} />
+                <Route path="/stage-select" element={<StageSelector onStageSelect={(stage: string) => handleStageSelect(stage as Stage)} />} />
+                <Route
+                  path="/assessment"
+                  element={
+                    currentStage ? (
+                      <ValidatedAssessment
+                        stage={currentStage}
+                        currentStage={currentStage.id}
+                        responses={responses}
+                        stages={stages}
+                        onStepChange={handleResponseChange}
+                        onComplete={handleComplete}
+                      />
+                    ) : (
+                      <Navigate to="/stage-select" replace />
+                    )
+                  }
+                />
+                <Route
+                  path="/summary"
+                  element={
+                    currentStage ? (
+                      <ValidatedSummary
+                        stage={currentStage}
+                        currentStage={currentStage.id}
+                        responses={responses}
+                        stages={stages}
+                        onStepChange={handleResponseChange}
+                      />
+                    ) : (
+                      <Navigate to="/stage-select" replace />
+                    )
+                  }
+                />
+                <Route
+                  path="/results"
+                  element={
+                    currentStage ? (
+                      <ValidatedResults
+                        stage={currentStage}
+                        currentStage={currentStage.id}
+                        responses={responses}
+                        stages={stages}
+                        onStepChange={handleResponseChange}
+                      />
+                    ) : (
+                      <Navigate to="/stage-select" replace />
+                    )
+                  }
+                />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Suspense>
+          </div>
         </Router>
       </ErrorBoundary>
     </div>

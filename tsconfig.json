@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "es5",
+    "target": "esnext",
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
@@ -15,16 +15,17 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
+    // Set the baseUrl to "src" to simplify module resolution and imports
     "baseUrl": "src",
     "paths": {
-      "@/*": ["*"],
+      "octoflow/*": ["types/*"],
       "octoflow": ["types/index.d.ts"]
     },
     "typeRoots": [
       "./node_modules/@types",
       "./src/types"
     ],
-    "types": ["node", "jest", "react", "react-dom", "@babel/core", "@babel/generator", "@babel/template", "@babel/traverse", "tough-cookie"]
+    "types": ["node", "jest", "react", "react-dom"]
   },
   "include": ["src"],
   "exclude": ["node_modules"]
