@@ -5,7 +5,7 @@ import { trackQuestionAnswer, trackAssessmentComplete } from '../utils/analytics
 import GitHubTooltip from './GitHubTooltip';
 import ProgressTracker from './ProgressTracker';
 import AutoSave from './AutoSave';
-import { withFlowValidation, Stage } from './withFlowValidation';
+import { withFlowValidation, FlowValidationProps } from './withFlowValidation';
 import AssessmentErrorBoundary from './AssessmentErrorBoundary';
 import useKeyboardNavigation from '../hooks/useKeyboardNavigation';
 import NavigationGuard from './NavigationGuard';
@@ -21,25 +21,23 @@ interface Question {
   text: string;
   tooltipTerm?: string;
   options: Option[];
+  stages: string[];
 }
 
-interface AssessmentProps {
-  stage: {
-    id: Stage;
-    name: string;
-  };
-  onComplete: (responses: Record<string, number>) => void;
+interface AssessmentProps extends FlowValidationProps {
+  stage: string;
+  onComplete: (responses: Responses) => void;
 }
 
-type Responses = Record<string, number>;
+export type Responses = Record<string, number>;
 
 const Assessment: React.FC<AssessmentProps> = ({ stage, onComplete }) => {
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
   const [responses, setResponses] = useState<Responses>({});
   const [, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
 
-  const questions = useMemo(() => getStageQuestions(stage.id), [stage.id]);
+  const questions = useMemo(() => getStageQuestions(stage), [stage]) as Question[];
   const currentQuestion = questions[currentQuestionIndex] as Question;
   
   // Add ref for managing focus
@@ -137,7 +135,7 @@ const Assessment: React.FC<AssessmentProps> = ({ stage, onComplete }) => {
       <div 
         className="assessment-container"
         role="main"
-        aria-label={`Assessment for ${stage.name} stage`}
+        aria-label={`Assessment for ${stage} stage`}
       >
         <ProgressTracker 
           progress={progress}
@@ -235,4 +233,4 @@ const Assessment: React.FC<AssessmentProps> = ({ stage, onComplete }) => {
   );
 };
 
-export default withFlowValidation<AssessmentProps>(Assessment);
+export default withFlowValidation(Assessment);

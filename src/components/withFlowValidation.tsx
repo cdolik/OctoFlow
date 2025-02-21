@@ -1,75 +1,91 @@
-import React, { ComponentType } from 'react';
-import { Navigate } from 'react-router-dom';
-import { useSessionGuard } from '../hooks/useSessionGuard';
+import React from 'react';
+import { Navigate, To } from 'react-router-dom';
 
 export type Stage = 'pre-seed' | 'seed' | 'series-a';
+export type Responses = Record<string, number>;
 
 export interface FlowValidationProps {
   currentStage: Stage;
-  responses: Record<Stage, unknown>;
+  responses: Responses;
   stages: Stage[];
+  onStepChange?: (responses: Responses) => void;
 }
 
-export function withFlowValidation<P extends FlowValidationProps>(
-  WrappedComponent: ComponentType<P>
-) {
-  return function WithFlowValidationComponent(props: P) {
-    const { currentStage, responses, stages } = props;
+interface ValidationResult {
+  isValid: boolean;
+  error?: string;
+  redirectTo?: To;
+}
 
-    // Validate the flow
-    const validateFlow = (): { isValid: boolean; redirectTo?: string; error?: string } => {
+export const withFlowValidation = <P extends FlowValidationProps>(
+  WrappedComponent: React.ComponentType<P>
+): React.FC<P> => {
+  const WithFlowValidation: React.FC<P> = (props: P) => {
+    const validateFlow = (): ValidationResult => {
+      const { currentStage, responses, stages } = props;
+      
       if (!stages.includes(currentStage)) {
-        return {
-          isValid: false,
-          error: `Invalid stage: ${currentStage}`,
-          redirectTo: '/stage-select'
-        };
+        throw new Error(`Invalid stage: ${currentStage}`);
       }
 
       const currentIndex = stages.indexOf(currentStage);
       const previousStage = stages[currentIndex - 1];
       
-      if (previousStage && !responses[previousStage]) {
+      // Check if previous stage exists and has responses
+      if (previousStage && !Object.keys(responses).some(key => key.startsWith(previousStage))) {
         return {
           isValid: false,
-          error: `Please complete ${previousStage} stage first`,
+          error: `Please complete ${previousStage} stage before proceeding`,
           redirectTo: `/assessment/${previousStage}`
+        };
+      }
+
+      // Validate current stage progress
+      const currentStageKeys = Object.keys(responses).filter(key => key.startsWith(currentStage));
+      if (currentStageKeys.length === 0 && currentIndex > 0) {
+        return {
+          isValid: false,
+          error: `Please start the ${currentStage} assessment`,
+          redirectTo: '/stage-select'
         };
       }
 
       return { isValid: true };
     };
 
-    // Use the session guard hook
-    const { isLoading, isAuthorized } = useSessionGuard(currentStage);
+    try {
+      const validation = validateFlow();
+      
+      if (!validation.isValid && validation.redirectTo) {
+        return (
+          <Navigate 
+            to={validation.redirectTo} 
+            state={{ error: validation.error }} 
+            replace 
+          />
+        );
+      }
 
-    if (isLoading) {
-      return <div>Loading...</div>;
-    }
-
-    if (!isAuthorized) {
+      return <WrappedComponent {...props} />;
+    } catch (error) {
+      console.error('Flow validation error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       return (
         <Navigate 
-          to="/stage-select" 
-          replace 
-          state={{ error: "Please complete previous stages first" }}
-        />
-      );
-    }
-
-    const validation = validateFlow();
-    if (!validation.isValid && validation.redirectTo) {
-      return (
-        <Navigate 
-          to={validation.redirectTo} 
-          state={{ error: validation.error }} 
+          to="/error" 
+          state={{ error: errorMessage }} 
           replace 
         />
       );
     }
-
-    return <WrappedComponent {...props} />;
   };
+
+  WithFlowValidation.displayName = `WithFlowValidation(${getDisplayName(WrappedComponent)})`;
+  return WithFlowValidation;
+};
+
+function getDisplayName<P>(WrappedComponent: React.ComponentType<P>): string {
+  return WrappedComponent.displayName || WrappedComponent.name || 'Component';
 }
 
 export default withFlowValidation;

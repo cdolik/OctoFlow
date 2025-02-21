@@ -2389,13 +2389,13 @@ button:disabled {
 
 /* Enhance option button transitions */
 .option-button {
-  // ...existing styles...
+  /* ...existing styles... */
   transform: translateZ(0);
   will-change: transform, border-color, background-color;
 }
 
 .option-button:hover {
-  // ...existing styles...
+  /* ...existing styles... */
   transform: translateY(-1px) translateZ(0);
 }
 
@@ -2404,7 +2404,7 @@ button:disabled {
 }
 
 .option-button.selected {
-  // ...existing styles...
+  /* ...existing styles... */
   animation: selectPulse 0.3s ease;
 }
 
@@ -2439,7 +2439,7 @@ button:disabled {
 
 /* Enhance keyboard shortcut visibility */
 .option-button[data-shortcut]::after {
-  // ...existing styles...
+  /* ...existing styles... */
   transition: all 0.2s ease;
 }
 

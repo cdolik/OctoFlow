@@ -1,78 +1,73 @@
 import React from 'react';
-import { stages } from '../data/categories';
-import TimeEstimator from './TimeEstimator';
+import GitHubTooltip from './GitHubTooltip';
+import { stages } from '../data/stages';
+import { trackStageSelect } from '../utils/analytics';
 import './styles.css';
 
-interface StageSelectorProps {
-  onStageSelect: (stage: string) => void;
+interface Stage {
+  id: 'pre-seed' | 'seed' | 'series-a';
+  label: string;
+  description: string;
+  benchmarks: {
+    deploymentFreq: string;
+    securityLevel: number;
+    costEfficiency: number;
+    expectedScores: {
+      'github-ecosystem': number;
+      'security': number;
+      'automation': number;
+    };
+  };
 }
 
-const StageSelector: React.FC<StageSelectorProps> = ({ onStageSelect }) => {
+interface StageSelectorProps {
+  onSelect: (stageId: Stage['id']) => void;
+}
+
+export const StageSelector: React.FC<StageSelectorProps> = ({ onSelect }) => {
+  const handleStageSelect = (stageId: Stage['id']) => {
+    trackStageSelect(stageId);
+    onSelect(stageId);
+  };
+
   return (
     <div className="stage-selector">
-      <h1>Welcome to OctoFlow</h1>
-      <p className="subtitle">
-        Select your startup stage to get personalized GitHub workflow recommendations
-      </p>
+      <h2>Select Your Startup Stage</h2>
+      <p className="subtitle">We'll tailor recommendations based on your phase</p>
       
       <div className="stages-grid">
-        {stages.map((stage) => (
-          <div
-            key={stage.id}
+        {stages.map(stage => (
+          <div 
+            key={stage.id} 
             className="stage-card"
-            onClick={() => onStageSelect(stage.id)}
-            role="button"
-            tabIndex={0}
+            onClick={() => handleStageSelect(stage.id as Stage['id'])}
           >
             <h3>{stage.label}</h3>
             <p>{stage.description}</p>
             
-            <div className="stage-benchmarks">
-              <div className="benchmark-item">
-                <span>Typical Team Size:</span>
-                {stage.id === 'pre-seed' && ' 1-5 developers'}
-                {stage.id === 'seed' && ' 5-15 developers'}
-                {stage.id === 'series-a' && ' 15+ developers'}
-              </div>
-              <div className="benchmark-item">
-                <span>Deployment Frequency: </span>
-                {stage.benchmarks.deploymentFreq}
-              </div>
+            <div className="benchmark">
+              <GitHubTooltip term="deployment-frequency">
+                <span>📈 {stage.benchmarks.deploymentFreq} deployments</span>
+              </GitHubTooltip>
             </div>
-
-            <div className="stage-assessment-info">
-              <TimeEstimator 
-                questionCount={Object.values(stage.benchmarks.expectedScores).length}
-                showDetails={true}
-              />
-            </div>
-
+            
             <div className="focus-areas">
-              {stage.id === 'pre-seed' && (
-                <>
-                  <span className="focus-tag">Basic Automation</span>
-                  <span className="focus-tag">Core Security</span>
-                </>
-              )}
-              {stage.id === 'seed' && (
-                <>
-                  <span className="focus-tag">Team Collaboration</span>
-                  <span className="focus-tag">CI/CD</span>
-                  <span className="focus-tag">Security</span>
-                </>
-              )}
-              {stage.id === 'series-a' && (
-                <>
-                  <span className="focus-tag">Advanced Security</span>
-                  <span className="focus-tag">Scale & Performance</span>
-                  <span className="focus-tag">Team Growth</span>
-                </>
-              )}
+              <GitHubTooltip term="github-ecosystem">
+                <span className="focus-tag">GitHub Score: {stage.benchmarks.expectedScores['github-ecosystem']}</span>
+              </GitHubTooltip>
+              <GitHubTooltip term="security">
+                <span className="focus-tag">Security Score: {stage.benchmarks.expectedScores['security']}</span>
+              </GitHubTooltip>
+              <GitHubTooltip term="automation">
+                <span className="focus-tag">Automation Score: {stage.benchmarks.expectedScores['automation']}</span>
+              </GitHubTooltip>
             </div>
-
-            <button className="select-stage-button">
-              Start Assessment
-            </button>
+            
+            <div className="benefit">
+              <GitHubTooltip term="cost-efficiency">
+                <span className="benefit-text">✨ Cost Efficiency: {(stage.benchmarks.costEfficiency * 100).toFixed(0)}%</span>
+              </GitHubTooltip>
+            </div>
           </div>
         ))}
       </div>

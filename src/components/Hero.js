@@ -1,7 +1,8 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import './styles.css';
 
-export default function Hero({ onStageSelect }) {
+const Hero = ({ onStageSelect }) => {
   return (
     <section className="hero">
       <h1>Engineering Health Check for Startups</h1>
@@ -26,4 +27,10 @@ export default function Hero({ onStageSelect }) {
       </div>
     </section>
   );
-}
+};
+
+Hero.propTypes = {
+  onStageSelect: PropTypes.func.isRequired
+};
+
+export default Hero;

@@ -1,20 +1,58 @@
 import React from 'react';
-import PropTypes from 'prop-types';
 import GitHubTooltip from './GitHubTooltip';
 import { getAssessmentResponses } from '../utils/storage';
 import { getStageQuestions } from '../data/categories';
 import './styles.css';
 
-const Summary = ({ stage, onStepChange }) => {
+interface Option {
+  value: number;
+  text: string;
+}
+
+interface Recommendation {
+  text: string;
+  link: string;
+}
+
+interface Question {
+  id: string;
+  text: string;
+  tooltipTerm?: string;
+  textAfter?: string;
+  stages: string[];
+  options: Option[];
+  recommendation?: Recommendation;
+}
+
+interface Category {
+  id: string;
+  title: string;
+  description: string;
+  weight: number;
+  questions: Question[];
+}
+
+interface QuestionResponse {
+  score: number;
+  label: string;
+  recommendation?: Recommendation;
+}
+
+interface SummaryProps {
+  stage: string;
+  onStepChange: (step: number) => void;
+}
+
+export const Summary: React.FC<SummaryProps> = ({ stage, onStepChange }) => {
   const responses = getAssessmentResponses();
   const stageCategories = getStageQuestions(stage);
 
-  const getCategoryQuestions = (categoryId) => {
+  const getCategoryQuestions = (categoryId: string): Question[] => {
     const category = stageCategories.find(c => c.id === categoryId);
     return category ? category.questions : [];
   };
 
-  const getQuestionResponse = (questionId) => {
+  const getQuestionResponse = (questionId: string): QuestionResponse | null => {
     const response = responses[questionId];
     if (!response) return null;
 
@@ -25,7 +63,7 @@ const Summary = ({ stage, onStepChange }) => {
         const option = question.options.find(opt => opt.value === response);
         return {
           score: response,
-          label: option?.label || 'Unknown',
+          label: option?.text || 'Unknown',
           recommendation: question.recommendation
         };
       }
@@ -40,7 +78,7 @@ const Summary = ({ stage, onStepChange }) => {
         <div className="stage-badge">{stage} Stage</div>
       </div>
       
-      {stageCategories.map(category => (
+      {stageCategories.map((category: Category) => (
         <div key={category.id} className="category-summary">
           <div className="category-header">
             <h3>{category.title}</h3>
@@ -48,7 +86,6 @@ const Summary = ({ stage, onStepChange }) => {
               <span className="category-weight">Weight: {category.weight}</span>
             </GitHubTooltip>
           </div>
-
           {getCategoryQuestions(category.id).map(question => {
             const response = getQuestionResponse(question.id);
             return (
@@ -62,7 +99,6 @@ const Summary = ({ stage, onStepChange }) => {
                   )}
                   {question.textAfter}
                 </div>
-
                 {response ? (
                   <div className="answer-display">
                     <div className="answer-score">Score: {response.score}/4</div>
@@ -81,7 +117,6 @@ const Summary = ({ stage, onStepChange }) => {
                 ) : (
                   <div className="no-answer">No response provided</div>
                 )}
-
                 <button 
                   onClick={() => onStepChange(2)}
                   className="edit-button"
@@ -93,7 +128,6 @@ const Summary = ({ stage, onStepChange }) => {
           })}
         </div>
       ))}
-
       <div className="summary-actions">
         <button 
           onClick={() => onStepChange(2)} 
@@ -110,11 +144,6 @@ const Summary = ({ stage, onStepChange }) => {
       </div>
     </div>
   );
-}
-
-Summary.propTypes = {
-  stage: PropTypes.string.isRequired,
-  onStepChange: PropTypes.func.isRequired
 };
 
 export default Summary;

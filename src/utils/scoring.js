@@ -1,5 +1,6 @@
-import { categories, questions, getCategoryWeight, stages } from '../data/questions';
+import { categories, questions, getCategoryWeight } from '../data/questions';
 import { RECOMMENDATIONS } from '../data/recommendations';
+import { stages } from '../data/stages';
 
 const STAGE_BENCHMARKS = {
   'pre-seed': {

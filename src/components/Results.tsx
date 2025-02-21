@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useMemo, useCallback } from 'react';
-import PropTypes from 'prop-types';
 import { Radar } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -8,7 +7,9 @@ import {
   LineElement,
   Filler,
   Tooltip,
-  Legend
+  Legend,
+  ChartData,
+  ChartOptions
 } from 'chart.js';
 import { getAssessmentResponses } from '../utils/storage';
 import { calculateWeightedScore, getScoreLevel, getRecommendations } from '../utils/scoring';
@@ -26,16 +27,71 @@ ChartJS.register(
   Legend
 );
 
-const Results = ({ stage }) => {
-  const chartRef = useRef(null);
-  const chartInstanceRef = useRef(null);
+interface CategoryScores {
+  [key: string]: number;
+}
 
+interface Benchmarks {
+  [key: string]: number;
+  overall: number;
+}
+
+interface ScoreResult {
+  categoryScores: CategoryScores;
+  overallScore: number;
+  benchmarks: Benchmarks;
+  completionRate: number;
+  gaps: Record<string, number>;
+}
+
+interface ScoreLevel {
+  level: string;
+  description: string;
+}
+
+interface Recommendation {
+  id: string;
+  category: string;
+  title: string;
+  details: string;
+  priority: 'high' | 'medium' | 'low';
+  impact: string;
+  effort: string;
+  steps: string[];
+  resource: string;
+  currentScore: number;
+  targetScore: number;
+}
+
+interface Stage {
+  id: string;
+  label: string;
+  toUpperCase: () => string;
+  benchmarks: Record<string, any>;
+}
+
+interface ResultsProps {
+  stage: Stage;
+}
+
+interface ChartDataset {
+  label: string;
+  data: number[];
+  backgroundColor: string;
+  borderColor: string;
+  borderWidth: number;
+}
+
+export const Results: React.FC<ResultsProps> = ({ stage }) => {
+  const chartRef = useRef<any>(null);
+  const chartInstanceRef = useRef<ChartJS | null>(null);
+  
   const responses = useMemo(() => getAssessmentResponses(), []);
-  const scores = useMemo(() => calculateWeightedScore(responses, stage), [responses, stage]);
-  const recommendations = useMemo(() => getRecommendations(scores, stage), [scores, stage]);
-  const scoreLevel = useMemo(() => getScoreLevel(scores.overallScore), [scores.overallScore]);
+  const scores = useMemo<ScoreResult>(() => calculateWeightedScore(responses, stage.id), [responses, stage]);
+  const recommendations = useMemo<Recommendation[]>(() => getRecommendations(scores, stage.id), [scores, stage]);
+  const scoreLevel = useMemo<ScoreLevel>(() => getScoreLevel(scores.overallScore), [scores.overallScore]);
 
-  const chartData = useMemo(() => ({
+  const chartData = useMemo<ChartData<'radar'>>(() => ({
     labels: Object.values(categories).map(cat => cat.title),
     datasets: [
       {
@@ -55,7 +111,7 @@ const Results = ({ stage }) => {
     ]
   }), [scores]);
 
-  const chartOptions = useMemo(() => ({
+  const chartOptions = useMemo<ChartOptions<'radar'>>(() => ({
     responsive: true,
     maintainAspectRatio: false,
     scales: {
@@ -79,7 +135,7 @@ const Results = ({ stage }) => {
     }
   }), []);
 
-  const handleRecommendationClick = useCallback((recId, category) => {
+  const handleRecommendationClick = useCallback((recId: string, category: string) => {
     trackRecommendationClick(recId, category);
   }, []);
 
@@ -92,7 +148,6 @@ const Results = ({ stage }) => {
       }
     };
   }, []);
-
 
   // Render prevention for invalid state
   if (!scores || !recommendations) {
@@ -120,7 +175,6 @@ const Results = ({ stage }) => {
           Assessment Completion: {(scores.completionRate * 100).toFixed(0)}%
         </div>
       </div>
-
       <div className="score-visualization">
         <h3>Category Performance vs. Benchmarks</h3>
         <div style={{ height: '400px', width: '100%' }}>
@@ -128,9 +182,9 @@ const Results = ({ stage }) => {
             ref={chartRef}
             data={chartData}
             options={chartOptions}
-            onElementsClick={(elems) => {
-              if (elems[0]) {
-                const categoryIndex = elems[0].index;
+            onClick={(event, elements) => {
+              if (elements && elements[0]) {
+                const categoryIndex = elements[0].index;
                 const categoryId = Object.values(categories)[categoryIndex]?.id;
                 if (categoryId) {
                   handleRecommendationClick(`chart_${categoryId}`, categoryId);
@@ -140,7 +194,6 @@ const Results = ({ stage }) => {
           />
         </div>
       </div>
-
       <div className="category-scores">
         <h3>Detailed Category Scores</h3>
         {Object.values(categories).map(category => (
@@ -179,7 +232,6 @@ const Results = ({ stage }) => {
           </div>
         ))}
       </div>
-
       <div className="recommendations">
         <h3>Priority Recommendations</h3>
         <div className="recommendations-grid">
@@ -223,15 +275,6 @@ const Results = ({ stage }) => {
       </div>
     </div>
   );
-}
-
-Results.propTypes = {
-  stage: PropTypes.shape({
-    id: PropTypes.string.isRequired,
-    label: PropTypes.string.isRequired,
-    toUpperCase: PropTypes.func,
-    benchmarks: PropTypes.object
-  }).isRequired
 };
 
 export default Results;

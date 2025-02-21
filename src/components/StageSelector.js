@@ -1,10 +1,11 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import GitHubTooltip from './GitHubTooltip';
-import { stages } from '../data/questions';
+import { stages } from '../data/stages';
 import { trackStageSelect } from '../utils/analytics';
 import './styles.css';
 
-export default function StageSelector({ onSelect }) {
+const StageSelector = ({ onSelect }) => {
   const handleStageSelect = (stageId) => {
     trackStageSelect(stageId);
     onSelect(stageId);
@@ -53,4 +54,10 @@ export default function StageSelector({ onSelect }) {
       </div>
     </div>
   );
-}
+};
+
+StageSelector.propTypes = {
+  onSelect: PropTypes.func.isRequired
+};
+
+export default StageSelector;

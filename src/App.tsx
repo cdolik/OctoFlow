@@ -3,44 +3,69 @@ import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import ErrorBoundary from './components/ErrorBoundary';
 import Hero from './components/Hero';
 import StageSelector from './components/StageSelector';
-import { withFlowValidation, FlowValidationProps, Stage as FlowStage } from './components/withFlowValidation';
+import { withFlowValidation, FlowValidationProps, Stage as FlowStage, Responses } from './components/withFlowValidation';
 import LoadingSpinner from './components/LoadingSpinner';
 import './App.css';
+import { stages } from './data/stages';
 
-interface Stage {
+// Define the type for stage data
+interface StageData {
   id: FlowStage;
-  name: string;
+  label: string;
+  description: string;
+  benchmarks: {
+    deploymentFreq: string;
+    securityLevel: number;
+    costEfficiency: number;
+    expectedScores: Record<string, number>;
+  };
 }
 
-interface AppFlowProps extends FlowValidationProps {
-  stage: Stage;
-  onStepChange?: (step: string) => void;
+interface AppProps {
+  initialStage?: StageData;
+  onStepChange?: (responses: Responses) => void;
 }
 
-const Assessment: React.FC<AppFlowProps> = ({ stage, onStepChange }) => {
-  // Assessment component implementation
-};
+// Base interface for validated components
+interface BaseValidatedProps extends FlowValidationProps {
+  stage: string;
+  onComplete: (responses: Responses) => void;
+}
 
+// Component-specific props that extend the base interface
+type AssessmentFlowProps = BaseValidatedProps;
+type SummaryFlowProps = BaseValidatedProps;
+type ResultsFlowProps = BaseValidatedProps;
+
+// Lazy loaded components
+const Assessment = lazy(() => import('./components/Assessment'));
 const Summary = lazy(() => import('./components/Summary'));
 const Results = lazy(() => import('./components/Results'));
 
-const ValidatedAssessment = withFlowValidation<AppFlowProps>(Assessment);
-const ValidatedSummary = withFlowValidation<AppFlowProps & { onStepChange: (step: string) => void }>(Summary);
-const ValidatedResults = withFlowValidation<AppFlowProps>(Results);
+// Wrap components with flow validation using their specific prop types
+const ValidatedAssessment = withFlowValidation<AssessmentFlowProps>(Assessment);
+const ValidatedSummary = withFlowValidation<SummaryFlowProps>(Summary);
+const ValidatedResults = withFlowValidation<ResultsFlowProps>(Results);
 
-const App: React.FC = () => {
-  const [stage, setStage] = useState<Stage | null>(null);
-  const [responses, setResponses] = useState<Record<string, unknown>>({});
+const App: React.FC<AppProps> = ({ initialStage, onStepChange }) => {
+  const [currentStage, setCurrentStage] = useState<StageData | null>(initialStage ?? null);
+  const [responses, setResponses] = useState<Responses>({});
 
-  const handleStageSelect = (selectedStage: Stage) => {
-    setStage(selectedStage);
+  const handleStageSelect = (stageId: FlowStage) => {
+    const selectedStage = stages.find(s => s.id === stageId);
+    if (selectedStage) {
+      setCurrentStage(selectedStage as StageData);
+    }
   };
 
-  const handleResponseUpdate = (newResponses: Record<FlowStage, unknown>) => {
+  const handleResponseUpdate = (newResponses: Responses) => {
     setResponses(newResponses);
+    onStepChange?.(newResponses);
   };
 
-  const stages: FlowStage[] = ['pre-seed', 'seed', 'series-a'];
+  const handleComplete = (newResponses: Responses) => {
+    handleResponseUpdate(newResponses);
+  };
 
   return (
     <div className="App">
@@ -48,18 +73,19 @@ const App: React.FC = () => {
         <Router>
           <Suspense fallback={<LoadingSpinner />}>
             <Routes>
-              <Route path="/" element={<Hero onSelect={handleStageSelect} />} />
-              <Route path="/stage-select" element={<StageSelector onSelect={handleStageSelect} />} />
+              <Route path="/" element={<Hero onStageSelect={(stage: string) => handleStageSelect(stage as FlowStage)} />} />
+              <Route path="/stage-select" element={<StageSelector onSelect={(stage: string) => handleStageSelect(stage as FlowStage)} />} />
               <Route
                 path="/assessment"
                 element={
-                  stage ? (
+                  currentStage ? (
                     <ValidatedAssessment
-                      stage={stage}
-                      currentStage={stage.id}
+                      stage={currentStage.id}
+                      currentStage={currentStage.id}
                       responses={responses}
-                      stages={stages}
-                      onResponseUpdate={handleResponseUpdate}
+                      stages={stages.map(s => s.id as FlowStage)}
+                      onStepChange={handleResponseUpdate}
+                      onComplete={handleComplete}
                     />
                   ) : (
                     <Navigate to="/stage-select" replace />
@@ -69,12 +95,14 @@ const App: React.FC = () => {
               <Route
                 path="/summary"
                 element={
-                  stage ? (
+                  currentStage ? (
                     <ValidatedSummary
-                      stage={stage}
-                      currentStage={stage.id}
+                      stage={currentStage.id}
+                      currentStage={currentStage.id}
                       responses={responses}
-                      stages={stages}
+                      stages={stages.map(s => s.id as FlowStage)}
+                      onStepChange={handleResponseUpdate}
+                      onComplete={handleComplete}
                     />
                   ) : (
                     <Navigate to="/stage-select" replace />
@@ -84,12 +112,14 @@ const App: React.FC = () => {
               <Route
                 path="/results"
                 element={
-                  stage ? (
+                  currentStage ? (
                     <ValidatedResults
-                      stage={stage}
-                      currentStage={stage.id}
+                      stage={currentStage.id}
+                      currentStage={currentStage.id}
                       responses={responses}
-                      stages={stages}
+                      stages={stages.map(s => s.id as FlowStage)}
+                      onStepChange={handleResponseUpdate}
+                      onComplete={handleComplete}
                     />
                   ) : (
                     <Navigate to="/stage-select" replace />
@@ -106,4 +136,3 @@ const App: React.FC = () => {
 };
 
 export default App;
-
