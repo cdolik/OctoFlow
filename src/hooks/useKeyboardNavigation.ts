@@ -16,7 +16,7 @@ export const useKeyboardNavigation = ({
   canProceed,
   isFirstQuestion,
   optionsCount
-}: UseKeyboardNavigationProps) => {
+}: UseKeyboardNavigationProps): void => {
   const handleKeyPress = useCallback((event: KeyboardEvent) => {
     // Don't handle keyboard events if user is typing in an input
     if (event.target instanceof HTMLInputElement || 
