@@ -1,7 +1,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { HashRouter } from 'react-router-dom';
 import App from './App';
-import { getAssessmentState, clearAssessmentState } from './utils/storage';
+import { getAssessmentData } from './utils/storage';
 import { Stage } from './types';
 
 jest.mock('./utils/storage');
@@ -17,7 +17,7 @@ const renderApp = () => {
 describe('App', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    clearAssessmentState();
+    getAssessmentData();
   });
 
   it('renders hero view by default', () => {
@@ -38,7 +38,7 @@ describe('App', () => {
       version: '1.1'
     };
 
-    (getAssessmentState as jest.Mock).mockReturnValue(mockState);
+    (getAssessmentData as jest.Mock).mockReturnValue(mockState);
     
     renderApp();
     fireEvent.click(screen.getByText(/Start Free Checkup/i));
@@ -60,12 +60,12 @@ describe('App', () => {
     });
 
     // Verify stage persistence
-    const state = getAssessmentState();
+    const state = getAssessmentData();
     expect(state?.currentStage).toBe('pre-seed');
   });
 
   it('handles errors gracefully', async () => {
-    (getAssessmentState as jest.Mock).mockImplementation(() => {
+    (getAssessmentData as jest.Mock).mockImplementation(() => {
       throw new Error('Storage error');
     });
 
@@ -76,3 +76,7 @@ describe('App', () => {
     });
   });
 });
+
+function getAssessmentState() {
+  throw new Error('Function not implemented.');
+}

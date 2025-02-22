@@ -7,6 +7,7 @@ import Assessment from './components/Assessment';
 import Summary from './components/Summary';
 import Results from './components/Results';
 import GlobalErrorBoundary from './components/GlobalErrorBoundary';
+import AssessmentErrorBoundary from './components/AssessmentErrorBoundary';
 import { stages } from './data/stages';
 
 interface AppProps {
@@ -40,12 +41,17 @@ const App: React.FC<AppProps> = ({ initialStage, onStepChange }) => {
             path="/assessment"
             element={
               currentStage ? (
-                <Assessment
-                  stage={currentStage}
-                  responses={responses}
-                  stages={stages.map(s => s.id as Stage)}
-                  onStepChange={handleResponseChange}
-                />
+                <AssessmentErrorBoundary
+                  key={currentStage}
+                  onRecovery={() => handleStageSelect(currentStage)}
+                >
+                  <Assessment
+                    stage={currentStage}
+                    responses={responses}
+                    stages={stages.map(s => s.id as Stage)}
+                    onStepChange={handleResponseChange}
+                  />
+                </AssessmentErrorBoundary>
               ) : (
                 <Navigate to="/stage-select" replace />
               )
@@ -70,11 +76,16 @@ const App: React.FC<AppProps> = ({ initialStage, onStepChange }) => {
             path="/results"
             element={
               currentStage ? (
-                <Results
-                  stage={currentStage}
-                  responses={responses}
-                  stages={stages.map(s => s.id as Stage)}
-                />
+                <AssessmentErrorBoundary
+                  key={`results-${currentStage}`}
+                  onRecovery={() => handleStageSelect(currentStage)}
+                >
+                  <Results
+                    stage={currentStage}
+                    responses={responses}
+                    stages={stages.map(s => s.id as Stage)}
+                  />
+                </AssessmentErrorBoundary>
               ) : (
                 <Navigate to="/stage-select" replace />
               )

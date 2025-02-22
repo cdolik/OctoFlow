@@ -1,150 +1,133 @@
-import React from 'react';
-import GitHubTooltip from './GitHubTooltip';
-import { getAssessmentResponses } from '../utils/storage';
+import React, { useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Stage, Question, Category } from '../types';
+import { useStageValidation } from '../hooks/useStageValidation';
 import { getStageQuestions } from '../data/categories';
-import { FlowValidationProps } from './withFlowValidation';
-import './styles.css';
+import { saveAssessmentResponses } from '../utils/storage';
+import { trackCTAClick } from '../utils/analytics';
+import GitHubTooltip from './GitHubTooltip';
 
-interface Option {
-  value: number;
-  text: string;
-}
-
-interface Recommendation {
-  text: string;
-  link: string;
-}
-
-interface Question {
-  id: string;
-  text: string;
-  tooltipTerm?: string;
-  textAfter?: string;
-  stages: string[];
-  options: Option[];
-  recommendation?: Recommendation;
-}
-
-interface Category {
-  id: string;
-  title: string;
-  description: string;
-  weight: number;
-  questions: Question[];
-}
-
-interface QuestionResponse {
-  score: number;
-  label: string;
-  recommendation?: Recommendation;
-}
-
-interface SummaryProps extends FlowValidationProps {
-  stage: import('../App').StageConfig;
+interface SummaryProps {
+  stage: Stage;
+  responses: Record<string, number>;
   onStepChange: (responses: Record<string, number>) => void;
 }
 
-export const Summary: React.FC<SummaryProps> = ({ stage, onStepChange }) => {
-  const responses = getAssessmentResponses() as Record<string, number>;
-  const stageCategories = getStageQuestions(stage.id) as Category[];
+const Summary: React.FC<SummaryProps> = ({ stage, responses, onStepChange }) => {
+  const navigate = useNavigate();
+  const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
-  const getCategoryQuestions = (categoryId: string): Question[] => {
-    const category = stageCategories.find((c: Category) => c.id === categoryId);
-    return category ? category.questions : [];
-  };
+  const { isValidating, error, canProgress } = useStageValidation({
+    currentStage: stage,
+    responses,
+    onValidationError: setValidationError
+  });
 
-  const getQuestionResponse = (questionId: string): QuestionResponse | null => {
-    const response = responses[questionId];
-    if (typeof response === 'undefined') return null;
+  const stageQuestions = getStageQuestions(stage);
 
-    for (const category of stageCategories) {
-      const question = category.questions.find((q: Question) => q.id === questionId);
-      if (question) {
-        const option = question.options.find((opt: Option) => opt.value === response);
-        return {
-          score: response,
-          label: option?.text || 'Unknown',
-          recommendation: question.recommendation
-        };
+  const handleResponseEdit = useCallback(async (questionId: string, value: number) => {
+    const newResponses = {
+      ...responses,
+      [questionId]: value
+    };
+
+    try {
+      const saved = await saveAssessmentResponses(newResponses, stage);
+      if (saved) {
+        onStepChange(newResponses);
+        setEditingQuestionId(null);
+        setValidationError(null);
+      } else {
+        setValidationError('Failed to save response changes');
       }
+    } catch (error) {
+      setValidationError('Error updating response');
+      console.error('Response update failed:', error);
     }
-    return null;
+  }, [responses, stage, onStepChange]);
+
+  const handleViewResults = useCallback(() => {
+    if (canProgress) {
+      trackCTAClick('view_results');
+      navigate('/results');
+    }
+  }, [canProgress, navigate]);
+
+  const handleEditQuestion = useCallback((questionId: string) => {
+    setEditingQuestionId(questionId);
+    setValidationError(null);
+  }, []);
+
+  const renderQuestion = (question: Question) => {
+    const response = responses[question.id];
+    const isEditing = editingQuestionId === question.id;
+
+    return (
+      <div key={question.id} className="summary-question">
+        <div className="question-header">
+          <h3>{question.text}</h3>
+          {question.tooltipTerm && (
+            <GitHubTooltip term={question.tooltipTerm} />
+          )}
+        </div>
+
+        {isEditing ? (
+          <div className="response-edit">
+            {question.options.map(option => (
+              <button
+                key={option.value}
+                onClick={() => handleResponseEdit(question.id, option.value)}
+                className={response === option.value ? 'selected' : ''}
+              >
+                {option.text}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="response-summary">
+            <span>Your answer: {question.options.find(o => o.value === response)?.text}</span>
+            <button
+              onClick={() => handleEditQuestion(question.id)}
+              className="edit-button"
+            >
+              Edit Answer
+            </button>
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
     <div className="summary-container">
-      <div className="summary-header">
-        <h2>Review Your Responses</h2>
-        <div className="stage-badge">{stage.id} Stage</div>
-      </div>
+      <h2>Review Your Responses</h2>
       
-      {stageCategories.map((category: Category) => (
-        <div key={category.id} className="category-summary">
-          <div className="category-header">
-            <h3>{category.title}</h3>
-            <GitHubTooltip term={category.id}>
-              <span className="category-weight">Weight: {category.weight}</span>
-            </GitHubTooltip>
-          </div>
-          {getCategoryQuestions(category.id).map(question => {
-            const response = getQuestionResponse(question.id);
-            return (
-              <div key={question.id} className="response-review">
-                <div className="question-text">
-                  {question.text}
-                  {question.tooltipTerm && (
-                    <GitHubTooltip term={question.tooltipTerm}>
-                      <span className="tooltip-trigger">{question.tooltipTerm}</span>
-                    </GitHubTooltip>
-                  )}
-                  {question.textAfter}
-                </div>
-                {response ? (
-                  <div className="answer-display">
-                    <div className="answer-score">Score: {response.score}/4</div>
-                    <div className="selected-answer">{response.label}</div>
-                    {response.score < 3 && response.recommendation && (
-                      <a 
-                        href={response.recommendation.link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="recommendation-link"
-                      >
-                        {response.recommendation.text} →
-                      </a>
-                    )}
-                  </div>
-                ) : (
-                  <div className="no-answer">No response provided</div>
-                )}
-                <button 
-                  onClick={() => onStepChange(responses)}
-                  className="edit-button"
-                >
-                  Edit Response
-                </button>
-              </div>
-            );
-          })}
+      {validationError && (
+        <div className="error-message" role="alert">
+          {validationError}
         </div>
-      ))}
-      
+      )}
+
+      <div className="questions-summary">
+        {stageQuestions.map(renderQuestion)}
+      </div>
+
       <div className="summary-actions">
-        <button 
-          onClick={() => onStepChange(responses)} 
-          className="back-button"
-        >
-          Back to Assessment
-        </button>
-        <button 
-          onClick={() => onStepChange(responses)}
-          className="next-button"
-        >
-          View Results →
-        </button>
+        {error ? (
+          <p className="validation-error">{error}</p>
+        ) : (
+          <button
+            onClick={handleViewResults}
+            disabled={!canProgress || isValidating}
+            className="cta-button"
+          >
+            View Results
+          </button>
+        )}
       </div>
     </div>
   );
-}
+};
 
 export default Summary;

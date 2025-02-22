@@ -49,6 +49,7 @@ export interface StageValidationResult {
   isValid: boolean;
   error?: string;
   details?: string[];
+  redirectTo?: string;
 }
 
 export interface ComponentFlowProps extends FlowValidationProps {
@@ -121,17 +122,8 @@ export interface UseSessionGuardResult {
   isAuthorized: boolean;
 }
 
-export interface StageConfig {
-  label: string;
-  description: string;
-  focus: string[];
-  questionFilter: (q: Question) => boolean;
-  benchmarks: {
-    deploymentFreq: string;
-    securityLevel: number;
-    costEfficiency: number;
-    expectedScores: Record<string, number>;
-  };
+export interface StageConfig extends Omit<StageDefinition, 'id'> {
+  id: Stage;
 }
 
 export interface WafPillar {

@@ -1,5 +1,5 @@
 import React, { Component, ErrorInfo } from 'react';
-import { trackErrorWithRecovery } from '../utils/analytics';
+import { trackErrorWithRecovery, trackError } from '../utils/analytics';
 import { backupState, restoreFromBackup } from '../utils/storage';
 import LoadingSpinner from './LoadingSpinner';
 
@@ -36,6 +36,11 @@ class GlobalErrorBoundary extends Component<Props, State> {
     backupState();
     
     trackErrorWithRecovery(error, false, false);
+    trackError(error, {
+      component: 'GlobalErrorBoundary',
+      stack: errorInfo.componentStack,
+      url: window.location.href
+    });
     console.error('Error caught by boundary:', error, errorInfo);
   }
 
@@ -58,8 +63,8 @@ class GlobalErrorBoundary extends Component<Props, State> {
   };
 
   handleReset = () => {
-    window.location.hash = '/';
-    window.location.reload();
+    sessionStorage.clear();
+    window.location.href = '/';
   };
 
   render() {
@@ -103,6 +108,12 @@ class GlobalErrorBoundary extends Component<Props, State> {
                 </button>
               </div>
             </>
+          )}
+
+          {process.env.NODE_ENV === 'development' && (
+            <pre className="error-details">
+              {this.state.error?.toString()}
+            </pre>
           )}
         </div>
       );

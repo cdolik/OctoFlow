@@ -4,25 +4,24 @@ import { stages } from '../data/stages';
 export const getStageQuestions = (stage: Stage, questions: Question[]): Question[] => {
   const stageDef = stages.find(s => s.id === stage);
   if (!stageDef) return [];
+  
   return questions.filter(q => 
     q.stages.includes(stage) && 
     stageDef.questionFilter(q)
   );
 };
 
-export const validateQuestionFilter = (question: Question, stage: Stage): boolean => {
-  const stageDef = stages.find(s => s.id === stage);
-  if (!stageDef) return false;
-  return stageDef.questionFilter(question);
-};
-
 export const validateStageResponses = (
-  responses: Record<string, number>,
+  responses: Record<string, number> | null,
   questions: Question[],
   stage: Stage
 ): StageValidationResult => {
   if (!responses || typeof responses !== 'object') {
-    return { isValid: false, error: 'Invalid responses format' };
+    return { 
+      isValid: false, 
+      error: 'Invalid responses format',
+      details: ['No responses found']
+    };
   }
 
   const stageQuestions = getStageQuestions(stage, questions);
@@ -39,14 +38,28 @@ export const validateStageResponses = (
   }
 
   // Check for missing required questions
-  const requiredQuestions = stageQuestions.map(q => q.id);
-  const missingRequired = requiredQuestions.filter(qId => !responses[qId]);
+  const requiredQuestionIds = stageQuestions.map(q => q.id);
+  const missingRequired = requiredQuestionIds.filter(qId => !responses[qId]);
 
   if (missingRequired.length > 0) {
     return {
       isValid: false,
       error: 'Missing required questions',
       details: missingRequired
+    };
+  }
+
+  // Validate score ranges
+  const invalidScores = Object.entries(responses)
+    .filter(([qId]) => stageQuestionIds.has(qId))
+    .filter(([, score]) => !Number.isInteger(score) || score < 1 || score > 4)
+    .map(([qId]) => qId);
+
+  if (invalidScores.length > 0) {
+    return {
+      isValid: false,
+      error: 'Invalid score values',
+      details: invalidScores
     };
   }
 

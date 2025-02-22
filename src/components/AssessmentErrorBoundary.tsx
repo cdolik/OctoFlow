@@ -1,21 +1,20 @@
-import React, { Component, ReactNode, ErrorInfo } from 'react';
-import { getAssessmentResponses } from '../utils/storage';
+import React, { useState, useCallback } from 'react';
+import { ErrorBoundary } from 'react-error-boundary';
+import { getAssessmentResponses, getAssessmentMetadata } from '../utils/storage';
 import { clearAssessmentData } from '../utils/storage';
 import { trackCTAClick, trackError } from '../utils/analytics';
 import { ErrorReporter } from '../utils/errorReporting';
-import { Stage } from './withFlowValidation';
+import { Stage } from '../types';
 import LoadingSpinner from './LoadingSpinner';
 
 interface Props {
-  children?: ReactNode;
+  children: React.ReactNode;
+  onRecovery: () => void;
 }
 
-interface State {
-  hasError: boolean;
-  error: Error | null;
-  errorInfo: ErrorInfo | null;
-  canRecover: boolean;
-  isRecovering: boolean;
+interface ErrorState {
+  error: Error;
+  componentStack: string;
 }
 
 interface AssessmentState {
@@ -23,140 +22,117 @@ interface AssessmentState {
   responses?: Record<string, number>;
 }
 
-export class AssessmentErrorBoundary extends Component<Props, State> {
-  state: State = {
-    hasError: false,
-    error: null,
-    errorInfo: null,
-    canRecover: true,
-    isRecovering: false
-  };
+const ErrorFallback = ({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) => {
+  const [isRecovering, setIsRecovering] = useState(false);
+  const [canRecover, setCanRecover] = useState(true);
 
-  static getDerivedStateFromError(error: Error): Partial<State> {
-    const isDataError = error.message.includes('storage') || 
-                       error.message.includes('assessment state');
-    
-    return { 
-      hasError: true, 
-      error,
-      canRecover: !isDataError
-    };
-  }
-
-  componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    const assessmentState = getAssessmentResponses() as AssessmentState | null;
-    
-    this.setState({
-      error,
-      errorInfo
-    });
-
-    ErrorReporter.report(error, errorInfo.componentStack || undefined);
-
-    trackError('assessment_error', {
-      error: error.message,
-      componentStack: errorInfo.componentStack,
-      assessmentStage: assessmentState?.currentStage,
-      hasResponses: !!assessmentState?.responses
-    });
-  }
-
-  handleRetry = async (): Promise<void> => {
-    this.setState({ isRecovering: true });
+  const handleRetry = useCallback(async () => {
+    setIsRecovering(true);
 
     try {
       const currentStage = (getAssessmentResponses() as AssessmentState)?.currentStage || 'pre-seed';
       const recovered = await ErrorReporter.attemptRecovery({
-        errorType: this.state.error?.name || 'Unknown',
-        message: this.state.error?.message || 'Unknown error',
+        errorType: error.name,
+        message: error.message,
         timestamp: Date.now(),
         stage: currentStage
       });
 
       if (recovered) {
-        this.setState({
-          hasError: false,
-          error: null,
-          errorInfo: null,
-          isRecovering: false
-        });
         trackCTAClick('assessment_recovery_success');
+        resetErrorBoundary();
       } else {
-        this.setState({
-          isRecovering: false,
-          canRecover: false
-        });
+        setCanRecover(false);
         trackCTAClick('assessment_recovery_failed');
       }
-    } catch (error) {
-      this.setState({
-        isRecovering: false,
-        canRecover: false
-      });
+    } catch {
+      setCanRecover(false);
       trackCTAClick('assessment_recovery_error');
+    } finally {
+      setIsRecovering(false);
     }
-  };
+  }, [error, resetErrorBoundary]);
 
-  handleReset = (): void => {
+  const handleReset = useCallback(() => {
     clearAssessmentData();
     trackCTAClick('assessment_reset');
     window.location.href = '/stage-select';
-  };
+  }, []);
 
-  render(): ReactNode {
-    if (this.state.hasError) {
-      return (
-        <div className="error-state assessment-error">
-          <h2>Assessment Error</h2>
-          <p>We encountered an issue during your assessment.</p>
-          
-          <div className="error-actions">
-            {this.state.isRecovering ? (
-              <div className="recovery-status">
-                <LoadingSpinner size="small" message="Attempting to recover..." />
-              </div>
-            ) : (
-              <>
-                {this.state.canRecover && (
-                  <button 
-                    onClick={this.handleRetry}
-                    className="retry-button"
-                  >
-                    Try to Recover
-                  </button>
-                )}
-                
-                <button 
-                  onClick={this.handleReset}
-                  className="cta-button"
-                >
-                  {this.state.canRecover ? 'Restart Assessment' : 'Reload Page'}
-                </button>
-                
-                {!this.state.canRecover && (
-                  <small className="error-notice">
-                    Due to a data issue, you'll need to restart the assessment
-                  </small>
-                )}
-              </>
-            )}
-          </div>
+  const isDataError = error.message.includes('storage') || 
+                     error.message.includes('assessment state');
 
-          {process.env.NODE_ENV === 'development' && (
-            <details className="error-details">
-              <summary>Error Details</summary>
-              <pre>
-                {this.state.error?.toString()}
-                {this.state.errorInfo?.componentStack}
-              </pre>
-            </details>
-          )}
-        </div>
-      );
-    }
-
-    return this.props.children;
+  if (isRecovering) {
+    return (
+      <div className="recovery-status">
+        <LoadingSpinner size="small" message="Attempting to recover..." />
+      </div>
+    );
   }
-}
+
+  return (
+    <div className="error-state assessment-error">
+      <h2>Assessment Error</h2>
+      <p>We encountered an issue during your assessment.</p>
+      
+      <div className="error-actions">
+        {canRecover && !isDataError && (
+          <button 
+            onClick={handleRetry}
+            className="retry-button"
+          >
+            Try to Recover
+          </button>
+        )}
+        
+        <button 
+          onClick={handleReset}
+          className="cta-button"
+        >
+          {canRecover ? 'Restart Assessment' : 'Reload Page'}
+        </button>
+        
+        {!canRecover && (
+          <small className="error-notice">
+            Due to a data issue, you'll need to restart the assessment
+          </small>
+        )}
+      </div>
+
+      {process.env.NODE_ENV === 'development' && (
+        <details className="error-details">
+          <summary>Error Details</summary>
+          <pre>{error.toString()}</pre>
+        </details>
+      )}
+    </div>
+  );
+};
+
+const AssessmentErrorBoundary: React.FC<Props> = ({ children, onRecovery }) => {
+  const handleError = useCallback((error: Error, info: ErrorState) => {
+    const assessmentState = getAssessmentResponses() as AssessmentState | null;
+    
+    ErrorReporter.report(error, info.componentStack);
+
+    trackError('assessment_error', {
+      error: error.message,
+      componentStack: info.componentStack,
+      assessmentStage: assessmentState?.currentStage,
+      hasResponses: !!assessmentState?.responses,
+      metadata: getAssessmentMetadata()
+    });
+  }, []);
+
+  return (
+    <ErrorBoundary
+      FallbackComponent={ErrorFallback}
+      onReset={onRecovery}
+      onError={handleError}
+    >
+      {children}
+    </ErrorBoundary>
+  );
+};
 
 export default AssessmentErrorBoundary;
