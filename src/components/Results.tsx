@@ -19,6 +19,7 @@ import GitHubTooltip from './GitHubTooltip';
 import { trackRecommendationClick } from '../utils/analytics';
 import { FlowValidationProps } from './withFlowValidation';
 import './styles.css';
+import AssessmentErrorBoundary from './AssessmentErrorBoundary';
 
 ChartJS.register(
   RadialLinearScale,
@@ -177,132 +178,134 @@ export const Results: React.FC<ResultsProps> = ({ stage }) => {
   }
 
   return (
-    <div className="results">
-      <div className="score-summary">
-        <h2>Your GitHub Engineering Health Score</h2>
-        <div className="stage-indicator">
-          <span className="stage-badge">{stage.toUpperCase()}</span>
-          <span className="stage-benchmark">Benchmark: {scores.benchmarks.overall.toFixed(1)}</span>
-        </div>
-        <div className="overall-score">
-          <span className={`score-number score-level-${scoreLevel.level.toLowerCase()}`}>
-            {scores.overallScore.toFixed(1)}
-          </span>
-          <span className="score-label">
-            <h3>{scoreLevel.level}</h3>
-            <p>{scoreLevel.description}</p>
-          </span>
-        </div>
-        <div className="completion-rate">
-          Assessment Completion: {(scores.completionRate * 100).toFixed(0)}%
-        </div>
-      </div>
-
-      <div className="score-visualization">
-        <h3>Category Performance vs. Benchmarks</h3>
-        <div style={{ height: '400px', width: '100%' }}>
-          <Radar 
-            ref={chartRef}
-            data={chartData}
-            options={chartOptions}
-            onClick={handleClick}
-          />
-        </div>
-      </div>
-
-      <div className="category-scores">
-        <h3>Detailed Category Scores</h3>
-        {Object.values(categories).map(category => (
-          <div key={category.id} className="category-score">
-            <div className="category-header">
-              <h4>{category.title}</h4>
-              <GitHubTooltip term={category.id}>
-                <p className="category-description">{category.description}</p>
-              </GitHubTooltip>
-            </div>
-            <div className="score-bar">
-              <div 
-                className="score-fill" 
-                style={{ 
-                  width: `${(scores.categoryScores[category.id] || 0) * 25}%`,
-                  backgroundColor: (scores.categoryScores[category.id] || 0) >= scores.benchmarks[category.id] 
-                    ? '#2DA44E' 
-                    : '#FCA000'
-                }} 
-              />
-              <div 
-                className="benchmark-marker"
-                style={{
-                  left: `${scores.benchmarks[category.id] * 25}%`
-                }}
-              />
-            </div>
-            <div className="score-details">
-              <span className="score-value">
-                {scores.categoryScores[category.id]?.toFixed(1) || '0.0'} / 4.0
-              </span>
-              <span className="benchmark-value">
-                Benchmark: {scores.benchmarks[category.id].toFixed(1)}
-              </span>
-            </div>
+    <AssessmentErrorBoundary>
+      <div className="results">
+        <div className="score-summary">
+          <h2>Your GitHub Engineering Health Score</h2>
+          <div className="stage-indicator">
+            <span className="stage-badge">{stage.toUpperCase()}</span>
+            <span className="stage-benchmark">Benchmark: {scores.benchmarks.overall.toFixed(1)}</span>
           </div>
-        ))}
-      </div>
+          <div className="overall-score">
+            <span className={`score-number score-level-${scoreLevel.level.toLowerCase()}`}>
+              {scores.overallScore.toFixed(1)}
+            </span>
+            <span className="score-label">
+              <h3>{scoreLevel.level}</h3>
+              <p>{scoreLevel.description}</p>
+            </span>
+          </div>
+          <div className="completion-rate">
+            Assessment Completion: {(scores.completionRate * 100).toFixed(0)}%
+          </div>
+        </div>
 
-      <div className="recommendations">
-        <h3>Priority Recommendations</h3>
-        <div className="recommendations-grid">
-          {recommendations.map((rec, index) => (
-            <div key={index} className="action-card" onClick={() => handleRecommendationClick(rec.id, rec.category)}>
-              <div className="recommendation-header">
-                <h4>{rec.title}</h4>
-                <div className="recommendation-meta">
-                  <span className={`priority-tag ${rec.priority}`}>
-                    {rec.priority.toUpperCase()}
-                  </span>
-                  <span className="impact">Impact: {rec.impact}</span>
-                  <span className="effort">Effort: {rec.effort}</span>
-                </div>
+        <div className="score-visualization">
+          <h3>Category Performance vs. Benchmarks</h3>
+          <div style={{ height: '400px', width: '100%' }}>
+            <Radar 
+              ref={chartRef}
+              data={chartData}
+              options={chartOptions}
+              onClick={handleClick}
+            />
+          </div>
+        </div>
+
+        <div className="category-scores">
+          <h3>Detailed Category Scores</h3>
+          {Object.values(categories).map(category => (
+            <div key={category.id} className="category-score">
+              <div className="category-header">
+                <h4>{category.title}</h4>
+                <GitHubTooltip term={category.id}>
+                  <p className="category-description">{category.description}</p>
+                </GitHubTooltip>
               </div>
-              <p className="recommendation-details">{rec.details}</p>
-              <div className="implementation-steps">
-                <h5>Implementation Steps:</h5>
-                <ul className="steps-list">
-                  {rec.steps.map((step, stepIndex) => (
-                    <li key={stepIndex}>{step}</li>
-                  ))}
-                </ul>
+              <div className="score-bar">
+                <div 
+                  className="score-fill" 
+                  style={{ 
+                    width: `${(scores.categoryScores[category.id] || 0) * 25}%`,
+                    backgroundColor: (scores.categoryScores[category.id] || 0) >= scores.benchmarks[category.id] 
+                      ? '#2DA44E' 
+                      : '#FCA000'
+                  }} 
+                />
+                <div 
+                  className="benchmark-marker"
+                  style={{
+                    left: `${scores.benchmarks[category.id] * 25}%`
+                  }}
+                />
               </div>
-              <div className="recommendation-footer">
-                <a 
-                  href={rec.resource} 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="resource-link"
-                >
-                  Documentation →
-                </a>
-                <span className="score-gap">
-                  Current: {rec.currentScore.toFixed(1)} → Target: {rec.targetScore.toFixed(1)}
+              <div className="score-details">
+                <span className="score-value">
+                  {scores.categoryScores[category.id]?.toFixed(1) || '0.0'} / 4.0
+                </span>
+                <span className="benchmark-value">
+                  Benchmark: {scores.benchmarks[category.id].toFixed(1)}
                 </span>
               </div>
             </div>
           ))}
         </div>
-      </div>
 
-      <div className="survey-container" style={{ marginTop: '2rem' }}>
-        <p>Help us improve by completing our brief survey:</p>
-        <a
-          href="https://forms.gle/your-google-form-url"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="survey-link"
-        >
-          Complete Survey
-        </a>
+        <div className="recommendations">
+          <h3>Priority Recommendations</h3>
+          <div className="recommendations-grid">
+            {recommendations.map((rec, index) => (
+              <div key={index} className="action-card" onClick={() => handleRecommendationClick(rec.id, rec.category)}>
+                <div className="recommendation-header">
+                  <h4>{rec.title}</h4>
+                  <div className="recommendation-meta">
+                    <span className={`priority-tag ${rec.priority}`}>
+                      {rec.priority.toUpperCase()}
+                    </span>
+                    <span className="impact">Impact: {rec.impact}</span>
+                    <span className="effort">Effort: {rec.effort}</span>
+                  </div>
+                </div>
+                <p className="recommendation-details">{rec.details}</p>
+                <div className="implementation-steps">
+                  <h5>Implementation Steps:</h5>
+                  <ul className="steps-list">
+                    {rec.steps.map((step, stepIndex) => (
+                      <li key={stepIndex}>{step}</li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="recommendation-footer">
+                  <a 
+                    href={rec.resource} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="resource-link"
+                  >
+                    Documentation →
+                  </a>
+                  <span className="score-gap">
+                    Current: {rec.currentScore.toFixed(1)} → Target: {rec.targetScore.toFixed(1)}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="survey-container" style={{ marginTop: '2rem' }}>
+          <p>Help us improve by completing our brief survey:</p>
+          <a
+            href="https://forms.gle/your-google-form-url"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="survey-link"
+          >
+            Complete Survey
+          </a>
+        </div>
       </div>
-    </div>
+    </AssessmentErrorBoundary>
   );
 };
 

@@ -8,6 +8,7 @@ import { stages } from '../data/stages';
 import { questions } from '../data/questions';
 import LoadingSpinner from './LoadingSpinner';
 import StageTransition from './StageTransition';
+import AutoSave from './AutoSave';
 
 interface AssessmentProps {
   stage: Stage;
@@ -63,6 +64,7 @@ const Assessment: React.FC<AssessmentProps> = ({ stage, responses: initialRespon
     try {
       const saved = await saveAssessmentResponses(newResponses, stage);
       if (!saved) {
+ {
         setSaveError('Failed to save response. Your progress may not be preserved.');
       } else {
         setSaveError(null);
@@ -162,6 +164,12 @@ const Assessment: React.FC<AssessmentProps> = ({ stage, responses: initialRespon
           <span>{Math.round((currentQuestionIndex / stageQuestions.length) * 100)}% Complete</span>
         </div>
       </div>
+
+      <AutoSave
+        data={responses}
+        onSave={saveAssessmentResponses}
+        onError={(error) => setSaveError(error.message)}
+      />
     </div>
   );
 };
