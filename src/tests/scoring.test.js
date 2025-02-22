@@ -90,4 +90,54 @@ describe('Scoring System', () => {
       });
     });
   });
+
+  describe('Recommendation Validation', () => {
+    test('validates recommendations match stage maturity', () => {
+      const mockScores = {
+        categoryScores: {
+          'github-ecosystem': 2.0,
+          'security': 1.5,
+          'ai-adoption': 1.0,
+          'automation': 1.5
+        },
+        benchmarks: {
+          'github-ecosystem': 2.5,
+          'security': 2.0,
+          'ai-adoption': 2.0,
+          'automation': 2.0
+        }
+      };
+
+      const preSeedRecs = getRecommendations(mockScores, 'pre-seed');
+      const seedRecs = getRecommendations(mockScores, 'seed');
+      const seriesARecs = getRecommendations(mockScores, 'series-a');
+
+      // Pre-seed should focus on essentials
+      expect(preSeedRecs.every(r => r.category !== 'ai-adoption')).toBe(true);
+      expect(preSeedRecs.every(r => r.effort !== 'High')).toBe(true);
+
+      // Seed stage can include more complex recommendations
+      expect(seedRecs.some(r => r.category === 'automation')).toBe(true);
+
+      // Series A can include all recommendation types
+      expect(seriesARecs.some(r => r.category === 'ai-adoption')).toBe(true);
+    });
+
+    test('sorts recommendations by priority within stage context', () => {
+      const mockScores = {
+        categoryScores: { 'security': 1.0 },
+        benchmarks: { 'security': 2.0 }
+      };
+
+      ['pre-seed', 'seed', 'series-a'].forEach(stage => {
+        const recs = getRecommendations(mockScores, stage);
+        
+        // High priority items should come first
+        const priorities = recs.map(r => r.priority);
+        expect(priorities).toEqual(
+          expect.arrayContaining(['high', 'medium', 'low'].sort().reverse())
+        );
+      });
+    });
+  });
 });

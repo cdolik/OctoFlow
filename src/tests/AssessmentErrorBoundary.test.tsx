@@ -192,3 +192,70 @@ describe('AssessmentErrorBoundary', () => {
     consoleError.mockRestore();
   });
 });
+
+describe('Error Recovery Scenarios', () => {
+  beforeEach(() => {
+    // Mock successful recovery attempt
+    (ErrorReporter.attemptRecovery as jest.Mock).mockResolvedValue(true);
+  });
+
+  it('preserves stage-specific data during recovery', async () => {
+    const mockResponses = {
+      'branch-protection': 3,
+      'deployment-automation': 4
+    };
+    (getAssessmentResponses as jest.Mock).mockReturnValue(mockResponses);
+
+    render(
+      <AssessmentErrorBoundary>
+        <ThrowError message="Test error" />
+      </AssessmentErrorBoundary>
+    );
+
+    const retryButton = screen.getByText(/Try to Recover/i);
+    fireEvent.click(retryButton);
+
+    await waitFor(() => {
+      const savedResponses = getAssessmentResponses();
+      expect(savedResponses).toEqual(mockResponses);
+    });
+  });
+
+  it('handles transition errors between stages', async () => {
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+    (getAssessmentResponses as jest.Mock).mockReturnValue({
+      'invalid-question': 3 // Question that doesn't exist in stage
+    });
+
+    render(
+      <AssessmentErrorBoundary>
+        <ThrowError message="Invalid stage transition" />
+      </AssessmentErrorBoundary>
+    );
+
+    expect(screen.getByText(/We encountered an issue/i)).toBeInTheDocument();
+    expect(screen.getByText(/Try Again/i)).toBeInTheDocument();
+
+    consoleError.mockRestore();
+  });
+
+  it('recovers from autosave failures', async () => {
+    const mockAutosaveError = new Error('Failed to save progress');
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    render(
+      <AssessmentErrorBoundary>
+        <ThrowError message={mockAutosaveError.message} />
+      </AssessmentErrorBoundary>
+    );
+
+    const retryButton = screen.getByText(/Try to Recover/i);
+    fireEvent.click(retryButton);
+
+    await waitFor(() => {
+      expect(trackError).toHaveBeenCalledWith('assessment_error', expect.any(Object));
+    });
+
+    consoleError.mockRestore();
+  });
+});

@@ -214,6 +214,14 @@ export const trackSessionHealth = () => {
   });
 };
 
+export const trackStageTransition = (fromStage, toStage) => {
+  logEvent('stage_transition', {
+    from: fromStage,
+    to: toStage,
+    timestamp: Date.now()
+  });
+};
+
 const isAnswerCorrection = (questionId) => {
   try {
     const responses = JSON.parse(sessionStorage.getItem('octoflow'))?.responses || {};

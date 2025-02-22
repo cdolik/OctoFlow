@@ -1,96 +1,62 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Stage } from '../types';
 import { getStageQuestions } from '../data/questions';
-import { updateAssessmentResponse, getAssessmentResponses, saveAssessmentResponses } from '../utils/storage';
-import { trackQuestionAnswer, trackAssessmentComplete } from '../utils/analytics';
+import { useAssessmentSession } from '../hooks/useAssessmentSession';
+import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
+import { useStageTransition } from '../hooks/useStageTransition';
 import GitHubTooltip from './GitHubTooltip';
 import ProgressTracker from './ProgressTracker';
 import AutoSave from './AutoSave';
-import { FlowValidationProps } from './withFlowValidation';
-import AssessmentErrorBoundary from './AssessmentErrorBoundary';
-import withFlowValidation from './withFlowValidation';
-import useKeyboardNavigation from '../hooks/useKeyboardNavigation';
-import NavigationGuard from './NavigationGuard';
+import LoadingSpinner from './LoadingSpinner';
 import './styles.css';
 
-interface Option {
-  value: number;
-  text: string;
+interface AssessmentProps {
+  stage: Stage;
+  onComplete?: (responses: Record<string, number>) => void;
 }
 
-interface Question {
-  id: string;
-  text: string;
-  tooltipTerm?: string;
-  options: Option[];
-  stages: string[];
-}
-
-interface AssessmentProps extends FlowValidationProps {
-  stage: import('../App').StageConfig;
-  onComplete: (responses: Record<string, number>) => void;
-}
-
-export type Responses = Record<string, number>;
-
-const Assessment: React.FC<AssessmentProps> = ({ stage, onComplete }) => {
+export const Assessment: React.FC<AssessmentProps> = ({ stage, onComplete }) => {
+  const navigate = useNavigate();
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
-  const [responses, setResponses] = useState<Responses>({});
-  const [, setIsSaving] = useState(false);
-  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [responses, setResponses] = useState<Record<string, number>>({});
 
-  const questions = useMemo(() => getStageQuestions(stage), [stage]) as Question[];
-  const currentQuestion = questions[currentQuestionIndex] as Question;
-  
-  // Add ref for managing focus
-  const optionsRef = useRef<(HTMLButtonElement | null)[]>([]);
-
-  useEffect(() => {
-    // Reset refs array when options change
-    optionsRef.current = optionsRef.current.slice(0, currentQuestion?.options.length);
-  }, [currentQuestion]);
-
-  // Load saved progress on mount
-  useEffect(() => {
-    const savedResponses = getAssessmentResponses();
-    if (Object.keys(savedResponses).length > 0) {
-      const typedResponses = savedResponses as Responses;
-      setResponses(typedResponses);
-      // Find the last unanswered question
-      const lastAnsweredIndex = questions.findIndex(
-        q => !typedResponses[q.id]
-      );
-      if (lastAnsweredIndex !== -1) {
-        setCurrentQuestionIndex(Math.max(0, lastAnsweredIndex));
+  // Use our enhanced session management
+  const {
+    isLoading,
+    recoveredResponses,
+    error: sessionError,
+    restoreSession,
+    clearSession
+  } = useAssessmentSession({
+    redirectPath: '/stage-select',
+    autoRecover: true,
+    onRecoveryComplete: (recoveredStage, responses) => {
+      if (recoveredStage === stage) {
+        setResponses(responses);
+        // Find last answered question
+        const questions = getStageQuestions(stage);
+        const lastAnswered = questions.findIndex(q => !responses[q.id]);
+        setCurrentQuestionIndex(lastAnswered === -1 ? questions.length - 1 : lastAnswered);
       }
     }
-  }, [questions]);
+  });
 
-  const handleSave = async (data: Responses) => {
-    try {
-      setIsSaving(true);
-      saveAssessmentResponses(data);
-      setLastSaved(new Date());
-    } finally {
-      setIsSaving(false);
-    }
-  };
+  const { startTransition } = useStageTransition({
+    stage,
+    responses,
+    onComplete
+  });
 
-  const handleAnswer = (questionId: string, value: number) => {
-    const newResponses = {
-      ...responses,
-      [questionId]: value
-    };
-    setResponses(newResponses);
-    updateAssessmentResponse(questionId, value);
-    trackQuestionAnswer(questionId, value);
-  };
+  const questions = useMemo(() => getStageQuestions(stage), [stage]);
+  const currentQuestion = questions[currentQuestionIndex];
 
   const handleNext = () => {
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
     } else {
-      trackAssessmentComplete(responses);
-      onComplete(responses);
+      startTransition('summary');
+      navigate('/summary');
     }
   };
 
@@ -100,138 +66,115 @@ const Assessment: React.FC<AssessmentProps> = ({ stage, onComplete }) => {
     }
   };
 
-  const handleOptionSelect = (index: number) => {
-    if (currentQuestion?.options[index]) {
-      handleAnswer(currentQuestion.id, currentQuestion.options[index].value);
-      // Focus the selected option
-      optionsRef.current[index]?.focus();
+  const handleSelect = (optionIndex: number) => {
+    if (currentQuestion) {
+      setResponses(prev => ({
+        ...prev,
+        [currentQuestion.id]: currentQuestion.options[optionIndex].value
+      }));
     }
   };
 
-  const progress = (Object.keys(responses).length / questions.length) * 100;
-  const canProceed = currentQuestion && responses[currentQuestion.id] !== undefined;
-
-  // Initialize keyboard navigation
+  // Keyboard navigation setup
   useKeyboardNavigation({
     onNext: handleNext,
     onBack: handleBack,
-    onSelect: handleOptionSelect,
-    canProceed,
-    isFirstQuestion: currentQuestionIndex === 0,
-    optionsCount: currentQuestion?.options.length || 0
+    onSelect: handleSelect,
+    shortcuts: [
+      {
+        key: 'R',
+        requiresCtrl: true,
+        action: restoreSession
+      },
+      {
+        key: 'Escape',
+        action: () => navigate('/stage-select')
+      }
+    ]
   });
 
-  // Prevent accidental navigation
-  const hasUnsavedChanges = Object.keys(responses).length > 0;
+  if (isLoading) {
+    return (
+      <div className="assessment-loading">
+        <LoadingSpinner />
+        <p>Loading assessment...</p>
+      </div>
+    );
+  }
+
+  if (sessionError) {
+    return (
+      <div className="assessment-error">
+        <h2>Session Error</h2>
+        <p>{sessionError.message}</p>
+        <button onClick={() => {
+          clearSession();
+          navigate('/stage-select');
+        }}>
+          Start Over
+        </button>
+      </div>
+    );
+  }
 
   return (
-    <AssessmentErrorBoundary>
-      <NavigationGuard hasUnsavedChanges={hasUnsavedChanges} />
-      <AutoSave 
-        data={responses}
-        onSave={handleSave}
-        interval={5000}
-        onError={(error) => console.error('Failed to save progress:', error)}
+    <div className="assessment">
+      <ProgressTracker
+        current={currentQuestionIndex + 1}
+        total={questions.length}
+        responses={responses}
       />
-      <div 
-        className="assessment-container"
-        role="main"
-        aria-label={`Assessment for ${stage} stage`}
-      >
-        <ProgressTracker 
-          progress={progress}
-          currentQuestion={currentQuestionIndex + 1}
-          totalQuestions={questions.length}
-        />
-        <div 
-          className="question-card"
-          role="form"
-          aria-labelledby="current-question"
-        >
-          {lastSaved && (
-            <div className="save-status" role="status">
-              Last saved: {lastSaved.toLocaleTimeString()}
+
+      <div className="question-container">
+        <h2>Question {currentQuestionIndex + 1}</h2>
+        {currentQuestion && (
+          <>
+            <div className="question-text">
+              {currentQuestion.text}
+              {currentQuestion.tooltipTerm && (
+                <GitHubTooltip term={currentQuestion.tooltipTerm} />
+              )}
             </div>
-          )}
-          <div 
-            className="keyboard-shortcuts-hint" 
-            role="note"
-            aria-label="Keyboard shortcuts available"
-          >
-            <p>Keyboard shortcuts:</p>
-            <ul>
-              <li>→ or Enter: Next question</li>
-              <li>←: Previous question</li>
-              <li>1-4: Select option</li>
-            </ul>
-          </div>
-          <div className="question-header">
-            {currentQuestion?.tooltipTerm ? (
-              <GitHubTooltip term={currentQuestion.tooltipTerm}>
-                <h3 id="current-question" className="question-text">
-                  {currentQuestion?.text}
-                </h3>
-              </GitHubTooltip>
-            ) : (
-              <h3 id="current-question" className="question-text">
-                {currentQuestion?.text}
-              </h3>
-            )}
-          </div>
-          <div 
-            className="options-grid"
-            role="radiogroup"
-            aria-labelledby="current-question"
-          >
-            {currentQuestion?.options.map((option, index) => (
-              <button
-                key={option.value}
-                ref={el => optionsRef.current[index] = el}
-                className={`option-button ${responses[currentQuestion.id] === option.value ? 'selected' : ''}`}
-                onClick={() => handleAnswer(currentQuestion.id, option.value)}
-                type="button"
-                role="radio"
-                aria-checked={responses[currentQuestion.id] === option.value}
-                aria-label={`Option ${index + 1}: ${option.text}`}
-                data-shortcut={index + 1}
-              >
-                <div className="option-content">
-                  <span className="option-number" aria-hidden="true">
-                    {index + 1}
-                  </span>
-                  <span className="option-label">{option.text}</span>
-                </div>
-              </button>
-            ))}
-          </div>
-          <div 
-            className="navigation-buttons"
-            role="toolbar"
-            aria-label="Question navigation"
-          >
-            <button 
-              className="back-button"
-              onClick={handleBack}
-              disabled={currentQuestionIndex === 0}
-              type="button"
-              aria-label="Previous question"
-            >
-              Back
-            </button>
-            <button 
-              className="next-button"
-              onClick={handleNext}
-              disabled={!canProceed}
-              type="button"
-              aria-label={currentQuestionIndex === questions.length - 1 ? 'Complete assessment' : 'Next question'}
-            >
-              {currentQuestionIndex === questions.length - 1 ? 'Complete' : 'Next'}
-            </button>
-          </div>
-        </div>
+
+            <div className="options-grid">
+              {currentQuestion.options.map((option, idx) => (
+                <button
+                  key={idx}
+                  className={`option ${responses[currentQuestion.id] === option.value ? 'selected' : ''}`}
+                  onClick={() => handleSelect(idx)}
+                  aria-pressed={responses[currentQuestion.id] === option.value}
+                >
+                  {option.text}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
       </div>
-    </AssessmentErrorBoundary>
+
+      <div className="navigation">
+        <button
+          onClick={handleBack}
+          disabled={currentQuestionIndex === 0}
+        >
+          Back
+        </button>
+        <button
+          onClick={handleNext}
+          disabled={!currentQuestion || !responses[currentQuestion.id]}
+        >
+          {currentQuestionIndex === questions.length - 1 ? 'Complete' : 'Next'}
+        </button>
+      </div>
+
+      <AutoSave
+        data={responses}
+        interval={5000}
+        onError={() => {
+          // Handle autosave error
+          console.error('Autosave failed');
+        }}
+      />
+    </div>
   );
 };
-
-export default withFlowValidation<AssessmentProps>(Assessment);
