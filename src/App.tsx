@@ -61,12 +61,17 @@ const App: React.FC<AppProps> = ({ initialStage, onStepChange }) => {
             path="/summary"
             element={
               currentStage ? (
-                <Summary
-                  stage={currentStage}
-                  responses={responses}
-                  stages={stages.map(s => s.id as Stage)}
-                  onStepChange={handleResponseChange}
-                />
+                <AssessmentErrorBoundary
+                  key={`summary-${currentStage}`}
+                  onRecovery={() => handleStageSelect(currentStage)}
+                >
+                  <Summary
+                    stage={currentStage}
+                    responses={responses}
+                    stages={stages.map(s => s.id as Stage)}
+                    onStepChange={handleResponseChange}
+                  />
+                </AssessmentErrorBoundary>
               ) : (
                 <Navigate to="/stage-select" replace />
               )
@@ -99,4 +104,3 @@ const App: React.FC<AppProps> = ({ initialStage, onStepChange }) => {
 };
 
 export default App;
-

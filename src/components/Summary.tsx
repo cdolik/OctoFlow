@@ -6,6 +6,7 @@ import { getStageQuestions } from '../data/categories';
 import { saveAssessmentResponses } from '../utils/storage';
 import { trackCTAClick } from '../utils/analytics';
 import GitHubTooltip from './GitHubTooltip';
+import AssessmentErrorBoundary from './AssessmentErrorBoundary';
 
 interface SummaryProps {
   stage: Stage;
@@ -100,33 +101,35 @@ const Summary: React.FC<SummaryProps> = ({ stage, responses, onStepChange }) => 
   };
 
   return (
-    <div className="summary-container">
-      <h2>Review Your Responses</h2>
-      
-      {validationError && (
-        <div className="error-message" role="alert">
-          {validationError}
-        </div>
-      )}
-
-      <div className="questions-summary">
-        {stageQuestions.map(renderQuestion)}
-      </div>
-
-      <div className="summary-actions">
-        {error ? (
-          <p className="validation-error">{error}</p>
-        ) : (
-          <button
-            onClick={handleViewResults}
-            disabled={!canProgress || isValidating}
-            className="cta-button"
-          >
-            View Results
-          </button>
+    <AssessmentErrorBoundary onRecovery={() => navigate('/stage-select')}>
+      <div className="summary-container">
+        <h2>Review Your Responses</h2>
+        
+        {validationError && (
+          <div className="error-message" role="alert">
+            {validationError}
+          </div>
         )}
+
+        <div className="questions-summary">
+          {stageQuestions.map(renderQuestion)}
+        </div>
+
+        <div className="summary-actions">
+          {error ? (
+            <p className="validation-error">{error}</p>
+          ) : (
+            <button
+              onClick={handleViewResults}
+              disabled={!canProgress || isValidating}
+              className="cta-button"
+            >
+              View Results
+            </button>
+          )}
+        </div>
       </div>
-    </div>
+    </AssessmentErrorBoundary>
   );
 };
 
