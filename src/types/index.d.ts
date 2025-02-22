@@ -126,6 +126,12 @@ export interface StageConfig {
   description: string;
   focus: string[];
   questionFilter: (q: Question) => boolean;
+  benchmarks: {
+    deploymentFreq: string;
+    securityLevel: number;
+    costEfficiency: number;
+    expectedScores: Record<string, number>;
+  };
 }
 
 export interface WafPillar {

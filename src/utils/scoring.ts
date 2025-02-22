@@ -12,13 +12,20 @@ interface CategoryScore {
 interface StageScores {
   overallScore: number;
   categoryScores: Record<string, number>;
-  recommendations: string[];
+  benchmarks: Record<string, number>;
+  completionRate: number;
+  gaps: string[];
 }
 
 export const calculateStageScores = (
   stage: Stage,
   responses: Record<string, number>
 ): StageScores => {
+  const stageConfig = stages.find(s => s.id === stage);
+  if (!stageConfig) {
+    throw new Error(`Invalid stage: ${stage}`);
+  }
+
   const categoryScores: Record<string, CategoryScore> = {};
   
   // Initialize category scores
@@ -40,57 +47,42 @@ export const calculateStageScores = (
     }
   });
 
-  // Calculate weighted averages
+  // Calculate weighted averages and identify gaps
   const finalScores: Record<string, number> = {};
-  let totalWeight = 0;
-  let weightedSum = 0;
-
-  Object.entries(categoryScores).forEach(([categoryId, data]) => {
-    if (data.questionCount > 0) {
-      const avgScore = data.score / data.questionCount;
-      finalScores[categoryId] = avgScore;
-      weightedSum += avgScore * data.weight;
-      totalWeight += data.weight;
+  const gaps: string[] = [];
+  
+  Object.entries(categoryScores).forEach(([category, score]) => {
+    if (score.questionCount > 0) {
+      const avgScore = score.score / score.questionCount;
+      finalScores[category] = avgScore;
+      
+      // Check for gaps against stage benchmarks
+      const benchmark = stageConfig.benchmarks.expectedScores[category];
+      if (benchmark && avgScore < benchmark) {
+        gaps.push(category);
+      }
     }
   });
 
-  const overallScore = totalWeight > 0 ? weightedSum / totalWeight : 0;
+  const overallScore = Object.entries(finalScores).reduce(
+    (acc, [category, score]) => acc + (score * categoryScores[category].weight),
+    0
+  ) / Object.values(categoryScores).reduce((acc, score) => acc + score.weight, 0);
 
-  // Generate recommendations based on scores
-  const recommendations = generateRecommendations(stage, finalScores);
-
+  const answeredCount = Object.keys(responses).length;
+  const totalQuestions = questions.filter(q => q.stages.includes(stage)).length;
+  
   return {
     overallScore,
     categoryScores: finalScores,
-    recommendations
+    benchmarks: stageConfig.benchmarks.expectedScores,
+    completionRate: totalQuestions > 0 ? answeredCount / totalQuestions : 0,
+    gaps
   };
 };
 
-const findQuestionById = (id: string): Question | undefined => {
-  return questions.find(q => q.id === id);
-};
-
-const generateRecommendations = (
-  stage: Stage,
-  scores: Record<string, number>
-): string[] => {
-  const recommendations: string[] = [];
-  const stageBenchmarks = stages.find(s => s.id === stage)?.benchmarks;
-  
-  if (!stageBenchmarks) return recommendations;
-
-  const validScores = (scores as Record<keyof typeof stageBenchmarks.expectedScores, number>);
-  Object.entries(stageBenchmarks.expectedScores).forEach(([category, benchmark]) => {
-    const score = validScores[category as keyof typeof stageBenchmarks.expectedScores];
-    if (score !== undefined && score < benchmark) {
-      recommendations.push(
-        `Improve ${category} practices to reach the expected benchmark of ${benchmark}`
-      );
-    }
-  });
-
-  return recommendations;
-};
+const findQuestionById = (id: string): Question | undefined =>
+  questions.find(q => q.id === id);
 
 export const validateScore = (score: number): boolean => {
   return score >= 0 && score <= 4;

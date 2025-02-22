@@ -1,33 +1,105 @@
 import { StageConfig, Stage, WafPillar, Question } from '../types';
 
-export const STAGE_CONFIG: Record<Stage, StageConfig> = {
-  'pre-seed': {
-    label: 'Pre-Seed',
-    description: 'Focus on establishing basic GitHub workflows and automation',
+export interface StageBenchmarks {
+  deploymentFreq: string;
+  securityLevel: number;
+  costEfficiency: number;
+  expectedScores: {
+    'github-ecosystem': number;
+    'security': number;
+    'automation': number;
+  };
+}
+
+export interface StageDefinition extends StageConfig {
+  id: Stage;
+  label: string;
+  description: string;
+  focus: string[];
+  benchmarks: StageBenchmarks;
+  questionFilter: (q: Question) => boolean;
+}
+
+// Single source of truth for all stage-related configuration
+export const stages: StageDefinition[] = [
+  {
+    id: "pre-seed",
+    label: "Pre-Seed Startup",
+    description: "Focus on establishing basic GitHub workflows and automation",
     focus: ['workflow', 'automation'],
+    benchmarks: {
+      deploymentFreq: "2/week",
+      securityLevel: 1,
+      costEfficiency: 0.8,
+      expectedScores: {
+        'github-ecosystem': 2.0,
+        'security': 1.5,
+        'automation': 1.5
+      }
+    },
     questionFilter: (q: Question) => {
       return ['branch-strategy', 'pr-review', 'ci-practices'].includes(q.id);
     }
   },
-  'seed': {
-    label: 'Series A',
-    description: 'Enhance security practices and release management',
+  {
+    id: "seed",
+    label: "Seed Stage",
+    description: "Raised seed funding, building MVP",
     focus: ['security', 'release'],
+    benchmarks: {
+      deploymentFreq: "1/day",
+      securityLevel: 2,
+      costEfficiency: 0.7,
+      expectedScores: {
+        'github-ecosystem': 2.5,
+        'security': 2.5,
+        'automation': 2.0
+      }
+    },
     questionFilter: (_q: Question) => true // Include all questions
   },
-  'series-a': {
-    label: 'Series A',
-    description: 'Enhance security practices and release management',
+  {
+    id: "series-a",
+    label: "Series A",
+    description: "Scaling operations and team",
     focus: ['security', 'release'],
-    questionFilter: (_q: Question) => true // Include all questions
+    benchmarks: {
+      deploymentFreq: "multiple/day",
+      securityLevel: 3,
+      costEfficiency: 0.6,
+      expectedScores: {
+        'github-ecosystem': 3.5,
+        'security': 3.0,
+        'automation': 3.0
+      }
+    },
+    questionFilter: (_q: Question) => true
   },
-  'series-b': {
-    label: 'Series B+',
-    description: 'Optimize workflows and implement advanced governance',
+  {
+    id: "series-b",
+    label: "Series B+",
+    description: "Optimize workflows and implement advanced governance",
     focus: ['governance', 'optimization'],
-    questionFilter: (_q: Question) => true // Include all questions with advanced options
+    benchmarks: {
+      deploymentFreq: "on-demand",
+      securityLevel: 4,
+      costEfficiency: 0.5,
+      expectedScores: {
+        'github-ecosystem': 4.0,
+        'security': 4.0,
+        'automation': 4.0
+      }
+    },
+    questionFilter: (_q: Question) => true
   }
-};
+];
+
+// Helper functions for stage operations
+export const getStage = (stageId: Stage): StageDefinition | undefined => 
+  stages.find(s => s.id === stageId);
+
+export const getStageQuestions = (stage: Stage, questions: Question[]): Question[] =>
+  questions.filter(q => stages.find(s => s.id === stage)?.questionFilter(q));
 
 export const WAF_PILLARS: WafPillar[] = [
   {
@@ -55,86 +127,5 @@ export const WAF_PILLARS: WafPillar[] = [
         ]
       }
     ]
-  }
-];
-
-interface StageBenchmarks {
-  deploymentFreq: string;
-  securityLevel: number;
-  costEfficiency: number;
-  expectedScores: {
-    'github-ecosystem': number;
-    'security': number;
-    'automation': number;
-  };
-}
-
-interface StageDefinition {
-  id: Stage;
-  label: string;
-  description: string;
-  benchmarks: StageBenchmarks;
-}
-
-export const stages: StageDefinition[] = [
-  {
-    id: "pre-seed",
-    label: "Pre-Seed Startup",
-    description: "Just starting out with a small team",
-    benchmarks: {
-      deploymentFreq: "2/week",
-      securityLevel: 1,
-      costEfficiency: 0.8,
-      expectedScores: {
-        'github-ecosystem': 2.0,
-        'security': 1.5,
-        'automation': 1.5
-      }
-    }
-  },
-  {
-    id: "seed",
-    label: "Seed Stage",
-    description: "Raised seed funding, building MVP",
-    benchmarks: {
-      deploymentFreq: "1/day",
-      securityLevel: 2,
-      costEfficiency: 0.7,
-      expectedScores: {
-        'github-ecosystem': 2.5,
-        'security': 2.5,
-        'automation': 2.0
-      }
-    }
-  },
-  {
-    id: "series-a",
-    label: "Series A",
-    description: "Scaling operations and team",
-    benchmarks: {
-      deploymentFreq: "multiple/day",
-      securityLevel: 3,
-      costEfficiency: 0.6,
-      expectedScores: {
-        'github-ecosystem': 3.5,
-        'security': 3.0,
-        'automation': 3.0
-      }
-    }
-  },
-  {
-    id: "series-b",
-    label: "Series B+",
-    description: "Optimizing for scale and compliance",
-    benchmarks: {
-      deploymentFreq: "on-demand",
-      securityLevel: 4,
-      costEfficiency: 0.5,
-      expectedScores: {
-        'github-ecosystem': 4.0,
-        'security': 4.0,
-        'automation': 4.0
-      }
-    }
   }
 ];
