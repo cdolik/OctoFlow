@@ -209,12 +209,18 @@ export const getProgress = () => {
 
 export const getAssessmentMetadata = () => {
   try {
-    const saved = sessionStorage.getItem(STORAGE_KEY);
-    if (!saved) return null;
-    
-    const state = JSON.parse(saved);
-    return state.metadata;
-  } catch (error) {
+    const data = getAssessmentData();
+    if (!data.metadata) {
+      return {
+        stage: null,
+        startTime: null,
+        lastSaved: null,
+        questionCount: 0
+      };
+    }
+    return data.metadata;
+  } catch (e) {
+    console.error('Error reading assessment metadata:', e);
     return null;
   }
 };

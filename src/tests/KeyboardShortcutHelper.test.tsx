@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, act } from '@testing-library/react';
+import { render, screen, act, fireEvent } from '@testing-library/react';
 import KeyboardShortcutHelper from '../components/KeyboardShortcutHelper';
 
 describe('KeyboardShortcutHelper', () => {
@@ -82,5 +82,50 @@ describe('KeyboardShortcutHelper', () => {
 
     render(<KeyboardShortcutHelper shortcuts={shortcutsWithIcons} />);
     expect(screen.getByText('↵')).toBeInTheDocument();
+  });
+
+  it('displays common shortcuts for all stages', () => {
+    render(<KeyboardShortcutHelper stage="pre-seed" />);
+    
+    // Check common shortcuts are present
+    expect(screen.getByText('→')).toBeInTheDocument();
+    expect(screen.getByText('←')).toBeInTheDocument();
+    expect(screen.getByText('Esc')).toBeInTheDocument();
+  });
+
+  it('shows stage-specific shortcuts', () => {
+    const { rerender } = render(<KeyboardShortcutHelper stage="pre-seed" />);
+    expect(screen.getByText('Save progress')).toBeInTheDocument();
+
+    rerender(<KeyboardShortcutHelper stage="seed" />);
+    expect(screen.getByText('Review previous answers')).toBeInTheDocument();
+
+    rerender(<KeyboardShortcutHelper stage="series-a" />);
+    expect(screen.getByText('Compare with benchmarks')).toBeInTheDocument();
+  });
+
+  it('toggles advanced shortcuts visibility', () => {
+    render(<KeyboardShortcutHelper stage="pre-seed" showAdvanced={false} />);
+    
+    const toggleButton = screen.getByText('Show Advanced Shortcuts');
+    fireEvent.click(toggleButton);
+
+    // Simulate the event listener response
+    window.dispatchEvent(new CustomEvent('toggleAdvancedShortcuts'));
+    
+    // Advanced shortcuts should be shown when props are updated
+    const { rerender } = render(<KeyboardShortcutHelper stage="pre-seed" showAdvanced={true} />);
+    expect(screen.getByText('Ctrl+B')).toBeInTheDocument();
+    expect(screen.getByText('Toggle benchmarks view')).toBeInTheDocument();
+  });
+
+  it('maintains proper accessibility attributes', () => {
+    render(<KeyboardShortcutHelper stage="pre-seed" />);
+    
+    const container = screen.getByRole('complementary');
+    expect(container).toHaveAttribute('aria-label', 'Keyboard shortcuts');
+    
+    const shortcuts = screen.getAllByRole('listitem');
+    expect(shortcuts.length).toBeGreaterThan(0);
   });
 });

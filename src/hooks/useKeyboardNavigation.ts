@@ -1,66 +1,68 @@
-import { useEffect, useCallback } from 'react';
-
-interface UseKeyboardNavigationProps {
-  onNext: () => void;
-  onBack: () => void;
-  onSelect: (index: number) => void;
-  canProceed: boolean;
-  isFirstQuestion: boolean;
-  optionsCount: number;
-}
+import { useState, useEffect, useCallback } from 'react';
+import { UseKeyboardNavigationConfig, UseKeyboardNavigationResult } from '../types/hooks';
 
 export const useKeyboardNavigation = ({
   onNext,
   onBack,
   onSelect,
-  canProceed,
-  isFirstQuestion,
-  optionsCount
-}: UseKeyboardNavigationProps): void => {
-  const handleKeyPress = useCallback((event: KeyboardEvent) => {
-    // Don't handle keyboard events if user is typing in an input
-    if (event.target instanceof HTMLInputElement || 
-        event.target instanceof HTMLTextAreaElement) {
-      return;
-    }
+  shortcuts = [],
+  disabled = false
+}: UseKeyboardNavigationConfig): UseKeyboardNavigationResult => {
+  const [currentFocus, setCurrentFocus] = useState<number>(-1);
 
+  const handleKeyPress = useCallback((event: KeyboardEvent) => {
+    if (disabled) return;
+
+    // Handle navigation keys
     switch (event.key) {
       case 'ArrowRight':
       case 'Enter':
-        if (canProceed) {
-          event.preventDefault();
-          onNext();
-        }
+        event.preventDefault();
+        onNext();
         break;
-
       case 'ArrowLeft':
-        if (!isFirstQuestion) {
-          event.preventDefault();
-          onBack();
-        }
+        event.preventDefault();
+        onBack();
         break;
-
-      // Number keys 1-4 for option selection
-      case '1':
-      case '2':
-      case '3':
-      case '4':
-        const optionIndex = parseInt(event.key) - 1;
-        if (optionIndex < optionsCount) {
-          event.preventDefault();
-          onSelect(optionIndex);
-        }
+      case 'Tab':
+        // Allow natural tab navigation
         break;
-
       default:
-        break;
+        // Handle numeric shortcuts (1-9)
+        const numKey = Number(event.key);
+        if (!isNaN(numKey) && numKey > 0 && onSelect) {
+          event.preventDefault();
+          onSelect(numKey - 1);
+          setCurrentFocus(numKey - 1);
+        }
+        
+        // Handle custom shortcuts
+        shortcuts.forEach(shortcut => {
+          if (
+            event.key.toLowerCase() === shortcut.key.toLowerCase() &&
+            event.ctrlKey === !!shortcut.requiresCtrl
+          ) {
+            event.preventDefault();
+            shortcut.action();
+          }
+        });
     }
-  }, [onNext, onBack, onSelect, canProceed, isFirstQuestion, optionsCount]);
+  }, [onNext, onBack, onSelect, shortcuts, disabled]);
+
+  const resetFocus = useCallback(() => {
+    setCurrentFocus(-1);
+  }, []);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, [handleKeyPress]);
+
+  return {
+    currentFocus,
+    setFocus: setCurrentFocus,
+    resetFocus
+  };
 };
 
 export default useKeyboardNavigation;

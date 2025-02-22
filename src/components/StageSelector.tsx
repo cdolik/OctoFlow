@@ -1,13 +1,20 @@
 import React from 'react';
 import GitHubTooltip from './GitHubTooltip';
+import { Stage } from '../types';
 import { stages } from '../data/stages';
 import './styles.css';
 
 interface StageSelectorProps {
-  onStageSelect: (stage: string) => void;
+  onSelect: (stage: Stage) => void;
+  initialStage?: Stage;
+  disabled?: boolean;
 }
 
-const StageSelector: React.FC<StageSelectorProps> = ({ onStageSelect }) => {
+const StageSelector: React.FC<StageSelectorProps> = ({
+  onSelect,
+  initialStage,
+  disabled = false
+}) => {
   return (
     <div className="stage-selector">
       <h2>Select Your Startup Stage</h2>
@@ -17,10 +24,12 @@ const StageSelector: React.FC<StageSelectorProps> = ({ onStageSelect }) => {
         {stages.map(stage => (
           <div 
             key={stage.id} 
-            className="stage-card"
-            onClick={() => onStageSelect(stage.id)}
+            className={`stage-card ${initialStage === stage.id ? 'selected' : ''}`}
+            onClick={() => !disabled && onSelect(stage.id as Stage)}
             role="button"
-            tabIndex={0}
+            tabIndex={disabled ? -1 : 0}
+            aria-selected={initialStage === stage.id}
+            aria-disabled={disabled}
           >
             <h3>{stage.label}</h3>
             <p>{stage.description}</p>

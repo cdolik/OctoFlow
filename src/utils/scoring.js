@@ -91,31 +91,40 @@ export const getScoreLevel = (score) => {
   return { level: 'Initial', description: 'Start implementing GitHub best practices' };
 };
 
+export const validateRecommendations = (recommendations, stage) => {
+  // Validate all recommendations are appropriate for the stage
+  return recommendations.filter(rec => {
+    // Exclude recommendations that require features beyond stage maturity
+    if (stage === 'pre-seed' && rec.category === 'ai-adoption') return false;
+    if (stage === 'pre-seed' && rec.effort === 'High') return false;
+    
+    // Prioritize stage-specific recommendations
+    const stagePriority = {
+      'pre-seed': ['github-ecosystem', 'security'],
+      'seed': ['automation', 'security'],
+      'series-a': ['security', 'ai-adoption']
+    };
+    
+    const categoryPriority = stagePriority[stage] || [];
+    return categoryPriority.includes(rec.category) || rec.priority === 'high';
+  });
+};
+
 export const getRecommendations = (scores, stage) => {
-  const recommendations = [];
-  const benchmarks = STAGE_BENCHMARKS[stage] || STAGE_BENCHMARKS['pre-seed'];
-
-  // Get recommendations based on score gaps
-  Object.entries(scores.categoryScores).forEach(([categoryId, score]) => {
-    if (score < benchmarks[categoryId]) {
-      const categoryRecs = getRecommendationKeys(categoryId, score, benchmarks[categoryId]);
-      const detailedRecs = categoryRecs.map(key => ({
-        ...RECOMMENDATIONS[key],
-        category: categoryId,
-        priority: score < benchmarks[categoryId] - 1 ? 'high' : 'medium',
-        currentScore: score,
-        targetScore: benchmarks[categoryId]
-      }));
-      recommendations.push(...detailedRecs);
-    }
+  // Get initial recommendations based on score gaps
+  const recommendations = RECOMMENDATIONS.filter(rec => {
+    const categoryScore = scores.categoryScores[rec.category] || 0;
+    return categoryScore < scores.benchmarks[rec.category];
   });
 
-  // Sort recommendations by priority and impact
-  return recommendations.sort((a, b) => {
-    if (a.priority === 'high' && b.priority !== 'high') return -1;
-    if (b.priority === 'high' && a.priority !== 'high') return 1;
-    return a.impact === 'High' ? -1 : 1;
-  });
+  // Sort by priority and apply stage-specific filtering
+  const validatedRecs = validateRecommendations(recommendations, stage)
+    .sort((a, b) => {
+      const priorityScore = { high: 3, medium: 2, low: 1 };
+      return priorityScore[b.priority] - priorityScore[a.priority];
+    });
+
+  return validatedRecs;
 };
 
 const getRecommendationKeys = (categoryId, currentScore, targetScore) => {

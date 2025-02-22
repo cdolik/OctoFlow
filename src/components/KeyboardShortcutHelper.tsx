@@ -1,61 +1,69 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import { Stage } from '../types';
 import './styles.css';
 
-interface KeyboardShortcutHelperProps {
-  shortcuts: Array<{
-    key: string;
-    description: string;
-    icon?: string;
-  }>;
-  autoHide?: boolean;
-  hideDelay?: number;
+interface ShortcutProps {
+  stage: Stage;
+  showAdvanced?: boolean;
 }
 
-const KeyboardShortcutHelper: React.FC<KeyboardShortcutHelperProps> = ({
-  shortcuts,
-  autoHide = true,
-  hideDelay = 5000
-}) => {
-  const [isVisible, setIsVisible] = useState(true);
+interface ShortcutInfo {
+  key: string;
+  description: string;
+}
 
-  useEffect(() => {
-    if (autoHide) {
-      const timer = setTimeout(() => {
-        setIsVisible(false);
-      }, hideDelay);
+const KeyboardShortcutHelper: React.FC<ShortcutProps> = ({ stage, showAdvanced = false }) => {
+  const getStageShortcuts = () => {
+    const common: ShortcutInfo[] = [
+      { key: '→', description: 'Next question/section' },
+      { key: '←', description: 'Previous question/section' },
+      { key: 'Esc', description: 'Open menu / Exit current view' }
+    ];
 
-      return () => clearTimeout(timer);
-    }
-  }, [autoHide, hideDelay]);
+    const stageSpecific: Record<Stage, ShortcutInfo[]> = {
+      'pre-seed': [
+        { key: '1-4', description: 'Select answer option' },
+        { key: 'S', description: 'Save progress' }
+      ],
+      'seed': [
+        { key: '1-4', description: 'Select answer option' },
+        { key: 'R', description: 'Review previous answers' }
+      ],
+      'series-a': [
+        { key: '1-4', description: 'Select answer option' },
+        { key: 'C', description: 'Compare with benchmarks' }
+      ]
+    };
 
-  if (!isVisible) {
-    return null;
-  }
+    const advanced: ShortcutInfo[] = [
+      { key: 'Ctrl+B', description: 'Toggle benchmarks view' },
+      { key: 'Ctrl+H', description: 'Show/hide help' },
+      { key: 'Ctrl+S', description: 'Force save' }
+    ];
+
+    return [
+      ...common,
+      ...stageSpecific[stage],
+      ...(showAdvanced ? advanced : [])
+    ];
+  };
 
   return (
-    <div 
-      className="keyboard-helper"
-      role="complementary"
-      aria-label="Keyboard shortcuts"
-    >
-      <div className="keyboard-helper-content">
-        {shortcuts.map(({ key, description, icon }) => (
-          <div key={key} className="shortcut-item">
-            <kbd className="shortcut-key">
-              {icon && <span className="shortcut-icon">{icon}</span>}
-              {key}
-            </kbd>
+    <div className="keyboard-shortcuts" role="complementary" aria-label="Keyboard shortcuts">
+      <div className="shortcuts-grid">
+        {getStageShortcuts().map(({ key, description }) => (
+          <div key={key} className="shortcut-row">
+            <kbd className="shortcut-key">{key}</kbd>
             <span className="shortcut-description">{description}</span>
           </div>
         ))}
       </div>
-      {autoHide && (
+      {!showAdvanced && (
         <button 
-          className="keyboard-helper-close"
-          onClick={() => setIsVisible(false)}
-          aria-label="Close keyboard shortcuts helper"
+          className="show-advanced-shortcuts"
+          onClick={() => window.dispatchEvent(new CustomEvent('toggleAdvancedShortcuts'))}
         >
-          ×
+          Show Advanced Shortcuts
         </button>
       )}
     </div>

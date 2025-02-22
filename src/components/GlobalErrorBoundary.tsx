@@ -1,84 +1,109 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { clearAllStorage } from '../utils/storage';
+import React, { Component, ErrorInfo } from 'react';
+import { trackErrorWithRecovery } from '../utils/analytics';
+import { backupState, restoreFromBackup } from '../utils/storage';
+import LoadingSpinner from './LoadingSpinner';
 
 interface Props {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
 interface State {
   hasError: boolean;
   error: Error | null;
-  errorInfo: ErrorInfo | null;
+  isRecovering: boolean;
 }
 
 class GlobalErrorBoundary extends Component<Props, State> {
-  public state: State = {
-    hasError: false,
-    error: null,
-    errorInfo: null
-  };
-
-  public static getDerivedStateFromError(error: Error): State {
-    return {
-      hasError: true,
-      error,
-      errorInfo: null
+  constructor(props: Props) {
+    super(props);
+    this.state = {
+      hasError: false,
+      error: null,
+      isRecovering: false
     };
   }
 
-  public componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    this.setState({
+  static getDerivedStateFromError(error: Error): State {
+    return {
+      hasError: true,
       error,
-      errorInfo
-    });
-
-    // Clear storage on critical errors to prevent persistent error states
-    if (this.isCriticalError(error)) {
-      clearAllStorage();
-    }
-
-    // Log error to monitoring service
-    console.error('Error caught by GlobalErrorBoundary:', error, errorInfo);
+      isRecovering: false
+    };
   }
 
-  private isCriticalError(error: Error): boolean {
-    const criticalErrors = [
-      'QuotaExceededError',
-      'SecurityError',
-      'InvalidStateError',
-      'SyntaxError'
-    ];
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    // Always backup state when an error occurs
+    backupState();
     
-    return criticalErrors.some(errorType => 
-      error.name === errorType || error.message.includes(errorType)
-    );
+    trackErrorWithRecovery(error, false, false);
+    console.error('Error caught by boundary:', error, errorInfo);
   }
 
-  private handleReset = (): void => {
-    clearAllStorage();
-    window.location.href = '/';
+  handleRetry = async () => {
+    this.setState({ isRecovering: true });
+
+    try {
+      const recovered = await restoreFromBackup();
+      trackErrorWithRecovery(this.state.error!, true, recovered);
+
+      if (recovered) {
+        this.setState({ hasError: false, error: null });
+      }
+    } catch (e) {
+      trackErrorWithRecovery(this.state.error!, true, false);
+      console.error('Recovery failed:', e);
+    } finally {
+      this.setState({ isRecovering: false });
+    }
   };
 
-  public render(): ReactNode {
+  handleReset = () => {
+    window.location.hash = '/';
+    window.location.reload();
+  };
+
+  render() {
     if (this.state.hasError) {
+      const isStorageError = this.state.error?.message.includes('storage');
+      const isNetworkError = this.state.error?.message.includes('network');
+
       return (
-        <div className="error-boundary">
-          <h1>Something went wrong</h1>
-          <p>We apologize for the inconvenience. Please try refreshing the page.</p>
-          {process.env.NODE_ENV === 'development' && (
-            <details style={{ whiteSpace: 'pre-wrap' }}>
-              {this.state.error && this.state.error.toString()}
-              <br />
-              {this.state.errorInfo?.componentStack}
-            </details>
+        <div className="error-boundary" role="alert">
+          <h2>Oops! Something went wrong</h2>
+          
+          {this.state.isRecovering ? (
+            <div className="recovery-status">
+              <LoadingSpinner size="small" />
+              <p>Attempting to recover your progress...</p>
+            </div>
+          ) : (
+            <>
+              <p>
+                {isStorageError ? 
+                  "We encountered an issue saving your progress. Please ensure you have enough storage space and cookies enabled." :
+                  isNetworkError ?
+                    "We're having trouble connecting. Please check your internet connection." :
+                    "We encountered an unexpected issue."}
+              </p>
+
+              <div className="error-actions">
+                {!isStorageError && (
+                  <button 
+                    onClick={this.handleRetry}
+                    className="retry-button"
+                  >
+                    Try to Recover
+                  </button>
+                )}
+                <button 
+                  onClick={this.handleReset}
+                  className="reset-button"
+                >
+                  Start Over
+                </button>
+              </div>
+            </>
           )}
-          <button 
-            onClick={this.handleReset}
-            className="reset-button"
-            type="button"
-          >
-            Reset Application
-          </button>
         </div>
       );
     }

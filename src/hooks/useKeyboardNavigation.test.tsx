@@ -1,79 +1,100 @@
-import { renderHook } from '@testing-library/react';
-import { fireEvent } from '@testing-library/react';
-import useKeyboardNavigation from './useKeyboardNavigation';
+import { renderHook, act } from '@testing-library/react';
+import { useKeyboardNavigation } from './useKeyboardNavigation';
+import { UseKeyboardNavigationConfig } from '../types/hooks';
 
 describe('useKeyboardNavigation', () => {
-  const mockProps = {
+  const mockConfig: UseKeyboardNavigationConfig = {
     onNext: jest.fn(),
     onBack: jest.fn(),
     onSelect: jest.fn(),
-    canProceed: true,
-    isFirstQuestion: false,
-    optionsCount: 4
+    shortcuts: [
+      { key: 'S', requiresCtrl: true, action: jest.fn() },
+      { key: 'R', requiresCtrl: false, action: jest.fn() }
+    ]
   };
 
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  it('should handle arrow right and enter for next', () => {
-    renderHook(() => useKeyboardNavigation(mockProps));
+  it('handles basic navigation keys', () => {
+    const { result } = renderHook(() => useKeyboardNavigation(mockConfig));
 
-    fireEvent.keyDown(document, { key: 'ArrowRight' });
-    expect(mockProps.onNext).toHaveBeenCalled();
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
+    });
+    expect(mockConfig.onNext).toHaveBeenCalled();
 
-    fireEvent.keyDown(document, { key: 'Enter' });
-    expect(mockProps.onNext).toHaveBeenCalledTimes(2);
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft' }));
+    });
+    expect(mockConfig.onBack).toHaveBeenCalled();
   });
 
-  it('should not proceed when canProceed is false', () => {
-    renderHook(() => useKeyboardNavigation({ ...mockProps, canProceed: false }));
+  it('handles numeric shortcuts', () => {
+    const { result } = renderHook(() => useKeyboardNavigation(mockConfig));
 
-    fireEvent.keyDown(document, { key: 'ArrowRight' });
-    expect(mockProps.onNext).not.toHaveBeenCalled();
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: '2' }));
+    });
+
+    expect(mockConfig.onSelect).toHaveBeenCalledWith(1);
+    expect(result.current.currentFocus).toBe(1);
   });
 
-  it('should handle arrow left for back when not first question', () => {
-    renderHook(() => useKeyboardNavigation(mockProps));
+  it('handles custom shortcuts', () => {
+    renderHook(() => useKeyboardNavigation(mockConfig));
 
-    fireEvent.keyDown(document, { key: 'ArrowLeft' });
-    expect(mockProps.onBack).toHaveBeenCalled();
+    // Test Ctrl+S shortcut
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'S', ctrlKey: true }));
+    });
+    expect(mockConfig.shortcuts[0].action).toHaveBeenCalled();
+
+    // Test R shortcut without Ctrl
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'R' }));
+    });
+    expect(mockConfig.shortcuts[1].action).toHaveBeenCalled();
   });
 
-  it('should not go back on first question', () => {
-    renderHook(() => useKeyboardNavigation({ ...mockProps, isFirstQuestion: true }));
+  it('ignores keyboard events when disabled', () => {
+    renderHook(() => useKeyboardNavigation({ ...mockConfig, disabled: true }));
 
-    fireEvent.keyDown(document, { key: 'ArrowLeft' });
-    expect(mockProps.onBack).not.toHaveBeenCalled();
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: '1' }));
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'S', ctrlKey: true }));
+    });
+
+    expect(mockConfig.onNext).not.toHaveBeenCalled();
+    expect(mockConfig.onSelect).not.toHaveBeenCalled();
+    expect(mockConfig.shortcuts[0].action).not.toHaveBeenCalled();
   });
 
-  it('should handle number keys for option selection', () => {
-    renderHook(() => useKeyboardNavigation(mockProps));
+  it('allows focus management', () => {
+    const { result } = renderHook(() => useKeyboardNavigation(mockConfig));
 
-    fireEvent.keyDown(document, { key: '1' });
-    expect(mockProps.onSelect).toHaveBeenCalledWith(0);
+    act(() => {
+      result.current.setFocus(2);
+    });
+    expect(result.current.currentFocus).toBe(2);
 
-    fireEvent.keyDown(document, { key: '4' });
-    expect(mockProps.onSelect).toHaveBeenCalledWith(3);
+    act(() => {
+      result.current.resetFocus();
+    });
+    expect(result.current.currentFocus).toBe(-1);
   });
 
-  it('should not handle number keys beyond optionsCount', () => {
-    renderHook(() => useKeyboardNavigation({ ...mockProps, optionsCount: 2 }));
+  it('cleans up event listeners on unmount', () => {
+    const { unmount } = renderHook(() => useKeyboardNavigation(mockConfig));
+    const removeEventListenerSpy = jest.spyOn(window, 'removeEventListener');
 
-    fireEvent.keyDown(document, { key: '3' });
-    expect(mockProps.onSelect).not.toHaveBeenCalled();
-  });
+    unmount();
 
-  it('should not handle keyboard events when typing in input', () => {
-    renderHook(() => useKeyboardNavigation(mockProps));
-    
-    const input = document.createElement('input');
-    document.body.appendChild(input);
-    input.focus();
-
-    fireEvent.keyDown(input, { key: 'ArrowRight' });
-    expect(mockProps.onNext).not.toHaveBeenCalled();
-
-    document.body.removeChild(input);
+    expect(removeEventListenerSpy).toHaveBeenCalledWith(
+      'keydown',
+      expect.any(Function)
+    );
   });
 });

@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen, act, fireEvent, waitFor } from '@testing-library/react';
 import AutoSave from '../components/AutoSave';
 import type { Responses } from 'octoflow';
+import { saveAssessmentResponses } from '../utils/storage';
 
 // Mock storage utility
 jest.mock('../utils/storage', () => ({
@@ -12,6 +13,7 @@ describe('AutoSave', () => {
   beforeEach(() => {
     jest.useFakeTimers();
     jest.clearAllMocks();
+    (saveAssessmentResponses as jest.Mock).mockImplementation(() => true);
   });
 
   afterEach(() => {
@@ -217,5 +219,138 @@ describe('AutoSave', () => {
     await waitFor(() => {
       expect(screen.getByText('Save failed')).toBeInTheDocument();
     });
+  });
+
+  it('auto-saves data at specified intervals', async () => {
+    render(
+      <AutoSave
+        data={mockData}
+        onSave={defaultProps.onSave}
+        interval={1000}
+        onError={defaultProps.onError}
+      />
+    );
+
+    // Fast-forward through three save intervals
+    for (let i = 0; i < 3; i++) {
+      act(() => {
+        jest.advanceTimersByTime(1000);
+      });
+
+      await waitFor(() => {
+        expect(saveAssessmentResponses).toHaveBeenCalledWith(mockData);
+        expect(defaultProps.onSave).toHaveBeenCalled();
+      });
+    }
+  });
+
+  it('handles save failures gracefully', async () => {
+    (saveAssessmentResponses as jest.Mock).mockImplementation(() => {
+      throw new Error('Save failed');
+    });
+
+    render(
+      <AutoSave
+        data={mockData}
+        onSave={defaultProps.onSave}
+        interval={1000}
+        onError={defaultProps.onError}
+      />
+    );
+
+    act(() => {
+      jest.advanceTimersByTime(1000);
+    });
+
+    await waitFor(() => {
+      expect(defaultProps.onError).toHaveBeenCalledWith(expect.any(Error));
+      expect(defaultProps.onSave).not.toHaveBeenCalled();
+    });
+  });
+
+  it('updates timer when interval changes', async () => {
+    const { rerender } = render(
+      <AutoSave
+        data={mockData}
+        onSave={defaultProps.onSave}
+        interval={1000}
+        onError={defaultProps.onError}
+      />
+    );
+
+    act(() => {
+      jest.advanceTimersByTime(1000);
+    });
+
+    await waitFor(() => {
+      expect(saveAssessmentResponses).toHaveBeenCalledTimes(1);
+    });
+
+    rerender(
+      <AutoSave
+        data={mockData}
+        onSave={defaultProps.onSave}
+        interval={2000}
+        onError={defaultProps.onError}
+      />
+    );
+
+    act(() => {
+      jest.advanceTimersByTime(1000);
+    });
+
+    expect(saveAssessmentResponses).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      jest.advanceTimersByTime(1000);
+    });
+
+    await waitFor(() => {
+      expect(saveAssessmentResponses).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  it('saves immediately when data changes significantly', async () => {
+    const { rerender } = render(
+      <AutoSave
+        data={mockData}
+        onSave={defaultProps.onSave}
+        interval={5000}
+        onError={defaultProps.onError}
+      />
+    );
+
+    const newData = { ...mockData, question3: 2 };
+    rerender(
+      <AutoSave
+        data={newData}
+        onSave={defaultProps.onSave}
+        interval={5000}
+        onError={defaultProps.onError}
+      />
+    );
+
+    await waitFor(() => {
+      expect(saveAssessmentResponses).toHaveBeenCalledWith(newData);
+    });
+  });
+
+  it('cleans up timer on unmount', () => {
+    const { unmount } = render(
+      <AutoSave
+        data={mockData}
+        onSave={defaultProps.onSave}
+        interval={1000}
+        onError={defaultProps.onError}
+      />
+    );
+
+    unmount();
+
+    act(() => {
+      jest.advanceTimersByTime(1000);
+    });
+
+    expect(saveAssessmentResponses).not.toHaveBeenCalled();
   });
 });

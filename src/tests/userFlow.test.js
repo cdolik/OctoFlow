@@ -193,6 +193,85 @@ describe('OctoFlow User Journey', () => {
   });
 });
 
+describe('Stage-specific validation', () => {
+  test('filters questions correctly for each stage', () => {
+    const allStages = ['pre-seed', 'seed', 'series-a'];
+    
+    allStages.forEach(stage => {
+      render(<App />);
+      
+      // Start assessment
+      fireEvent.click(screen.getByText(/Start Free Checkup/i));
+      fireEvent.click(screen.getByText(new RegExp(stage, 'i')));
+
+      // Get questions that should be shown for this stage
+      const stageQuestions = Object.values(categories)
+        .flatMap(cat => cat.questions)
+        .filter(q => q.stages.includes(stage));
+
+      // Get questions that shouldn't be shown
+      const otherQuestions = Object.values(categories)
+        .flatMap(cat => cat.questions)
+        .filter(q => !q.stages.includes(stage));
+
+      // Verify correct questions are shown
+      stageQuestions.forEach(question => {
+        expect(screen.getByText(question.text)).toBeInTheDocument();
+      });
+
+      // Verify other questions are not shown
+      otherQuestions.forEach(question => {
+        expect(screen.queryByText(question.text)).not.toBeInTheDocument();
+      });
+
+      cleanup();
+    });
+  });
+
+  test('autosave functionality preserves stage-specific responses', async () => {
+    render(<App />);
+    
+    // Start pre-seed assessment
+    fireEvent.click(screen.getByText(/Start Free Checkup/i));
+    fireEvent.click(screen.getByText(/Pre-Seed/i));
+
+    // Answer first question
+    const options = screen.getAllByRole('button', { name: /option/i });
+    fireEvent.click(options[2]); // Select third option
+
+    // Wait for autosave
+    await waitFor(() => {
+      const savedResponses = getAssessmentResponses();
+      expect(Object.keys(savedResponses).length).toBeGreaterThan(0);
+    });
+
+    // Reload page
+    cleanup();
+    render(<App />);
+
+    // Verify responses were restored
+    const savedResponses = getAssessmentResponses();
+    expect(savedResponses).toBeTruthy();
+    expect(Object.values(savedResponses)[0]).toBe(3);
+  });
+
+  test('error boundary handles invalid stage transitions', () => {
+    const mockError = new Error('Invalid stage transition');
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    render(
+      <AssessmentErrorBoundary>
+        <div onClick={() => { throw mockError; }}>Trigger Error</div>
+      </AssessmentErrorBoundary>
+    );
+
+    fireEvent.click(screen.getByText('Trigger Error'));
+
+    expect(screen.getByText(/We encountered an issue/i)).toBeInTheDocument();
+    expect(screen.getByText(/Try to Resume/i)).toBeInTheDocument();
+  });
+});
+
 describe('App Routing', () => {
   beforeEach(() => {
     // Clear all mocks before each test

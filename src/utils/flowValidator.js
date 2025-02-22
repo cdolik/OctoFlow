@@ -147,33 +147,26 @@ const validateStageResponses = (responses, stage) => {
   }
 
   const stageQuestions = allQuestions.filter(q => q.stages.includes(stage));
+  const stageQuestionIds = new Set(stageQuestions.map(q => q.id));
 
-  const requiredQuestions = stageQuestions
-    .filter(q => !q.optional)
-    .map(q => q.id);
+  // Validate no responses exist for questions not in this stage
+  const invalidQuestions = Object.keys(responses).filter(qId => !stageQuestionIds.has(qId));
+  if (invalidQuestions.length > 0) {
+    return {
+      isValid: false,
+      error: 'Responses found for questions not in current stage',
+      details: invalidQuestions
+    };
+  }
 
-  const missingRequired = requiredQuestions
-    .filter(qId => !responses[qId]);
+  const requiredQuestions = stageQuestions.filter(q => !q.optional).map(q => q.id);
+  const missingRequired = requiredQuestions.filter(qId => !responses[qId]);
 
   if (missingRequired.length > 0) {
     return {
       isValid: false,
       error: 'Missing required questions',
       details: missingRequired
-    };
-  }
-
-  const invalidScores = Object.entries(responses)
-    .filter(([qId, score]) => {
-      const question = stageQuestions.find(q => q.id === qId);
-      return !question || score < 1 || score > 4;
-    });
-
-  if (invalidScores.length > 0) {
-    return {
-      isValid: false,
-      error: 'Invalid scores detected',
-      details: invalidScores.map(([qId]) => qId)
     };
   }
 
