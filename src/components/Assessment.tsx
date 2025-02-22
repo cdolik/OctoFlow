@@ -1,180 +1,122 @@
-import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Stage } from '../types';
-import { getStageQuestions } from '../data/questions';
+import React, { useState, useEffect } from 'react';
+import { Stage, Question } from '../types';
 import { useAssessmentSession } from '../hooks/useAssessmentSession';
-import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
 import { useStageTransition } from '../hooks/useStageTransition';
-import GitHubTooltip from './GitHubTooltip';
-import ProgressTracker from './ProgressTracker';
-import AutoSave from './AutoSave';
+import { getStageQuestions } from '../utils/questionFilters';
+import { stages } from '../data/stages';
+import { questions } from '../data/questions';
 import LoadingSpinner from './LoadingSpinner';
-import './styles.css';
+import StageTransition from './StageTransition';
 
 interface AssessmentProps {
-  stage: Stage;
-  onComplete?: (responses: Record<string, number>) => void;
+  stageId: Stage;
+  onComplete?: (stageId: Stage) => void;
 }
 
-export const Assessment: React.FC<AssessmentProps> = ({ stage, onComplete }) => {
-  const navigate = useNavigate();
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
+const Assessment: React.FC<AssessmentProps> = ({ stageId, onComplete }) => {
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [stageQuestions, setStageQuestions] = useState<Question[]>([]);
   const [responses, setResponses] = useState<Record<string, number>>({});
 
-  // Use our enhanced session management
+  const stage = stages.find(s => s.id === stageId);
+  
   const {
     isLoading,
-    recoveredResponses,
     error: sessionError,
-    restoreSession,
     clearSession
   } = useAssessmentSession({
     redirectPath: '/stage-select',
     autoRecover: true,
-    onRecoveryComplete: (recoveredStage, responses) => {
-      if (recoveredStage === stage) {
-        setResponses(responses);
-        // Find last answered question
-        const questions = getStageQuestions(stage);
-        const lastAnswered = questions.findIndex(q => !responses[q.id]);
-        setCurrentQuestionIndex(lastAnswered === -1 ? questions.length - 1 : lastAnswered);
+    onRecoveryComplete: (recoveredStage, recoveredResponses) => {
+      if (recoveredStage === stageId) {
+        setResponses(recoveredResponses);
+        const lastAnswered = Object.keys(recoveredResponses).length;
+        setCurrentQuestionIndex(Math.min(lastAnswered, stageQuestions.length - 1));
       }
     }
   });
 
-  const { startTransition } = useStageTransition({
-    stage,
+  const { isTransitioning, progress } = useStageTransition({
+    currentStage: stageId,
     responses,
-    onComplete
+    onTransitionComplete: () => onComplete?.(stageId)
   });
 
-  const questions = useMemo(() => getStageQuestions(stage), [stage]);
-  const currentQuestion = questions[currentQuestionIndex];
+  useEffect(() => {
+    const filteredQuestions = getStageQuestions(stageId, questions);
+    setStageQuestions(filteredQuestions);
+  }, [stageId]);
 
-  const handleNext = () => {
-    if (currentQuestionIndex < questions.length - 1) {
+  const currentQuestion = stageQuestions[currentQuestionIndex];
+
+  const handleAnswer = (value: number) => {
+    if (!currentQuestion) return;
+    
+    const newResponses = {
+      ...responses,
+      [currentQuestion.id]: value
+    };
+    setResponses(newResponses);
+
+    // Auto-advance to next question
+    if (currentQuestionIndex < stageQuestions.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
-    } else {
-      startTransition('summary');
-      navigate('/summary');
     }
   };
-
-  const handleBack = () => {
-    if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(prev => prev - 1);
-    }
-  };
-
-  const handleSelect = (optionIndex: number) => {
-    if (currentQuestion) {
-      setResponses(prev => ({
-        ...prev,
-        [currentQuestion.id]: currentQuestion.options[optionIndex].value
-      }));
-    }
-  };
-
-  // Keyboard navigation setup
-  useKeyboardNavigation({
-    onNext: handleNext,
-    onBack: handleBack,
-    onSelect: handleSelect,
-    shortcuts: [
-      {
-        key: 'R',
-        requiresCtrl: true,
-        action: restoreSession
-      },
-      {
-        key: 'Escape',
-        action: () => navigate('/stage-select')
-      }
-    ]
-  });
 
   if (isLoading) {
-    return (
-      <div className="assessment-loading">
-        <LoadingSpinner />
-        <p>Loading assessment...</p>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   if (sessionError) {
     return (
-      <div className="assessment-error">
+      <div className="error-container">
         <h2>Session Error</h2>
         <p>{sessionError.message}</p>
-        <button onClick={() => {
-          clearSession();
-          navigate('/stage-select');
-        }}>
-          Start Over
-        </button>
+        <button onClick={clearSession}>Start New Session</button>
       </div>
     );
   }
 
-  return (
-    <div className="assessment">
-      <ProgressTracker
-        current={currentQuestionIndex + 1}
-        total={questions.length}
-        responses={responses}
+  if (isTransitioning) {
+    return (
+      <StageTransition
+        fromStage={stageId}
+        toStage={stageId}
+        progress={progress}
       />
+    );
+  }
 
+  return (
+    <div className="assessment-container">
+      <h2>{stage?.label}</h2>
       <div className="question-container">
-        <h2>Question {currentQuestionIndex + 1}</h2>
         {currentQuestion && (
-          <>
-            <div className="question-text">
-              {currentQuestion.text}
-              {currentQuestion.tooltipTerm && (
-                <GitHubTooltip term={currentQuestion.tooltipTerm} />
-              )}
-            </div>
-
-            <div className="options-grid">
-              {currentQuestion.options.map((option, idx) => (
+          <div className="question">
+            <h3>{currentQuestion.text}</h3>
+            <div className="options">
+              {currentQuestion.options.map(option => (
                 <button
-                  key={idx}
-                  className={`option ${responses[currentQuestion.id] === option.value ? 'selected' : ''}`}
-                  onClick={() => handleSelect(idx)}
-                  aria-pressed={responses[currentQuestion.id] === option.value}
+                  key={option.value}
+                  onClick={() => handleAnswer(option.value)}
+                  className={responses[currentQuestion.id] === option.value ? 'selected' : ''}
                 >
                   {option.text}
                 </button>
               ))}
             </div>
-          </>
+          </div>
         )}
       </div>
-
-      <div className="navigation">
-        <button
-          onClick={handleBack}
-          disabled={currentQuestionIndex === 0}
-        >
-          Back
-        </button>
-        <button
-          onClick={handleNext}
-          disabled={!currentQuestion || !responses[currentQuestion.id]}
-        >
-          {currentQuestionIndex === questions.length - 1 ? 'Complete' : 'Next'}
-        </button>
+      <div className="progress-bar">
+        <div 
+          className="progress"
+          style={{ width: `${(currentQuestionIndex / stageQuestions.length) * 100}%` }}
+        />
       </div>
-
-      <AutoSave
-        data={responses}
-        interval={5000}
-        onError={() => {
-          // Handle autosave error
-          console.error('Autosave failed');
-        }}
-      />
     </div>
   );
 };
+
+export default Assessment;

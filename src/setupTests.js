@@ -1,5 +1,20 @@
 import '@testing-library/jest-dom';
-import 'jest-canvas-mock';
+import { server } from './mocks/server';
+
+beforeAll(() => server.listen());
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
+
+// Mock sessionStorage
+Object.defineProperty(window, 'sessionStorage', {
+  value: {
+    getItem: jest.fn(() => null),
+    setItem: jest.fn(() => null),
+    removeItem: jest.fn(() => null),
+    clear: jest.fn(() => null)
+  },
+  writable: true
+});
 
 // Chart.js mock
 const mockChart = {

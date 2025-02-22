@@ -1,64 +1,67 @@
-import React from 'react';
-import GitHubTooltip from './GitHubTooltip';
+import React, { useState } from 'react';
 import { Stage } from '../types';
 import { stages } from '../data/stages';
 import './styles.css';
 
 interface StageSelectorProps {
-  onSelect: (stage: Stage) => void;
+  onSelect: (stageId: Stage) => void;
   initialStage?: Stage;
-  disabled?: boolean;
 }
 
-const StageSelector: React.FC<StageSelectorProps> = ({
-  onSelect,
-  initialStage,
-  disabled = false
-}) => {
+const StageSelector: React.FC<StageSelectorProps> = ({ onSelect, initialStage }) => {
+  const [filter, setFilter] = useState('');
+
+  const filteredStages = stages.filter(stage =>
+    stage.label.toLowerCase().includes(filter.toLowerCase()) ||
+    stage.description.toLowerCase().includes(filter.toLowerCase()) ||
+    stage.focus.some(f => f.toLowerCase().includes(filter.toLowerCase()))
+  );
+
   return (
     <div className="stage-selector">
-      <h2>Select Your Startup Stage</h2>
-      <p className="subtitle">We'll tailor recommendations based on your phase</p>
+      <div className="search-container">
+        <input
+          type="text"
+          placeholder="Search stages"
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          className="search-input"
+        />
+      </div>
       
       <div className="stages-grid">
-        {stages.map(stage => (
-          <div 
-            key={stage.id} 
-            className={`stage-card ${initialStage === stage.id ? 'selected' : ''}`}
-            onClick={() => !disabled && onSelect(stage.id as Stage)}
-            role="button"
-            tabIndex={disabled ? -1 : 0}
-            aria-selected={initialStage === stage.id}
-            aria-disabled={disabled}
-          >
-            <h3>{stage.label}</h3>
-            <p>{stage.description}</p>
-            
-            <div className="benchmark">
-              <GitHubTooltip term="deployment-frequency">
-                <span>📈 {stage.benchmarks.deploymentFreq} deployments</span>
-              </GitHubTooltip>
-            </div>
-            
-            <div className="focus-areas">
-              <GitHubTooltip term="github-ecosystem">
-                <span className="focus-tag">GitHub Score: {stage.benchmarks.expectedScores['github-ecosystem']}</span>
-              </GitHubTooltip>
-              <GitHubTooltip term="security">
-                <span className="focus-tag">Security Score: {stage.benchmarks.expectedScores['security']}</span>
-              </GitHubTooltip>
-              <GitHubTooltip term="automation">
-                <span className="focus-tag">Automation Score: {stage.benchmarks.expectedScores['automation']}</span>
-              </GitHubTooltip>
-            </div>
-            
-            <div className="benefit">
-              <GitHubTooltip term="cost-efficiency">
-                <span className="benefit-text">✨ Cost Efficiency: {(stage.benchmarks.costEfficiency * 100).toFixed(0)}%</span>
-              </GitHubTooltip>
-            </div>
-          </div>
-        ))}
+        {filteredStages.length === 0 ? (
+          <p className="no-results">No stages found</p>
+        ) : (
+          filteredStages.map((stage) => (
+            <button
+              key={stage.id}
+              onClick={() => onSelect(stage.id)}
+              className={`stage-card ${initialStage === stage.id ? 'current' : ''}`}
+              tabIndex={0}
+            >
+              <h3>{stage.label}</h3>
+              <p>{stage.description}</p>
+              
+              <div className="stage-metrics">
+                <span className="metric">
+                  <strong>Deployments:</strong> {stage.benchmarks.deploymentFreq}
+                </span>
+                <span className="metric">
+                  <strong>Questions:</strong> {Object.keys(stage.benchmarks.expectedScores).length}
+                </span>
+              </div>
+
+              <div className="focus-areas">
+                {stage.focus.map(area => (
+                  <span key={area} className="focus-tag">
+                    {area.charAt(0).toUpperCase() + area.slice(1)}
+                  </span>
+                ))}
+              </div>
+            </button>
+          ))
+        )}
       </div>
     </div>
   );

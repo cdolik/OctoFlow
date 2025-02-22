@@ -1,4 +1,4 @@
-export type Stage = 'pre-seed' | 'seed' | 'series-a';
+export type Stage = 'pre-seed' | 'seed' | 'series-a' | 'series-b';
 export type StageType = 'assessment' | 'summary' | 'results';
 
 export interface Responses {
@@ -52,7 +52,103 @@ export interface StageValidationResult {
 }
 
 export interface ComponentFlowProps extends FlowValidationProps {
-  stage: StageInfo;
+  stage: Stage;
   onKeyboardShortcut?: (shortcut: KeyboardShortcut) => void;
   transitionState?: TransitionState;
+}
+
+export interface StageDefinition {
+  id: Stage;
+  label: string;
+  description: string;
+  focus: string[];
+  benchmarks: {
+    deploymentFreq: string;
+    securityLevel: number;
+    costEfficiency: number;
+    expectedScores: {
+      'github-ecosystem': number;
+      'security': number;
+      'automation': number;
+    };
+  };
+  questionFilter: (q: Question) => boolean;
+}
+
+export interface Question {
+  id: string;
+  text: string;
+  category: string;
+  tooltipTerm?: string;
+  weight: number;
+  stages: Stage[];
+  options: Array<{
+    value: number;
+    text: string;
+  }>;
+}
+
+export interface GlossaryTerm {
+  term: string;
+  definition: string;
+}
+
+export interface Category {
+  id: string;
+  title: string;
+  description: string;
+  weight?: number;
+}
+
+export interface Recommendation {
+  id: string;
+  title: string;
+  description: string;
+  priority: 'high' | 'medium' | 'low';
+  effort: 'High' | 'Medium' | 'Low';
+  category: string;
+  steps: string[];
+}
+
+export interface UseSessionGuardConfig {
+  redirectPath?: string;
+  requireAuth?: boolean;
+  persistSession?: boolean;
+}
+
+export interface UseSessionGuardResult {
+  isLoading: boolean;
+  isAuthorized: boolean;
+}
+
+export interface StageConfig {
+  label: string;
+  description: string;
+  focus: string[];
+  questionFilter: (q: Question) => boolean;
+}
+
+export interface WafPillar {
+  id: string;
+  title: string;
+  questions: Question[];
+}
+
+export interface ScoreLevel {
+  level: 'Initial' | 'Basic' | 'Proactive' | 'Advanced';
+  description: string;
+}
+
+export interface ScoreResult {
+  overallScore: number;
+  categoryScores: Record<string, number>;
+  benchmarks: Record<string, number>;
+  completionRate: number;
+  gaps: string[];
+}
+
+export interface StageScores {
+  overallScore: number;
+  categoryScores: Record<string, number>;
+  recommendations: string[];
 }

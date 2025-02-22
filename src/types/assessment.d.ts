@@ -4,7 +4,7 @@ export interface Question {
   tooltipTerm?: string;
   category: string;
   weight: number;
-  stages: Array<'pre-seed' | 'seed' | 'series-a'>;
+  stages: Array<'pre-seed' | 'seed' | 'series-a' | 'series-b'>;
   options: Array<{
     value: number;
     text: string;
@@ -53,5 +53,5 @@ export interface Recommendation {
   resource: string;
   minScore: number;
   targetScore: number;
-  stageRequirement?: 'pre-seed' | 'seed' | 'series-a';
+  stageRequirement?: 'pre-seed' | 'seed' | 'series-a' | 'series-b';
 }

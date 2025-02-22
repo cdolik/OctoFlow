@@ -4,6 +4,7 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import type { Stage, StageInfo } from 'octoflow';
 import type { ReactElement, ComponentType } from 'react';
 import React from 'react';
+import { stages } from '../data/stages';
 
 // Chart.js test utilities
 export const mockChartInstance = (chartConfig = {}) => {
@@ -89,7 +90,41 @@ export const mockResponses = {
   'series-a': { q1: 5, q2: 6 }
 };
 
-// Mock local storage utility
+interface MockStorageState {
+  stage: Stage | null;
+  responses: Record<string, number>;
+  metadata?: {
+    startTime: number;
+    lastSaved: number;
+    questionCount: number;
+  };
+}
+
+export const createMockState = (
+  stage: Stage = 'pre-seed',
+  responses: Record<string, number> = {}
+): MockStorageState => ({
+  stage,
+  responses,
+  metadata: {
+    startTime: Date.now() - 1000,
+    lastSaved: Date.now(),
+    questionCount: Object.keys(responses).length
+  }
+});
+
+export const mockAssessmentFlow = async (stage: Stage): Promise<MockStorageState> => {
+  sessionStorage.clear();
+  const responses: Record<string, number> = {};
+  const questionCount = 5;
+
+  for (let i = 1; i <= questionCount; i++) {
+    responses[`question${i}`] = Math.floor(Math.random() * 4) + 1;
+  }
+
+  return createMockState(stage, responses);
+};
+
 export const mockStorage = () => {
   const storage = new Map<string, string>();
   return {
@@ -100,4 +135,44 @@ export const mockStorage = () => {
     length: storage.size,
     key: (index: number) => Array.from(storage.keys())[index] ?? null,
   };
+};
+
+export const mockAnalytics = () => ({
+  trackStageSelect: jest.fn(),
+  trackQuestionAnswer: jest.fn(),
+  trackAssessmentComplete: jest.fn(),
+  trackError: jest.fn(),
+  trackResourceClick: jest.fn()
+});
+
+export const expectScoreInRange = (
+  score: Record<string, number>,
+  stage: Stage
+): void => {
+  const stageBenchmarks = stages.find(s => s.id === stage)?.benchmarks;
+  if (!stageBenchmarks) {
+    throw new Error(`Invalid stage: ${stage}`);
+  }
+
+  const { expectedScores } = stageBenchmarks;
+  Object.entries(expectedScores).forEach(([category, benchmark]) => {
+    expect(score[category]).toBeDefined();
+    expect(score[category]).toBeGreaterThanOrEqual(0);
+    expect(score[category]).toBeLessThanOrEqual(4);
+    expect(Math.abs(score[category] - benchmark)).toBeLessThanOrEqual(2);
+  });
+};
+
+export const simulateError = (
+  component: string,
+  message = 'Test error'
+): Error => {
+  const error = new Error(message);
+  error.stack = `Error: ${message}\n    at ${component}`;
+  return error;
+};
+
+export const mockEvent = {
+  preventDefault: jest.fn(),
+  stopPropagation: jest.fn()
 };

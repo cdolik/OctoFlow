@@ -18,7 +18,7 @@ describe('useKeyboardNavigation', () => {
   });
 
   it('handles basic navigation keys', () => {
-    const { result } = renderHook(() => useKeyboardNavigation(mockConfig));
+    const { result: _result } = renderHook(() => useKeyboardNavigation(mockConfig));
 
     act(() => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
@@ -49,13 +49,15 @@ describe('useKeyboardNavigation', () => {
     act(() => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: 'S', ctrlKey: true }));
     });
-    expect(mockConfig.shortcuts[0].action).toHaveBeenCalled();
+    expect(mockConfig.shortcuts).toBeDefined();
+    expect(mockConfig.shortcuts?.[0]?.action).toHaveBeenCalled();
 
     // Test R shortcut without Ctrl
     act(() => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: 'R' }));
     });
-    expect(mockConfig.shortcuts[1].action).toHaveBeenCalled();
+    expect(mockConfig.shortcuts).toBeDefined();
+    expect(mockConfig.shortcuts?.[1]?.action).toHaveBeenCalled();
   });
 
   it('ignores keyboard events when disabled', () => {
@@ -69,7 +71,10 @@ describe('useKeyboardNavigation', () => {
 
     expect(mockConfig.onNext).not.toHaveBeenCalled();
     expect(mockConfig.onSelect).not.toHaveBeenCalled();
-    expect(mockConfig.shortcuts[0].action).not.toHaveBeenCalled();
+    expect(mockConfig.shortcuts).toBeDefined();
+    expect(mockConfig.shortcuts).toBeDefined();
+    expect(mockConfig.shortcuts).toBeDefined();
+    expect(mockConfig.shortcuts?.[0]?.action).not.toHaveBeenCalled();
   });
 
   it('allows focus management', () => {

@@ -1,4 +1,4 @@
-import { Question, Category } from '../types/assessment';
+import { Question, Category, Stage } from '../types/assessment';
 
 export const categories: Record<string, Category> = {
   GITHUB_ENTERPRISE: {

@@ -1,103 +1,87 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
-import { HashRouter, Routes, Route } from 'react-router-dom';
-import withFlowValidation from '../components/withFlowValidation';
-import { FlowValidationProps, WithFlowValidationProps } from '../types/flowValidation';
+import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import { withFlowValidation, FlowValidationProps } from '../components/withFlowValidation';
+import type { Stage as GlobalStage } from '../types';
 
-// Mock component to test with flow validation
-const TestComponent: React.FC<FlowValidationProps> = ({ stage }) => (
-  <div>Current Stage: {stage}</div>
-);
+// Use the Stage type from withFlowValidation component
+type ComponentStage = Exclude<GlobalStage, 'series-b'>;
 
-const ValidatedComponent = withFlowValidation(TestComponent);
+const MockComponent: React.FC<FlowValidationProps> = () => <div>Mock Component</div>;
+const WrappedComponent = withFlowValidation(MockComponent);
 
-describe('withFlowValidation HOC', () => {
-  const defaultProps: WithFlowValidationProps = {
-    stage: 'pre-seed',
-    responses: {},
-    validationConfig: {
-      requirePreviousStage: true,
-      validateResponses: true
+describe('withFlowValidation', () => {
+  const validProps: FlowValidationProps = {
+    currentStage: 'seed' as ComponentStage,
+    stages: ['pre-seed', 'seed', 'series-a'] as ComponentStage[],
+    responses: {
+      'pre-seed-q1': 3,
+      'pre-seed-q2': 4
     }
   };
 
-  const renderWithRouter = (props = defaultProps) => {
-    return render(
-      <HashRouter>
-        <Routes>
-          <Route path="/" element={<ValidatedComponent {...props} />} />
-          <Route path="/error" element={<div>Error Page</div>} />
-        </Routes>
-      </HashRouter>
+  it('renders wrapped component when flow is valid', () => {
+    render(
+      <MemoryRouter>
+        <WrappedComponent {...validProps} />
+      </MemoryRouter>
     );
-  };
-
-  it('renders wrapped component when validation passes', () => {
-    renderWithRouter();
-    expect(screen.getByText(/Current Stage: pre-seed/)).toBeInTheDocument();
+    expect(screen.getByText('Mock Component')).toBeInTheDocument();
   });
 
-  it('redirects on validation failure', async () => {
-    const invalidProps = {
-      ...defaultProps,
-      stage: 'series-a',
-      responses: {}
-    };
-
-    renderWithRouter(invalidProps);
-    await waitFor(() => {
-      expect(window.location.hash).toBe('#/error');
-    });
-  });
-
-  it('handles missing responses gracefully', () => {
-    const propsWithoutResponses = {
-      ...defaultProps,
-      responses: undefined
-    };
-
-    renderWithRouter(propsWithoutResponses);
-    expect(screen.getByText(/Current Stage: pre-seed/)).toBeInTheDocument();
-  });
-
-  it('validates stage progression order', async () => {
-    const advancedStageProps = {
-      ...defaultProps,
-      stage: 'series-a',
-      validationConfig: {
-        requirePreviousStage: true
+  it('redirects when previous stage is incomplete', () => {
+    const invalidProps: FlowValidationProps = {
+      ...validProps,
+      currentStage: 'series-a' as ComponentStage,
+      responses: {
+        'pre-seed-q1': 3,
+        'pre-seed-q2': 4
       }
     };
 
-    renderWithRouter(advancedStageProps);
-    await waitFor(() => {
-      expect(window.location.hash).not.toBe('/');
-    });
+    render(
+      <MemoryRouter initialEntries={['/assessment/series-a']}>
+        <WrappedComponent {...invalidProps} />
+      </MemoryRouter>
+    );
+
+    // Component should redirect and not render
+    expect(screen.queryByText('Mock Component')).not.toBeInTheDocument();
   });
 
-  it('calls onValidationError when provided', () => {
-    const onValidationError = jest.fn();
+  it('handles invalid stage errors', () => {
     const invalidProps = {
-      ...defaultProps,
-      stage: 'invalid-stage',
-      onValidationError
+      ...validProps,
+      // Using 'invalid-stage' to test error handling
+      currentStage: 'invalid-stage' as ComponentStage
     };
 
-    renderWithRouter(invalidProps);
-    expect(onValidationError).toHaveBeenCalled();
+    render(
+      <MemoryRouter>
+        <WrappedComponent {...invalidProps} />
+      </MemoryRouter>
+    );
+
+    // Should redirect to error page
+    expect(screen.queryByText('Mock Component')).not.toBeInTheDocument();
   });
 
-  it('allows stage skipping when configured', () => {
-    const skipProps = {
-      ...defaultProps,
-      stage: 'series-a',
-      validationConfig: {
-        requirePreviousStage: false,
-        allowSkipTo: ['series-a']
+  it('validates stage progression order', () => {
+    const outOfOrderProps: FlowValidationProps = {
+      ...validProps,
+      currentStage: 'series-a' as ComponentStage,
+      stages: ['pre-seed', 'seed', 'series-a'] as ComponentStage[],
+      responses: {
+        'series-a-q1': 3 // Trying to answer series-a questions without completing seed stage
       }
     };
 
-    renderWithRouter(skipProps);
-    expect(screen.getByText(/Current Stage: series-a/)).toBeInTheDocument();
+    render(
+      <MemoryRouter>
+        <WrappedComponent {...outOfOrderProps} />
+      </MemoryRouter>
+    );
+
+    expect(screen.queryByText('Mock Component')).not.toBeInTheDocument();
   });
 });

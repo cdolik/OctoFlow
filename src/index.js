@@ -1,42 +1,14 @@
 import React from 'react';
-import { createRoot } from 'react-dom/client';
-import './index.css';
+import ReactDOM from 'react-dom';
+import { BrowserRouter as Router } from 'react-router-dom';
 import App from './App';
-import reportWebVitals from './reportWebVitals';
-import {
-  Chart as ChartJS,
-  RadialLinearScale,
-  PointElement,
-  LineElement,
-  Filler,
-  Tooltip,
-  Legend,
-} from 'chart.js';
+import './index.css';
 
-// Register Chart.js components
-ChartJS.register(
-  RadialLinearScale,
-  PointElement,
-  LineElement,
-  Filler,
-  Tooltip,
-  Legend
-);
-
-const container = document.getElementById('root');
-const root = createRoot(container!);
-
-// Enable strict mode for development
-root.render(
+ReactDOM.render(
   <React.StrictMode>
-    <App />
-  </React.StrictMode>
+    <Router>
+      <App />
+    </Router>
+  </React.StrictMode>,
+  document.getElementById('root')
 );
-
-// Analytics tracking
-reportWebVitals(metric => {
-  // Only send performance metrics in production
-  if (process.env.NODE_ENV === 'production') {
-    console.log(metric);
-  }
-});

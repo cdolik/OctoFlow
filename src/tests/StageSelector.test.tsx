@@ -1,16 +1,17 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import StageSelector from '../components/StageSelector';
 import { stages } from '../data/stages';
+import { Stage } from '../types';
 
 describe('StageSelector', () => {
-  const mockOnStageSelect = jest.fn();
+  const mockOnSelect = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
   it('renders all available stages', () => {
-    render(<StageSelector onStageSelect={mockOnStageSelect} />);
+    render(<StageSelector onSelect={mockOnSelect} />);
 
     stages.forEach(stage => {
       expect(screen.getByText(stage.label)).toBeInTheDocument();
@@ -18,93 +19,77 @@ describe('StageSelector', () => {
     });
   });
 
-  it('shows correct team size for each stage', () => {
-    render(<StageSelector onStageSelect={mockOnStageSelect} />);
-
-    expect(screen.getByText(/1-5 developers/)).toBeInTheDocument();
-    expect(screen.getByText(/5-15 developers/)).toBeInTheDocument();
-    expect(screen.getByText(/15\+ developers/)).toBeInTheDocument();
-  });
-
-  it('shows correct focus areas for each stage', () => {
-    render(<StageSelector onStageSelect={mockOnStageSelect} />);
-
-    // Pre-seed stage focus areas
-    expect(screen.getByText('Basic Automation')).toBeInTheDocument();
-    expect(screen.getByText('Core Security')).toBeInTheDocument();
-
-    // Seed stage focus areas
-    expect(screen.getByText('Team Collaboration')).toBeInTheDocument();
-    expect(screen.getByText('CI/CD')).toBeInTheDocument();
-
-    // Series A focus areas
-    expect(screen.getByText('Advanced Security')).toBeInTheDocument();
-    expect(screen.getByText('Scale & Performance')).toBeInTheDocument();
-  });
-
-  it('shows deployment frequency benchmarks', () => {
-    render(<StageSelector onStageSelect={mockOnStageSelect} />);
+  it('displays stage metrics correctly', () => {
+    render(<StageSelector onSelect={mockOnSelect} />);
 
     stages.forEach(stage => {
       expect(screen.getByText(stage.benchmarks.deploymentFreq)).toBeInTheDocument();
+      const questionCount = Object.keys(stage.benchmarks.expectedScores).length;
+      expect(screen.getByText(`Questions: ${questionCount}`)).toBeInTheDocument();
     });
   });
 
-  it('calls onStageSelect with correct stage id when clicked', () => {
-    render(<StageSelector onStageSelect={mockOnStageSelect} />);
-
-    const preSeedCard = screen.getByRole('button', { name: /pre-seed/i });
-    fireEvent.click(preSeedCard);
-    expect(mockOnStageSelect).toHaveBeenCalledWith('pre-seed');
-  });
-
-  it('shows estimated time for each stage', () => {
-    render(<StageSelector onStageSelect={mockOnStageSelect} />);
+  it('displays focus areas for each stage', () => {
+    render(<StageSelector onSelect={mockOnSelect} />);
 
     stages.forEach(stage => {
-      const questionCount = Object.values(stage.benchmarks.expectedScores).length;
-      expect(screen.getByText((content, element) => {
-        return element?.textContent?.toLowerCase().includes(`${questionCount} questions`) || false;
-      })).toBeInTheDocument();
+      stage.focus.forEach(area => {
+        const capitalizedArea = area.charAt(0).toUpperCase() + area.slice(1);
+        expect(screen.getByText(capitalizedArea)).toBeInTheDocument();
+      });
     });
   });
 
-  it('supports keyboard navigation', () => {
-    render(<StageSelector onStageSelect={mockOnStageSelect} />);
-
-    const firstStageCard = screen.getAllByRole('button')[0];
-    firstStageCard.focus();
-    fireEvent.keyDown(firstStageCard, { key: 'Enter' });
-
-    expect(mockOnStageSelect).toHaveBeenCalled();
-  });
-
-  it('has correct accessibility attributes', () => {
-    render(<StageSelector onStageSelect={mockOnStageSelect} />);
-
-    const stageCards = screen.getAllByRole('button');
-    stageCards.forEach(card => {
-      expect(card).toHaveAttribute('tabIndex', '0');
-    });
-  });
-
-  it('filters stages correctly based on user input', () => {
-    render(<StageSelector onStageSelect={mockOnStageSelect} />);
+  it('filters stages based on search input', () => {
+    render(<StageSelector onSelect={mockOnSelect} />);
 
     const searchInput = screen.getByPlaceholderText('Search stages');
+    
+    // Filter by stage label
     fireEvent.change(searchInput, { target: { value: 'seed' } });
-
-    expect(screen.queryByText('Pre-Seed Startup')).not.toBeInTheDocument();
     expect(screen.getByText('Seed Stage')).toBeInTheDocument();
     expect(screen.queryByText('Series A')).not.toBeInTheDocument();
+
+    // Filter by focus area
+    fireEvent.change(searchInput, { target: { value: 'security' } });
+    const securityStages = stages.filter(s => s.focus.includes('security'));
+    securityStages.forEach(stage => {
+      expect(screen.getByText(stage.label)).toBeInTheDocument();
+    });
   });
 
-  it('displays no results message when no stages match filter', () => {
-    render(<StageSelector onStageSelect={mockOnStageSelect} />);
+  it('handles no search results gracefully', () => {
+    render(<StageSelector onSelect={mockOnSelect} />);
 
     const searchInput = screen.getByPlaceholderText('Search stages');
     fireEvent.change(searchInput, { target: { value: 'nonexistent' } });
 
     expect(screen.getByText('No stages found')).toBeInTheDocument();
+  });
+
+  it('highlights current stage when provided', () => {
+    const currentStage: Stage = 'seed';
+    render(<StageSelector onSelect={mockOnSelect} initialStage={currentStage} />);
+
+    const stageCard = screen.getByText('Seed Stage').closest('button');
+    expect(stageCard).toHaveClass('current');
+  });
+
+  it('calls onSelect with correct stage id when clicked', () => {
+    render(<StageSelector onSelect={mockOnSelect} />);
+
+    const firstStage = stages[0];
+    fireEvent.click(screen.getByText(firstStage.label));
+    expect(mockOnSelect).toHaveBeenCalledWith(firstStage.id);
+  });
+
+  it('supports keyboard navigation', () => {
+    render(<StageSelector onSelect={mockOnSelect} />);
+
+    const firstStageCard = screen.getAllByRole('button')[0];
+    firstStageCard.focus();
+    fireEvent.keyDown(firstStageCard, { key: 'Enter' });
+
+    expect(mockOnSelect).toHaveBeenCalledWith(stages[0].id);
   });
 });

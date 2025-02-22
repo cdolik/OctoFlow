@@ -1,5 +1,6 @@
-import { getResumePoint, validateStageProgression } from './flowState';
+import { getResumePoint, validateStageProgression, getNextStage, getPreviousStage } from './flowState';
 import { getAssessmentResponses, getAssessmentMetadata } from './storage';
+import { Stage } from '../types';
 
 jest.mock('./storage');
 
@@ -57,22 +58,55 @@ describe('Flow State Utilities', () => {
   });
 
   describe('validateStageProgression', () => {
+    it('allows starting from any stage when no current stage', () => {
+      const result = validateStageProgression(null, 'seed');
+      expect(result.isValid).toBe(true);
+    });
+
     it('allows progression to next stage', () => {
-      expect(validateStageProgression('pre-seed', 'seed')).toBe(true);
-      expect(validateStageProgression('seed', 'series-a')).toBe(true);
+      expect(validateStageProgression('pre-seed', 'seed').isValid).toBe(true);
+      expect(validateStageProgression('seed', 'series-a').isValid).toBe(true);
     });
 
     it('allows moving to previous stages', () => {
-      expect(validateStageProgression('series-a', 'seed')).toBe(true);
-      expect(validateStageProgression('series-a', 'pre-seed')).toBe(true);
+      expect(validateStageProgression('series-a', 'seed').isValid).toBe(true);
+      expect(validateStageProgression('series-a', 'pre-seed').isValid).toBe(true);
     });
 
     it('prevents skipping stages forward', () => {
-      expect(validateStageProgression('pre-seed', 'series-a')).toBe(false);
+      expect(validateStageProgression('pre-seed', 'series-a').isValid).toBe(false);
     });
 
     it('allows staying in current stage', () => {
-      expect(validateStageProgression('seed', 'seed')).toBe(true);
+      expect(validateStageProgression('seed', 'seed').isValid).toBe(true);
+    });
+
+    it('handles invalid stage identifiers', () => {
+      const result = validateStageProgression('pre-seed', 'invalid' as Stage);
+      expect(result.isValid).toBe(false);
+      expect(result.error).toBe('Invalid stage identifier');
+    });
+  });
+
+  describe('getNextStage', () => {
+    it('returns correct next stage', () => {
+      expect(getNextStage('pre-seed')).toBe('seed');
+      expect(getNextStage('seed')).toBe('series-a');
+    });
+
+    it('returns null for final stage', () => {
+      expect(getNextStage('series-b')).toBeNull();
+    });
+  });
+
+  describe('getPreviousStage', () => {
+    it('returns correct previous stage', () => {
+      expect(getPreviousStage('series-a')).toBe('seed');
+      expect(getPreviousStage('seed')).toBe('pre-seed');
+    });
+
+    it('returns null for first stage', () => {
+      expect(getPreviousStage('pre-seed')).toBeNull();
     });
   });
 });
