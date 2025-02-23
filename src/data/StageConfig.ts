@@ -16,9 +16,7 @@ export const STAGE_CONFIG: Record<Stage, StageDefinition> = {
         'automation': 1.5
       }
     },
-    questionFilter: (q: Question) => {
-      return ['branch-strategy', 'pr-review', 'ci-practices'].includes(q.id);
-    }
+    questionFilter: (q: Question) => ['branch-strategy', 'pr-review', 'ci-practices'].includes(q.id)
   },
   'seed': {
     id: 'seed',
@@ -52,7 +50,7 @@ export const STAGE_CONFIG: Record<Stage, StageDefinition> = {
         'automation': 3.0
       }
     },
-    questionFilter: (q: Question) => true // All questions applicable
+    questionFilter: (q: Question) => true
   },
   'series-b': {
     id: 'series-b',

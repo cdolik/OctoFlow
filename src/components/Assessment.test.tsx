@@ -1,6 +1,9 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { MemoryRouter, useNavigate } from 'react-router-dom';
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
+import { MemoryRouter, Routes, Route, useNavigate } from 'react-router-dom';
+import { KeyboardShortcutsProvider } from '../contexts/KeyboardShortcutsContext';
+import { useAssessmentSession } from '../hooks/useAssessmentSession';
+import { trackCTAClick } from '../utils/analytics';
 import Assessment from './Assessment';
 import { useStageManager } from '../hooks/useStageManager';
 import { useStorage } from '../hooks/useStorage';
@@ -15,6 +18,8 @@ jest.mock('../hooks/useStageManager');
 jest.mock('../hooks/useStorage');
 jest.mock('../hooks/useErrorManagement');
 jest.mock('../utils/questionFiltering');
+jest.mock('../hooks/useAssessmentSession');
+jest.mock('../utils/analytics');
 
 describe('Assessment', () => {
   const mockQuestions = [
@@ -38,9 +43,18 @@ describe('Assessment', () => {
 
   const mockState = {
     responses: {},
-    currentStage: 'pre-seed'
+    currentStage: 'pre-seed',
+    stage: 'pre-seed',
+    progress: {
+      questionIndex: 0,
+      totalQuestions: 5,
+      isComplete: false,
+      lastUpdated: new Date().toISOString()
+    }
   };
 
+  const mockSaveResponse = jest.fn();
+  const mockCompleteSession = jest.fn();
   const navigate = jest.fn();
 
   beforeEach(() => {
@@ -62,7 +76,26 @@ describe('Assessment', () => {
       activeErrorCount: 0,
       isHandlingError: false
     });
+    (useAssessmentSession as jest.Mock).mockReturnValue({
+      state: mockState,
+      saveStatus: { status: 'saved', timestamp: Date.now() },
+      saveResponse: mockSaveResponse,
+      completeSession: mockCompleteSession,
+      isLoading: false
+    });
   });
+
+  const renderWithProviders = (stage = 'pre-seed') => {
+    return render(
+      <MemoryRouter initialEntries={[`/assessment/${stage}`]}>
+        <KeyboardShortcutsProvider>
+          <Routes>
+            <Route path="/assessment/:stage" element={<Assessment />} />
+          </Routes>
+        </KeyboardShortcutsProvider>
+      </MemoryRouter>
+    );
+  };
 
   it('renders questions and handles responses', async () => {
     const onStepChange = jest.fn();
@@ -207,5 +240,129 @@ describe('Assessment', () => {
     await waitFor(() => {
       expect(transition).toHaveBeenCalledWith('summary');
     });
+  });
+
+  it('handles keyboard navigation between questions', () => {
+    renderWithProviders();
+
+    // Next question
+    fireEvent.keyDown(document, { key: 'ArrowRight' });
+    expect(trackCTAClick).toHaveBeenCalledWith('next_question');
+
+    // Previous question
+    fireEvent.keyDown(document, { key: 'ArrowLeft' });
+    expect(trackCTAClick).toHaveBeenCalledWith('previous_question');
+  });
+
+  it('handles keyboard score selection', async () => {
+    renderWithProviders();
+
+    for (let score = 1; score <= 4; score++) {
+      fireEvent.keyDown(document, { key: score.toString() });
+      expect(mockSaveResponse).toHaveBeenCalledWith(0, score, 0);
+    }
+  });
+
+  it('handles assessment completion with Enter key', async () => {
+    const { container } = renderWithProviders();
+    mockCompleteSession.mockResolvedValue(true);
+
+    fireEvent.keyDown(document, { key: 'Enter' });
+
+    await waitFor(() => {
+      expect(mockCompleteSession).toHaveBeenCalled();
+    });
+  });
+
+  it('shows keyboard shortcut helper when ? is pressed', () => {
+    renderWithProviders();
+
+    fireEvent.keyDown(document, { key: '?' });
+
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByText('Keyboard Shortcuts')).toBeInTheDocument();
+  });
+
+  it('shows save indicator with correct status', () => {
+    (useAssessmentSession as jest.Mock).mockReturnValue({
+      state: mockState,
+      saveStatus: { status: 'saving' },
+      saveResponse: mockSaveResponse,
+      completeSession: mockCompleteSession,
+      isLoading: false
+    });
+
+    renderWithProviders();
+
+    expect(screen.getByText('Saving changes...')).toBeInTheDocument();
+  });
+
+  it('handles loading state', () => {
+    (useAssessmentSession as jest.Mock).mockReturnValue({
+      state: null,
+      saveStatus: { status: 'saved', timestamp: Date.now() },
+      saveResponse: mockSaveResponse,
+      completeSession: mockCompleteSession,
+      isLoading: true
+    });
+
+    renderWithProviders();
+
+    expect(screen.getByText('Loading assessment...')).toBeInTheDocument();
+  });
+
+  it('handles error state when assessment not found', () => {
+    (useAssessmentSession as jest.Mock).mockReturnValue({
+      state: null,
+      saveStatus: { status: 'saved', timestamp: Date.now() },
+      saveResponse: mockSaveResponse,
+      completeSession: mockCompleteSession,
+      isLoading: false
+    });
+
+    renderWithProviders();
+
+    expect(screen.getByText('Assessment not found')).toBeInTheDocument();
+  });
+
+  it('disables keyboard navigation at boundaries', () => {
+    (useAssessmentSession as jest.Mock).mockReturnValue({
+      state: {
+        ...mockState,
+        progress: {
+          ...mockState.progress,
+          questionIndex: 0
+        }
+      },
+      saveStatus: { status: 'saved', timestamp: Date.now() },
+      saveResponse: mockSaveResponse,
+      completeSession: mockCompleteSession,
+      isLoading: false
+    });
+
+    renderWithProviders();
+
+    // At first question, previous should be disabled
+    fireEvent.keyDown(document, { key: 'ArrowLeft' });
+    expect(trackCTAClick).not.toHaveBeenCalled();
+
+    // Move to last question
+    (useAssessmentSession as jest.Mock).mockReturnValue({
+      state: {
+        ...mockState,
+        progress: {
+          ...mockState.progress,
+          questionIndex: 4 // Last question
+        }
+      },
+      saveStatus: { status: 'saved', timestamp: Date.now() },
+      saveResponse: mockSaveResponse,
+      completeSession: mockCompleteSession,
+      isLoading: false
+    });
+
+    // At last question, next should be disabled
+    fireEvent.keyDown(document, { key: 'ArrowRight' });
+    expect(trackCTAClick).not.toHaveBeenCalledWith('next_question');
   });
 });

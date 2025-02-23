@@ -1,69 +1,122 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { trackCTAClick } from '../utils/analytics';
+import { validateStorageState } from '../utils/storageValidation';
+import { trackError } from '../utils/analytics';
+import ErrorFallback from './ErrorFallback';
 
 interface Props {
   children: ReactNode;
+  onRecovery?: () => Promise<void>;
+  onReset?: () => void;
+  fallbackComponent?: React.ComponentType<{ 
+    error: Error; 
+    resetError: () => void;
+    recoverError?: () => Promise<void>;
+  }>;
 }
 
 interface State {
-  hasError: boolean;
   error: Error | null;
   errorInfo: ErrorInfo | null;
+  isRecovering: boolean;
+  recoveryAttempts: number;
 }
 
-class ErrorBoundary extends Component<Props, State> {
+export class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
-    this.state = { 
-      hasError: false, 
+    this.state = {
       error: null,
-      errorInfo: null
+      errorInfo: null,
+      isRecovering: false,
+      recoveryAttempts: 0
     };
   }
 
   static getDerivedStateFromError(error: Error): Partial<State> {
-    return { hasError: true, error };
+    return { error };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    console.error('Flow Error:', error, errorInfo);
-    this.setState({
-      error,
-      errorInfo
+    this.setState({ errorInfo });
+    trackError(error, {
+      component: 'ErrorBoundary',
+      info: errorInfo,
+      recoveryAttempts: this.state.recoveryAttempts
     });
   }
 
-  handleReset = (): void => {
-    sessionStorage.clear();
-    trackCTAClick('error_reset');
-    window.location.reload();
+  private isStorageError = (error: Error): boolean => {
+    return error.message.includes('storage') || 
+           error.message.includes('localStorage') || 
+           error.message.includes('sessionStorage');
+  };
+
+  private handleRecovery = async (): Promise<void> => {
+    this.setState({ isRecovering: true });
+
+    try {
+      // Attempt to validate current storage state
+      const currentState = sessionStorage.getItem('octoflow');
+      if (currentState) {
+        const parsedState = JSON.parse(currentState);
+        const validation = validateStorageState(parsedState);
+
+        if (!validation.isValid) {
+          throw new Error(`Invalid storage state: ${validation.errors.join(', ')}`);
+        }
+      }
+
+      // If validation passes or no state exists, try recovery
+      await this.props.onRecovery?.();
+      
+      this.setState({
+        error: null,
+        errorInfo: null,
+        isRecovering: false,
+        recoveryAttempts: 0
+      });
+    } catch (recoveryError) {
+      this.setState(prevState => ({
+        error: recoveryError instanceof Error ? recoveryError : new Error('Recovery failed'),
+        isRecovering: false,
+        recoveryAttempts: prevState.recoveryAttempts + 1
+      }));
+
+      trackError(recoveryError instanceof Error ? recoveryError : new Error('Recovery failed'), {
+        context: 'error_recovery',
+        attempts: this.state.recoveryAttempts + 1
+      });
+    }
+  };
+
+  private handleReset = (): void => {
+    this.props.onReset?.();
+    this.setState({
+      error: null,
+      errorInfo: null,
+      isRecovering: false,
+      recoveryAttempts: 0
+    });
   };
 
   render(): ReactNode {
-    if (this.state.hasError) {
+    const { error, isRecovering, recoveryAttempts } = this.state;
+    const { children, fallbackComponent: FallbackComponent = ErrorFallback } = this.props;
+
+    if (error) {
+      const canAttemptRecovery = this.isStorageError(error) && recoveryAttempts < 3;
+
       return (
-        <div className="error-state">
-          <h2>Something went wrong</h2>
-          <p>{this.state.error?.message || 'An unexpected error occurred'}</p>
-          <div className="error-actions">
-            <button 
-              onClick={this.handleReset}
-              className="cta-button"
-            >
-              Reset Application
-            </button>
-            <small>This will clear your progress</small>
-          </div>
-          {process.env.NODE_ENV === 'development' && (
-            <pre className="error-details">
-              {this.state.errorInfo?.componentStack}
-            </pre>
-          )}
-        </div>
+        <FallbackComponent
+          error={error}
+          resetError={this.handleReset}
+          recoverError={canAttemptRecovery ? this.handleRecovery : undefined}
+          isRecovering={isRecovering}
+        />
       );
     }
 
-    return this.props.children;
+    return children;
   }
 }
 

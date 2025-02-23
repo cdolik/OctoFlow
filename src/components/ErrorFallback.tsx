@@ -1,106 +1,105 @@
-import React, { useCallback } from 'react';
-import { useErrorManagement } from '../hooks/useErrorManagement';
-import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
-import LoadingSpinner from './LoadingSpinner';
+import React, { useEffect, useRef } from 'react';
+import { useError } from '../contexts/ErrorContext';
+import { trackCTAClick } from '../utils/analytics';
+import './styles.css';
 
 interface ErrorFallbackProps {
   error: Error;
-  resetError?: () => void;
-  stage?: string;
+  resetError: () => void;
+  recoverError?: () => Promise<void>;
+  isRecovering?: boolean;
 }
 
 const ErrorFallback: React.FC<ErrorFallbackProps> = ({
   error,
   resetError,
-  stage
+  recoverError,
+  isRecovering = false
 }) => {
-  const {
-    isRecovering,
-    retryCount,
-    handleError,
-    canRetry
-  } = useErrorManagement({
-    stage,
-    onRecoverySuccess: resetError
-  });
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const { getRemainingCooldown } = useError();
+  const cooldownSeconds = Math.ceil(getRemainingCooldown() / 1000);
 
-  const handleRetry = useCallback(async () => {
-    if (error.message.includes('storage')) {
-      await handleError(error);
-    } else if (resetError) {
+  useEffect(() => {
+    // Focus the dialog on mount for screen readers
+    dialogRef.current?.focus();
+  }, []);
+
+  const handleKeyDown = (event: React.KeyboardEvent) => {
+    if (event.key === 'Escape') {
       resetError();
     }
-  }, [error, handleError, resetError]);
+  };
 
-  useKeyboardNavigation({
-    shortcuts: [
-      {
-        key: 'r',
-        description: 'Retry',
-        action: handleRetry,
-        allowInErrorState: true
-      }
-    ]
-  });
+  const handleReset = (): void => {
+    trackCTAClick('error_reset');
+    resetError();
+  };
 
-  if (isRecovering) {
-    return (
-      <div className="error-recovery">
-        <LoadingSpinner 
-          size="small"
-          message="Attempting to recover..."
-          aria-label="Recovery in progress"
-        />
-      </div>
-    );
-  }
+  const handleRecover = async (): Promise<void> => {
+    trackCTAClick('error_recover');
+    await recoverError?.();
+  };
 
   return (
     <div 
-      className="error-container"
-      role="alert"
-      aria-live="assertive"
+      className="error-dialog"
+      role="alertdialog"
+      aria-labelledby="error-title"
+      aria-describedby="error-message"
+      ref={dialogRef}
+      tabIndex={-1}
+      onKeyDown={handleKeyDown}
     >
-      <div className="error-icon" aria-hidden="true">
-        ⚠️
-      </div>
+      <div className="error-content">
+        <h2 id="error-title" className="error-title">
+          We encountered an issue
+        </h2>
+        
+        <div id="error-message" className="error-message">
+          <p>{error.message}</p>
+          {cooldownSeconds > 0 && (
+            <p className="error-cooldown" aria-live="polite">
+              Please wait {cooldownSeconds} seconds before trying again
+            </p>
+          )}
+        </div>
 
-      <h2>Something went wrong</h2>
-      
-      <div className="error-details">
-        <p>{error.message}</p>
-        {retryCount > 0 && (
-          <p className="retry-count">
-            Recovery attempts: {retryCount}
-          </p>
+        <div className="error-actions" role="group" aria-label="Error recovery options">
+          <button
+            onClick={handleReset}
+            className="error-button reset"
+            disabled={isRecovering}
+            aria-busy={isRecovering}
+          >
+            Try Again
+          </button>
+
+          {recoverError && cooldownSeconds === 0 && (
+            <button
+              onClick={handleRecover}
+              className="error-button recover"
+              disabled={isRecovering}
+              aria-busy={isRecovering}
+            >
+              Try to Resume
+              {isRecovering && (
+                <span className="visually-hidden"> (Loading...)</span>
+              )}
+            </button>
+          )}
+        </div>
+
+        {process.env.NODE_ENV === 'development' && (
+          <pre 
+            className="error-stack"
+            aria-label="Error stack trace"
+            tabIndex={0}
+          >
+            {error.stack}
+          </pre>
         )}
       </div>
-
-      <div className="error-actions">
-        {canRetry ? (
-          <button
-            onClick={handleRetry}
-            className="retry-button"
-            autoFocus
-          >
-            Try Again (Press 'R')
-          </button>
-        ) : (
-          <button
-            onClick={() => window.location.reload()}
-            className="reset-button"
-          >
-            Restart Assessment
-          </button>
-        )}
-      </div>
-
-      {process.env.NODE_ENV === 'development' && (
-        <details className="error-debug">
-          <summary>Technical Details</summary>
-          <pre>{error.stack}</pre>
-        </details>
-      )}
     </div>
   );
 };

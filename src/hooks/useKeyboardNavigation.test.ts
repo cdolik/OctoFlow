@@ -2,6 +2,7 @@ import { renderHook, act } from '@testing-library/react';
 import { useKeyboardNavigation } from './useKeyboardNavigation';
 import { useErrorManagement } from './useErrorManagement';
 import { trackCTAClick } from '../utils/analytics';
+import { KeyboardShortcut } from '../types';
 
 jest.mock('./useErrorManagement');
 jest.mock('../utils/analytics');
@@ -171,5 +172,156 @@ describe('useKeyboardNavigation', () => {
 
     simulateKeyPress('ArrowRight');
     expect(onNext).not.toHaveBeenCalled();
+  });
+});
+
+describe('useKeyboardNavigation Hook', () => {
+  const mockShortcuts: KeyboardShortcut[] = [
+    {
+      key: 'n',
+      description: 'Next question',
+      action: jest.fn()
+    },
+    {
+      key: 'p',
+      description: 'Previous question',
+      action: jest.fn()
+    }
+  ];
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockShortcuts.forEach(s => s.action.mockClear());
+  });
+
+  it('initializes with correct default state', () => {
+    const { result } = renderHook(() => useKeyboardNavigation({ shortcuts: mockShortcuts }));
+    
+    expect(result.current.activeShortcut).toBeNull();
+    expect(result.current.focusIndex).toBe(-1);
+    expect(result.current.isListening).toBe(true);
+  });
+
+  it('handles keyboard shortcuts correctly', () => {
+    const { result } = renderHook(() => useKeyboardNavigation({ shortcuts: mockShortcuts }));
+
+    act(() => {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'n' }));
+    });
+
+    expect(mockShortcuts[0].action).toHaveBeenCalled();
+    expect(result.current.activeShortcut).toEqual(mockShortcuts[0]);
+  });
+
+  it('supports arrow key navigation', () => {
+    const { result } = renderHook(() => 
+      useKeyboardNavigation({ 
+        shortcuts: mockShortcuts,
+        enableArrowKeys: true 
+      })
+    );
+
+    act(() => {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
+    });
+
+    expect(result.current.focusIndex).toBe(0);
+
+    act(() => {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp' }));
+    });
+
+    expect(result.current.focusIndex).toBe(mockShortcuts.length - 1);
+  });
+
+  it('triggers focused shortcut on Enter', () => {
+    const { result } = renderHook(() => 
+      useKeyboardNavigation({ 
+        shortcuts: mockShortcuts,
+        enableArrowKeys: true 
+      })
+    );
+
+    act(() => {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    });
+
+    expect(mockShortcuts[0].action).toHaveBeenCalled();
+  });
+
+  it('respects disabled state', () => {
+    const { result } = renderHook(() => 
+      useKeyboardNavigation({ 
+        shortcuts: mockShortcuts,
+        isEnabled: false 
+      })
+    );
+
+    act(() => {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'n' }));
+    });
+
+    expect(mockShortcuts[0].action).not.toHaveBeenCalled();
+    expect(result.current.isListening).toBe(false);
+  });
+
+  it('supports focus management with selector', () => {
+    // Create test elements
+    const button1 = document.createElement('button');
+    const button2 = document.createElement('button');
+    document.body.appendChild(button1);
+    document.body.appendChild(button2);
+
+    const { result } = renderHook(() => 
+      useKeyboardNavigation({ 
+        shortcuts: mockShortcuts,
+        focusSelector: 'button' 
+      })
+    );
+
+    act(() => {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
+    });
+
+    expect(document.activeElement).toBe(button1);
+
+    // Cleanup
+    document.body.removeChild(button1);
+    document.body.removeChild(button2);
+  });
+
+  it('provides ARIA labels for shortcuts', () => {
+    const { result } = renderHook(() => 
+      useKeyboardNavigation({ shortcuts: mockShortcuts })
+    );
+
+    result.current.shortcuts.forEach((shortcut, index) => {
+      expect(shortcut.ariaLabel).toBe(
+        `Press ${mockShortcuts[index].key} to ${mockShortcuts[index].description}`
+      );
+    });
+  });
+
+  it('allows dynamic shortcut registration', () => {
+    const { result } = renderHook(() => 
+      useKeyboardNavigation({ shortcuts: [...mockShortcuts] })
+    );
+
+    const newShortcut: KeyboardShortcut = {
+      key: 'x',
+      description: 'Exit',
+      action: jest.fn()
+    };
+
+    act(() => {
+      result.current.registerShortcut(newShortcut);
+    });
+
+    act(() => {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'x' }));
+    });
+
+    expect(newShortcut.action).toHaveBeenCalled();
   });
 });

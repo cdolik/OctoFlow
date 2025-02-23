@@ -1,43 +1,55 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
+import { AssessmentSaveStatus } from '../types/assessment';
 import './styles.css';
 
 interface SaveIndicatorProps {
-  isSaving: boolean;
-  lastSaved: Date | null;
+  status: AssessmentSaveStatus;
+  className?: string;
 }
 
-const SaveIndicator: React.FC<SaveIndicatorProps> = ({ isSaving, lastSaved }) => {
-  const [showIndicator, setShowIndicator] = useState(false);
-  const [message, setMessage] = useState('');
-
-  useEffect(() => {
-    if (isSaving) {
-      setShowIndicator(true);
-      setMessage('Saving...');
-    } else if (lastSaved) {
-      setMessage('Progress saved');
-      // Keep showing for 2 seconds after save
-      const timer = setTimeout(() => {
-        setShowIndicator(false);
-      }, 2000);
-      return () => clearTimeout(timer);
+const SaveIndicator: React.FC<SaveIndicatorProps> = ({ status, className = '' }) => {
+  const getStatusText = (): string => {
+    switch (status.status) {
+      case 'saved':
+        return 'All changes saved';
+      case 'saving':
+        return 'Saving changes...';
+      case 'error':
+        return 'Error saving changes';
+      default:
+        return '';
     }
-  }, [isSaving, lastSaved]);
+  };
 
-  if (!showIndicator) return null;
+  const getStatusClass = (): string => {
+    switch (status.status) {
+      case 'saved':
+        return 'save-status--saved';
+      case 'saving':
+        return 'save-status--saving';
+      case 'error':
+        return 'save-status--error';
+      default:
+        return '';
+    }
+  };
 
   return (
-    <div 
-      className={`save-indicator ${isSaving ? 'saving' : 'saved'}`}
+    <div
+      className={`save-status ${getStatusClass()} ${className}`}
       role="status"
       aria-live="polite"
     >
-      <span className="save-indicator-dot" />
-      {message}
-      {lastSaved && !isSaving && (
-        <span className="save-time">
-          {lastSaved.toLocaleTimeString()}
-        </span>
+      <span className="save-status__icon" aria-hidden="true" />
+      <span className="save-status__text">{getStatusText()}</span>
+      {status.status === 'error' && (
+        <button
+          className="save-status__retry"
+          onClick={() => window.location.reload()}
+          aria-label="Retry saving changes"
+        >
+          Retry
+        </button>
       )}
     </div>
   );

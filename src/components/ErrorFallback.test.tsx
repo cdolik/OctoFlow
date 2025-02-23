@@ -1,5 +1,6 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { ErrorProvider } from '../contexts/ErrorContext';
 import ErrorFallback from './ErrorFallback';
 import { useErrorManagement } from '../hooks/useErrorManagement';
 import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
@@ -10,6 +11,8 @@ jest.mock('../hooks/useKeyboardNavigation');
 describe('ErrorFallback', () => {
   const mockError = new Error('Test error');
   const mockReset = jest.fn();
+  const mockResetError = jest.fn();
+  const mockRecoverError = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -23,6 +26,12 @@ describe('ErrorFallback', () => {
       shortcuts: []
     });
   });
+
+  const renderWithProvider = (ui: React.ReactElement) => {
+    return render(
+      <ErrorProvider maxAttempts={3}>{ui}</ErrorProvider>
+    );
+  };
 
   it('renders error message and retry button', () => {
     render(
@@ -171,5 +180,132 @@ describe('ErrorFallback', () => {
         ])
       })
     );
+  });
+
+  it('meets accessibility requirements', () => {
+    renderWithProvider(
+      <ErrorFallback
+        error={mockError}
+        resetError={mockResetError}
+        recoverError={mockRecoverError}
+      />
+    );
+
+    const dialog = screen.getByRole('alertdialog');
+    expect(dialog).toHaveAttribute('aria-labelledby');
+    expect(dialog).toHaveAttribute('aria-describedby');
+    
+    const title = screen.getByRole('heading');
+    expect(title.id).toBe(dialog.getAttribute('aria-labelledby'));
+    
+    const message = screen.getByText(mockError.message);
+    expect(message.parentElement?.id).toBe(dialog.getAttribute('aria-describedby'));
+  });
+
+  it('handles keyboard navigation', () => {
+    renderWithProvider(
+      <ErrorFallback
+        error={mockError}
+        resetError={mockResetError}
+        recoverError={mockRecoverError}
+      />
+    );
+
+    const dialog = screen.getByRole('alertdialog');
+    
+    // Test Escape key
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    expect(mockResetError).toHaveBeenCalled();
+
+    // Test tab navigation
+    const buttons = screen.getAllByRole('button');
+    buttons[0].focus();
+    expect(document.activeElement).toBe(buttons[0]);
+    
+    fireEvent.keyDown(buttons[0], { key: 'Tab' });
+    expect(document.activeElement).toBe(buttons[1]);
+  });
+
+  it('shows loading state during recovery', () => {
+    renderWithProvider(
+      <ErrorFallback
+        error={mockError}
+        resetError={mockResetError}
+        recoverError={mockRecoverError}
+        isRecovering={true}
+      />
+    );
+
+    const buttons = screen.getAllByRole('button');
+    buttons.forEach(button => {
+      expect(button).toBeDisabled();
+      expect(button).toHaveAttribute('aria-busy', 'true');
+    });
+  });
+
+  it('displays cooldown message when recovery attempts exceeded', async () => {
+    renderWithProvider(
+      <ErrorFallback
+        error={mockError}
+        resetError={mockResetError}
+        recoverError={mockRecoverError}
+      />
+    );
+
+    // Simulate multiple recovery attempts
+    for (let i = 0; i < 3; i++) {
+      await act(async () => {
+        await mockRecoverError();
+      });
+    }
+
+    const cooldownMessage = screen.getByText(/Please wait/);
+    expect(cooldownMessage).toHaveAttribute('aria-live', 'polite');
+  });
+
+  it('shows stack trace only in development', () => {
+    const originalEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'development';
+
+    renderWithProvider(
+      <ErrorFallback
+        error={mockError}
+        resetError={mockResetError}
+      />
+    );
+
+    const stackTrace = screen.getByLabelText('Error stack trace');
+    expect(stackTrace).toBeInTheDocument();
+    expect(stackTrace).toHaveAttribute('tabIndex', '0');
+
+    process.env.NODE_ENV = originalEnv;
+  });
+
+  it('provides accessible button labels', () => {
+    renderWithProvider(
+      <ErrorFallback
+        error={mockError}
+        resetError={mockResetError}
+        recoverError={mockRecoverError}
+        isRecovering={true}
+      />
+    );
+
+    const recoverButton = screen.getByText('Try to Resume');
+    expect(recoverButton).toHaveTextContent(/Loading/);
+    expect(screen.getByText(/Loading/)).toHaveClass('visually-hidden');
+  });
+
+  it('maintains focus within dialog', () => {
+    renderWithProvider(
+      <ErrorFallback
+        error={mockError}
+        resetError={mockResetError}
+        recoverError={mockRecoverError}
+      />
+    );
+
+    const dialog = screen.getByRole('alertdialog');
+    expect(document.activeElement).toBe(dialog);
   });
 });

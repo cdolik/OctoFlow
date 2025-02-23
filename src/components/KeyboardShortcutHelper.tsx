@@ -1,71 +1,90 @@
-import React from 'react';
-import { Stage } from '../types';
+import React, { useState, useEffect } from 'react';
+import { KeyboardShortcut } from '../types';
+import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
 import './styles.css';
 
-interface ShortcutProps {
-  stage: Stage;
-  showAdvanced?: boolean;
+interface KeyboardShortcutHelperProps {
+  shortcuts: KeyboardShortcut[];
+  isEnabled?: boolean;
 }
 
-interface ShortcutInfo {
-  key: string;
-  description: string;
-}
+const KeyboardShortcutHelper: React.FC<KeyboardShortcutHelperProps> = ({
+  shortcuts,
+  isEnabled = true
+}) => {
+  const [isVisible, setIsVisible] = useState(false);
+  const { activeShortcut } = useKeyboardNavigation({
+    shortcuts: [
+      {
+        key: '?',
+        description: 'Show/hide keyboard shortcuts',
+        action: () => setIsVisible(prev => !prev)
+      },
+      ...shortcuts
+    ],
+    isEnabled
+  });
 
-const KeyboardShortcutHelper: React.FC<ShortcutProps> = ({ stage, showAdvanced = false }) => {
-  const getStageShortcuts = () => {
-    const common: ShortcutInfo[] = [
-      { key: '→', description: 'Next question/section' },
-      { key: '←', description: 'Previous question/section' },
-      { key: 'Esc', description: 'Open menu / Exit current view' }
-    ];
-
-    const stageSpecific: Record<Stage, ShortcutInfo[]> = {
-      'pre-seed': [
-        { key: '1-4', description: 'Select answer option' },
-        { key: 'S', description: 'Save progress' }
-      ],
-      'seed': [
-        { key: '1-4', description: 'Select answer option' },
-        { key: 'R', description: 'Review previous answers' }
-      ],
-      'series-a': [
-        { key: '1-4', description: 'Select answer option' },
-        { key: 'C', description: 'Compare with benchmarks' }
-      ]
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isVisible) {
+        setIsVisible(false);
+      }
     };
 
-    const advanced: ShortcutInfo[] = [
-      { key: 'Ctrl+B', description: 'Toggle benchmarks view' },
-      { key: 'Ctrl+H', description: 'Show/hide help' },
-      { key: 'Ctrl+S', description: 'Force save' }
-    ];
+    if (isVisible) {
+      document.addEventListener('keydown', handleEscape);
+    }
 
-    return [
-      ...common,
-      ...stageSpecific[stage],
-      ...(showAdvanced ? advanced : [])
-    ];
-  };
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isVisible]);
+
+  if (!isEnabled || !isVisible) {
+    return null;
+  }
 
   return (
-    <div className="keyboard-shortcuts" role="complementary" aria-label="Keyboard shortcuts">
-      <div className="shortcuts-grid">
-        {getStageShortcuts().map(({ key, description }) => (
-          <div key={key} className="shortcut-row">
-            <kbd className="shortcut-key">{key}</kbd>
-            <span className="shortcut-description">{description}</span>
-          </div>
-        ))}
-      </div>
-      {!showAdvanced && (
-        <button 
-          className="show-advanced-shortcuts"
-          onClick={() => window.dispatchEvent(new CustomEvent('toggleAdvancedShortcuts'))}
+    <div
+      role="dialog"
+      aria-label="Keyboard shortcuts"
+      className="keyboard-shortcuts"
+      aria-modal="true"
+    >
+      <div className="keyboard-shortcuts__content">
+        <h2 className="keyboard-shortcuts__title">
+          Keyboard Shortcuts
+        </h2>
+        <button
+          className="keyboard-shortcuts__close"
+          onClick={() => setIsVisible(false)}
+          aria-label="Close keyboard shortcuts"
         >
-          Show Advanced Shortcuts
+          ✕
         </button>
-      )}
+        <div className="keyboard-shortcuts__list">
+          {shortcuts.map((shortcut, index) => (
+            <div
+              key={shortcut.key}
+              className={`keyboard-shortcuts__item ${
+                activeShortcut?.key === shortcut.key ? 'is-active' : ''
+              }`}
+            >
+              <kbd className="keyboard-shortcuts__key">{shortcut.key}</kbd>
+              <span 
+                className="keyboard-shortcuts__description"
+                aria-label={`Press ${shortcut.key} to ${shortcut.description}`}
+              >
+                {shortcut.description}
+              </span>
+            </div>
+          ))}
+        </div>
+        <div className="keyboard-shortcuts__tip">
+          Press <kbd>?</kbd> to toggle this menu
+        </div>
+      </div>
     </div>
   );
 };

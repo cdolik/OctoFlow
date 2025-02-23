@@ -2996,3 +2996,569 @@ button:disabled {
     transform: rotate(360deg);
   }
 }
+
+/* Error Handling Styles */
+.error-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  padding: 2rem;
+}
+
+.error-content {
+  background: white;
+  border-radius: 8px;
+  padding: 2rem;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+  max-width: 500px;
+  width: 100%;
+  text-align: center;
+}
+
+.error-message {
+  color: #24292e;
+  margin: 1.5rem 0;
+  padding: 1rem;
+  background: #f6f8fa;
+  border-radius: 6px;
+  font-family: monospace;
+}
+
+.error-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 2rem;
+}
+
+.error-button {
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.error-button.reset {
+  background: #24292e;
+  color: white;
+  border: none;
+}
+
+.error-button.reset:hover {
+  background: #1b1f23;
+}
+
+.error-button.recover {
+  background: white;
+  color: #24292e;
+  border: 1px solid #24292e;
+}
+
+.error-button.recover:hover {
+  background: #f6f8fa;
+}
+
+.error-stack {
+  margin-top: 2rem;
+  padding: 1rem;
+  background: #f6f8fa;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  text-align: left;
+  overflow-x: auto;
+}
+
+/* Save Status Indicator */
+.save-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+}
+
+.save-status__icon {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.save-status--saved {
+  background: #e6f4ea;
+  color: #1e4620;
+}
+
+.save-status--saved .save-status__icon {
+  background: #34a853;
+}
+
+.save-status--saving {
+  background: #e8f0fe;
+  color: #174ea6;
+}
+
+.save-status--saving .save-status__icon {
+  background: #4285f4;
+  animation: pulse 1.5s infinite;
+}
+
+.save-status--error {
+  background: #fce8e6;
+  color: #c5221f;
+}
+
+.save-status--error .save-status__icon {
+  background: #ea4335;
+}
+
+.save-status__retry {
+  padding: 2px 8px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  font-size: inherit;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.save-status__retry:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
+}
+
+/* Add to existing styles */
+
+/* Error Dialog */
+.error-dialog {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 1rem;
+  z-index: 1000;
+}
+
+.error-content {
+  background: white;
+  border-radius: 8px;
+  padding: 2rem;
+  max-width: 500px;
+  width: 100%;
+  position: relative;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.error-title {
+  color: #24292e;
+  margin: 0 0 1.5rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.error-message {
+  background: #f6f8fa;
+  border-radius: 6px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  color: #24292e;
+}
+
+.error-cooldown {
+  color: #6a737d;
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+}
+
+.error-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+}
+
+.error-button {
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.error-button:focus-visible {
+  outline: 2px solid #0366d6;
+  outline-offset: 2px;
+}
+
+.error-button[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.error-button.reset {
+  background: #24292e;
+  color: white;
+  border: none;
+}
+
+.error-button.reset:hover:not([disabled]) {
+  background: #1b1f23;
+}
+
+.error-button.recover {
+  background: white;
+  color: #24292e;
+  border: 1px solid #24292e;
+}
+
+.error-button.recover:hover:not([disabled]) {
+  background: #f6f8fa;
+}
+
+.error-stack {
+  margin-top: 2rem;
+  padding: 1rem;
+  background: #f6f8fa;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  overflow-x: auto;
+  max-height: 200px;
+  border: 1px solid #e1e4e8;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+/* Keyboard Shortcuts */
+.keyboard-shortcuts {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.keyboard-shortcuts__content {
+  background: white;
+  border-radius: 8px;
+  padding: 2rem;
+  max-width: 500px;
+  width: 100%;
+  position: relative;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.keyboard-shortcuts__title {
+  color: #24292e;
+  margin: 0 0 1.5rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.keyboard-shortcuts__close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: none;
+  border: none;
+  color: #6a737d;
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.keyboard-shortcuts__close:hover {
+  background: #f6f8fa;
+  color: #24292e;
+}
+
+.keyboard-shortcuts__close:focus-visible {
+  outline: 2px solid #0366d6;
+  outline-offset: 2px;
+}
+
+.keyboard-shortcuts__list {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.keyboard-shortcuts__item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.keyboard-shortcuts__item:hover,
+.keyboard-shortcuts__item.is-active {
+  background: #f6f8fa;
+}
+
+.keyboard-shortcuts__key {
+  background: #f6f8fa;
+  border: 1px solid #d1d5da;
+  border-radius: 4px;
+  padding: 0.25rem 0.5rem;
+  font-family: monospace;
+  font-size: 0.875rem;
+  color: #24292e;
+  min-width: 1.5rem;
+  text-align: center;
+}
+
+.keyboard-shortcuts__description {
+  color: #24292e;
+  font-size: 0.875rem;
+}
+
+.keyboard-shortcuts__tip {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e1e4e8;
+  color: #6a737d;
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+.keyboard-shortcuts__tip kbd {
+  background: #f6f8fa;
+  border: 1px solid #d1d5da;
+  border-radius: 4px;
+  padding: 0.125rem 0.25rem;
+  font-family: monospace;
+  font-size: 0.75rem;
+}
+
+/* Stage Navigation */
+.stage-navigation {
+  position: sticky;
+  top: 0;
+  background: white;
+  padding: 1rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  z-index: 100;
+}
+
+.stage-navigation:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px #0366d6;
+}
+
+.stage-navigation__progress {
+  width: 100%;
+  height: 4px;
+  background: #f6f8fa;
+  border-radius: 2px;
+  margin-bottom: 1rem;
+  overflow: hidden;
+}
+
+.stage-navigation__progress-bar {
+  height: 100%;
+  background: #2ea44f;
+  transition: width 0.3s ease;
+}
+
+.stage-navigation__controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.stage-navigation__button {
+  padding: 0.5rem 1rem;
+  border: 1px solid #d1d5da;
+  border-radius: 6px;
+  background: white;
+  color: #24292e;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stage-navigation__button:hover:not(:disabled) {
+  background: #f6f8fa;
+  border-color: #959da5;
+}
+
+.stage-navigation__button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px #0366d6;
+}
+
+.stage-navigation__button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.stage-navigation__status {
+  font-size: 0.875rem;
+  color: #6a737d;
+  text-align: center;
+  min-width: 120px;
+}
+
+.stage-navigation__shortcuts {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: #6a737d;
+}
+
+.stage-navigation__shortcuts kbd {
+  background: #f6f8fa;
+  border: 1px solid #d1d5da;
+  border-radius: 3px;
+  padding: 0.125rem 0.25rem;
+  font-family: monospace;
+  margin: 0 0.25rem;
+}
+
+/* High Contrast Mode Adjustments */
+@media (forced-colors: active) {
+  .stage-navigation__button {
+    border: 2px solid ButtonText;
+  }
+
+  .stage-navigation__progress-bar {
+    background: Highlight;
+  }
+
+  .stage-navigation:focus {
+    outline: 2px solid ButtonText;
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .stage-navigation__progress-bar {
+    transition: none;
+  }
+}
+
+/* Timer Component */
+.timer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+.timer--idle {
+  background: #f6f8fa;
+  border: 1px solid #e1e4e8;
+}
+
+.timer__display {
+  font-size: 1.5rem;
+  font-family: monospace;
+  color: #24292e;
+  font-weight: 600;
+  min-width: 4ch;
+  text-align: center;
+}
+
+.timer__progress {
+  width: 100%;
+  height: 4px;
+  background: #f6f8fa;
+  border-radius: 2px;
+  overflow: hidden;
+  margin: 0.5rem 0;
+}
+
+.timer__progress-bar {
+  height: 100%;
+  background: #2ea44f;
+  transition: width 0.3s ease;
+}
+
+.timer__remaining {
+  font-size: 0.875rem;
+  color: #6a737d;
+  text-align: center;
+}
+
+.timer__resume {
+  padding: 0.5rem 1rem;
+  border: 1px solid #d1d5da;
+  border-radius: 6px;
+  background: white;
+  color: #24292e;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.timer__resume:hover {
+  background: #f6f8fa;
+  border-color: #959da5;
+}
+
+.timer__resume:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px #0366d6;
+}
+
+/* High Contrast Mode Support */
+@media (forced-colors: active) {
+  .timer__progress-bar {
+    background: Highlight;
+  }
+
+  .timer__resume {
+    border: 2px solid ButtonText;
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .timer,
+  .timer__progress-bar {
+    transition: none;
+  }
+}

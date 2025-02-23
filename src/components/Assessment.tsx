@@ -1,183 +1,135 @@
-import React, { useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Stage, Question } from '../types';
-import { useStageManager } from '../hooks/useStageManager';
-import { useErrorManagement } from '../hooks/useErrorManagement';
-import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
-import { useStorage } from '../hooks/useStorage';
-import { filterQuestionsByStage } from '../utils/questionFiltering';
-import { questions } from '../data/questions';
-import LoadingSpinner from './LoadingSpinner';
-import ErrorFallback from './ErrorFallback';
+import React, { useCallback, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useKeyboardShortcuts } from '../contexts/KeyboardShortcutsContext';
+import { useAssessmentSession } from '../hooks/useAssessmentSession';
+import { Stage } from '../types';
+import { trackCTAClick } from '../utils/analytics';
+import KeyboardShortcutHelper from './KeyboardShortcutHelper';
+import SaveIndicator from './SaveIndicator';
+import './styles.css';
 
-interface AssessmentProps {
-  stage: Stage;
-  onStepChange?: (responses: Record<string, number>) => void;
-}
-
-const Assessment: React.FC<AssessmentProps> = ({ stage, onStepChange }) => {
+const Assessment: React.FC = () => {
+  const { stage } = useParams<{ stage: Stage }>();
   const navigate = useNavigate();
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  
+  const { registerShortcut } = useKeyboardShortcuts();
   const {
     state,
-    saveState,
-    isLoading: storageLoading
-  } = useStorage({
-    autoSave: true,
-    backupInterval: 5 * 60 * 1000 // 5 minutes
+    saveStatus,
+    saveResponse,
+    completeSession,
+    isLoading
+  } = useAssessmentSession({
+    initialStage: stage
   });
 
-  const {
-    isTransitioning,
-    error: stageError,
-    transition
-  } = useStageManager({
-    onStageComplete: () => navigate('/summary')
-  });
-
-  const {
-    handleError,
-    activeErrorCount,
-    isHandlingError
-  } = useErrorManagement({
-    stage,
-    onUnrecoverableError: () => navigate('/stage-select')
-  });
-
-  const stageQuestions = filterQuestionsByStage(questions, stage);
-
-  const handleNext = useCallback(async () => {
-    if (currentQuestionIndex < stageQuestions.length - 1) {
-      setCurrentQuestionIndex(prev => prev + 1);
-    } else {
-      try {
-        await transition('summary');
-      } catch (error) {
-        handleError(error instanceof Error ? error : new Error('Failed to transition'));
-      }
+  const handleNextQuestion = useCallback(() => {
+    if (!state) return;
+    const nextIndex = state.progress.questionIndex + 1;
+    if (nextIndex < state.progress.totalQuestions) {
+      trackCTAClick('next_question');
+      // Update progress logic here
     }
-  }, [currentQuestionIndex, stageQuestions.length, transition, handleError]);
+  }, [state]);
 
-  const handlePrevious = useCallback(() => {
-    setCurrentQuestionIndex(prev => Math.max(0, prev - 1));
-  }, []);
-
-  const handleAnswer = useCallback(async (value: number) => {
-    const currentQuestion = stageQuestions[currentQuestionIndex];
-    if (!currentQuestion) return;
-
-    try {
-      const newResponses = {
-        ...state?.responses,
-        [currentQuestion.id]: value
-      };
-
-      await saveState({
-        ...state,
-        responses: newResponses
-      });
-
-      onStepChange?.(newResponses);
-      handleNext();
-    } catch (error) {
-      handleError(error instanceof Error ? error : new Error('Failed to save response'));
+  const handlePreviousQuestion = useCallback(() => {
+    if (!state) return;
+    const prevIndex = state.progress.questionIndex - 1;
+    if (prevIndex >= 0) {
+      trackCTAClick('previous_question');
+      // Update progress logic here
     }
-  }, [currentQuestionIndex, stageQuestions, state, saveState, onStepChange, handleNext, handleError]);
+  }, [state]);
 
-  const { shortcuts, isDisabled } = useKeyboardNavigation({
-    stage,
-    onNext: handleNext,
-    onPrevious: handlePrevious,
-    onEscape: () => navigate('/stage-select'),
-    disabled: isHandlingError || isTransitioning,
-    shortcuts: [
+  const handleComplete = useCallback(async () => {
+    if (!state) return;
+    const success = await completeSession();
+    if (success) {
+      navigate(`/summary/${stage}`);
+    }
+  }, [state, stage, completeSession, navigate]);
+
+  // Register keyboard shortcuts
+  useEffect(() => {
+    const shortcuts = [
+      {
+        key: 'ArrowRight',
+        description: 'Next question',
+        action: handleNextQuestion
+      },
+      {
+        key: 'ArrowLeft',
+        description: 'Previous question',
+        action: handlePreviousQuestion
+      },
       {
         key: '1',
-        description: 'Select first option',
-        action: () => handleAnswer(1)
+        description: 'Select score 1',
+        action: () => saveResponse(state?.progress.questionIndex || 0, 1, 0)
       },
       {
         key: '2',
-        description: 'Select second option',
-        action: () => handleAnswer(2)
+        description: 'Select score 2',
+        action: () => saveResponse(state?.progress.questionIndex || 0, 2, 0)
       },
       {
         key: '3',
-        description: 'Select third option',
-        action: () => handleAnswer(3)
+        description: 'Select score 3',
+        action: () => saveResponse(state?.progress.questionIndex || 0, 3, 0)
       },
       {
         key: '4',
-        description: 'Select fourth option',
-        action: () => handleAnswer(4)
+        description: 'Select score 4',
+        action: () => saveResponse(state?.progress.questionIndex || 0, 4, 0)
+      },
+      {
+        key: 'Enter',
+        description: 'Complete assessment',
+        action: handleComplete
       }
-    ]
-  });
+    ];
 
-  if (storageLoading) {
-    return <LoadingSpinner />;
+    shortcuts.forEach(registerShortcut);
+  }, [
+    registerShortcut,
+    handleNextQuestion,
+    handlePreviousQuestion,
+    handleComplete,
+    saveResponse,
+    state
+  ]);
+
+  if (isLoading) {
+    return <div className="loading">Loading assessment...</div>;
   }
 
-  if (stageError || activeErrorCount > 0) {
-    return (
-      <ErrorFallback
-        error={stageError || new Error('Assessment error')}
-        resetError={() => window.location.reload()}
-      />
-    );
+  if (!state) {
+    return <div className="error">Assessment not found</div>;
   }
-
-  const currentQuestion = stageQuestions[currentQuestionIndex];
 
   return (
-    <div className="assessment-container" role="main">
-      <div className="progress-bar">
-        <div 
-          className="progress"
-          style={{ width: `${(currentQuestionIndex / stageQuestions.length) * 100}%` }}
-          role="progressbar"
-          aria-valuenow={(currentQuestionIndex / stageQuestions.length) * 100}
-          aria-valuemin={0}
-          aria-valuemax={100}
-        />
-      </div>
-
-      {currentQuestion && (
-        <div className="question-container">
-          <h2 id="question-title">{currentQuestion.text}</h2>
-          <div 
-            className="options"
-            role="radiogroup"
-            aria-labelledby="question-title"
-          >
-            {currentQuestion.options.map((option, index) => (
-              <button
-                key={option.value}
-                onClick={() => handleAnswer(option.value)}
-                className={state?.responses?.[currentQuestion.id] === option.value ? 'selected' : ''}
-                disabled={isDisabled}
-                aria-checked={state?.responses?.[currentQuestion.id] === option.value}
-                role="radio"
-              >
-                <span className="option-number">{index + 1}</span>
-                {option.text}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="navigation-help">
-        <h3>Keyboard Shortcuts</h3>
-        <ul>
-          {shortcuts.map(shortcut => (
-            <li key={shortcut.key}>
-              <kbd>{shortcut.key}</kbd> - {shortcut.description}
-            </li>
-          ))}
-        </ul>
-      </div>
+    <div className="assessment">
+      <SaveIndicator status={saveStatus} />
+      <KeyboardShortcutHelper 
+        shortcuts={[
+          {
+            key: '→',
+            description: 'Next question'
+          },
+          {
+            key: '←',
+            description: 'Previous question'
+          },
+          {
+            key: '1-4',
+            description: 'Select score'
+          },
+          {
+            key: 'Enter',
+            description: 'Complete assessment'
+          }
+        ]} 
+      />
+      {/* Rest of assessment UI */}
     </div>
   );
 };

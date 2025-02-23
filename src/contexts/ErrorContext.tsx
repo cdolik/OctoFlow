@@ -1,30 +1,43 @@
-import React, { createContext, useContext } from 'react';
-import { AssessmentError } from '../types/errors';
-import { useErrorManagement } from '../hooks/useErrorManagement';
+import React, { createContext, useContext, ReactNode } from 'react';
+import { useErrorRecovery } from '../hooks/useErrorRecovery';
 
-interface ErrorContextValue {
-  error: AssessmentError | null;
-  isRecovering: boolean;
-  handleError: (error: unknown, recover?: () => Promise<boolean>) => Promise<boolean>;
-  clearError: () => void;
-  hasCriticalError: boolean;
+interface ErrorContextType {
+  attempts: number;
+  errors: string[];
+  canAttemptRecovery: () => boolean;
+  recordAttempt: (error: Error) => void;
+  resetRecovery: () => void;
+  getRemainingCooldown: () => number;
 }
 
-const ErrorContext = createContext<ErrorContextValue | null>(null);
+const ErrorContext = createContext<ErrorContextType | undefined>(undefined);
 
-export const ErrorProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const errorManagement = useErrorManagement();
+interface ErrorProviderProps {
+  children: ReactNode;
+  maxAttempts?: number;
+  cooldownPeriod?: number;
+}
+
+export const ErrorProvider: React.FC<ErrorProviderProps> = ({
+  children,
+  maxAttempts,
+  cooldownPeriod
+}) => {
+  const errorRecovery = useErrorRecovery({
+    maxAttempts,
+    cooldownPeriod
+  });
 
   return (
-    <ErrorContext.Provider value={errorManagement}>
+    <ErrorContext.Provider value={errorRecovery}>
       {children}
     </ErrorContext.Provider>
   );
 };
 
-export const useError = (): ErrorContextValue => {
+export const useError = (): ErrorContextType => {
   const context = useContext(ErrorContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error('useError must be used within an ErrorProvider');
   }
   return context;

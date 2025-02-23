@@ -33,49 +33,54 @@ export const filterQuestionsByStage = (
 };
 
 export const validateQuestionResponses = (
-  responses: Record<string, number>,
+  responses: Record<string, number> | null,
   questions: Question[],
   stage: Stage
 ): StageValidationResult => {
+  if (!responses || typeof responses !== 'object') {
+    return { 
+      isValid: false, 
+      error: 'Invalid responses format',
+      details: ['No responses found']
+    };
+  }
+
   const stageQuestions = filterQuestionsByStage(questions, stage);
   const stageQuestionIds = new Set(stageQuestions.map(q => q.id));
 
   // Check for responses to questions not in this stage
-  const invalidQuestions = Object.keys(responses)
-    .filter(qId => !stageQuestionIds.has(qId));
-
+  const invalidQuestions = Object.keys(responses).filter(qId => !stageQuestionIds.has(qId));
   if (invalidQuestions.length > 0) {
     return {
       isValid: false,
-      error: 'Invalid question responses detected',
+      error: 'Responses found for questions not in current stage',
       details: invalidQuestions
     };
   }
 
   // Check for missing required questions
-  const missingQuestions = stageQuestions
-    .filter(q => !responses[q.id])
-    .map(q => q.id);
+  const requiredQuestionIds = stageQuestions.map(q => q.id);
+  const missingRequired = requiredQuestionIds.filter(qId => !responses[qId]);
 
-  if (missingQuestions.length > 0) {
+  if (missingRequired.length > 0) {
     return {
       isValid: false,
-      error: 'Missing required question responses',
-      details: missingQuestions
+      error: 'Missing required questions',
+      details: missingRequired
     };
   }
 
-  // Validate response values
-  const invalidResponses = Object.entries(responses)
+  // Validate score ranges
+  const invalidScores = Object.entries(responses)
     .filter(([qId]) => stageQuestionIds.has(qId))
-    .filter(([, value]) => !Number.isInteger(value) || value < 1 || value > 4)
+    .filter(([, score]) => !Number.isInteger(score) || score < 1 || score > 4)
     .map(([qId]) => qId);
 
-  if (invalidResponses.length > 0) {
+  if (invalidScores.length > 0) {
     return {
       isValid: false,
-      error: 'Invalid response values detected',
-      details: invalidResponses
+      error: 'Invalid score values',
+      details: invalidScores
     };
   }
 

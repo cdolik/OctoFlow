@@ -1,68 +1,87 @@
-import { useEffect, useCallback, useRef } from 'react';
-import { KeyboardShortcut } from '../types/flowValidation';
+import { useCallback, useEffect, useState } from 'react';
+import { KeyboardShortcut } from '../types';
 
-interface ShortcutConfig {
-  shortcuts: KeyboardShortcut[];
-  disabled?: boolean;
-  enableInInputs?: boolean;
+interface ShortcutOptions {
+  isEnabled?: boolean;
+  onShortcutTriggered?: (shortcut: KeyboardShortcut) => void;
 }
 
-export const useGlobalShortcuts = ({
-  shortcuts,
-  disabled = false,
-  enableInInputs = false
-}: ShortcutConfig) => {
-  const activeShortcuts = useRef(shortcuts);
+interface ShortcutState {
+  activeShortcut: KeyboardShortcut | null;
+  isEnabled: boolean;
+}
+
+export const useGlobalShortcuts = (
+  shortcuts: KeyboardShortcut[],
+  options: ShortcutOptions = {}
+) => {
+  const { isEnabled = true, onShortcutTriggered } = options;
+
+  const [state, setState] = useState<ShortcutState>({
+    activeShortcut: null,
+    isEnabled
+  });
 
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
-    if (disabled) return;
+    if (!state.isEnabled) return;
 
-    // Skip if we're in an input and shortcuts aren't enabled for inputs
+    // Don't trigger shortcuts when typing in form elements
     if (
-      !enableInInputs &&
-      (event.target as HTMLElement).tagName.match(/^(INPUT|TEXTAREA)$/i)
+      event.target instanceof HTMLInputElement ||
+      event.target instanceof HTMLTextAreaElement ||
+      event.target instanceof HTMLSelectElement
     ) {
       return;
     }
 
-    activeShortcuts.current.forEach(shortcut => {
-      const keys = shortcut.key.toLowerCase().split('+');
-      const mainKey = keys[keys.length - 1];
-      const requiresCtrl = keys.includes('ctrl');
-      const requiresShift = keys.includes('shift');
-      const requiresAlt = keys.includes('alt');
-
-      if (
-        event.key.toLowerCase() === mainKey &&
-        event.ctrlKey === requiresCtrl &&
-        event.shiftKey === requiresShift &&
-        event.altKey === requiresAlt
-      ) {
-        event.preventDefault();
-        shortcut.action();
+    const shortcut = shortcuts.find(s => {
+      if (typeof s.key === 'string') {
+        return s.key.toLowerCase() === event.key.toLowerCase();
       }
+      return false;
     });
-  }, [disabled, enableInInputs]);
 
-  useEffect(() => {
-    activeShortcuts.current = shortcuts;
-  }, [shortcuts]);
+    if (shortcut) {
+      event.preventDefault();
+      setState(prev => ({ ...prev, activeShortcut: shortcut }));
+      shortcut.action();
+      onShortcutTriggered?.(shortcut);
+    }
+  }, [shortcuts, state.isEnabled, onShortcutTriggered]);
 
-  useEffect(() => {
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleKeyDown]);
-
-  const registerShortcut = useCallback((shortcut: KeyboardShortcut) => {
-    activeShortcuts.current = [...activeShortcuts.current, shortcut];
+  const clearActiveShortcut = useCallback(() => {
+    setState(prev => ({ ...prev, activeShortcut: null }));
   }, []);
 
-  const unregisterShortcut = useCallback((key: string) => {
-    activeShortcuts.current = activeShortcuts.current.filter(s => s.key !== key);
+  useEffect(() => {
+    if (isEnabled) {
+      document.addEventListener('keydown', handleKeyDown);
+      document.addEventListener('keyup', clearActiveShortcut);
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('keyup', clearActiveShortcut);
+    };
+  }, [isEnabled, handleKeyDown, clearActiveShortcut]);
+
+  const enableShortcuts = useCallback(() => {
+    setState(prev => ({ ...prev, isEnabled: true }));
+  }, []);
+
+  const disableShortcuts = useCallback(() => {
+    setState(prev => ({ ...prev, isEnabled: false }));
+  }, []);
+
+  const toggleShortcuts = useCallback(() => {
+    setState(prev => ({ ...prev, isEnabled: !prev.isEnabled }));
   }, []);
 
   return {
-    registerShortcut,
-    unregisterShortcut
+    activeShortcut: state.activeShortcut,
+    isEnabled: state.isEnabled,
+    enableShortcuts,
+    disableShortcuts,
+    toggleShortcuts
   };
 };

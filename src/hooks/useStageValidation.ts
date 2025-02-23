@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Stage, StageValidationResult } from '../types';
-import { validateStageProgression, validateStageTransition } from '../utils/stageValidation';
-import { getStageQuestions } from '../utils/questionFilters';
+import { validateStageSequence, getStageConfig } from '../data/StageConfig';
+import { validateQuestionResponses } from '../utils/questionFiltering';
 import { questions } from '../data/questions';
 import { trackError } from '../utils/analytics';
 
@@ -30,29 +30,32 @@ export const useStageValidation = ({
     canProgress: true
   });
 
-  const validateStage = useCallback(async (stage: Stage) => {
+  const validateStage = useCallback(async (stage: Stage): Promise<boolean> => {
     setValidationState(prev => ({ ...prev, isValidating: true }));
 
     try {
-      const stageQuestions = getStageQuestions(stage, questions);
-      
-      // First validate progression
-      const progressionResult = validateStageProgression(currentStage, stage);
-      if (!progressionResult.isValid) {
-        throw new Error(progressionResult.error);
+      // First validate stage sequence
+      const isValidSequence = validateStageSequence(currentStage, stage);
+      if (!isValidSequence) {
+        throw new Error('Invalid stage progression. Please complete stages in order.');
       }
 
-      // Then validate transition if we have a current stage
+      // Then validate stage configuration
+      const stageConfig = getStageConfig(stage);
+      if (!stageConfig) {
+        throw new Error('Invalid stage configuration');
+      }
+
+      // Finally validate responses if we have a current stage
       if (currentStage) {
-        const transitionResult = validateStageTransition(
-          currentStage,
-          stage,
-          stageQuestions,
-          responses
+        const responseValidation = validateQuestionResponses(
+          responses, 
+          questions,
+          currentStage
         );
 
-        if (!transitionResult.isValid) {
-          throw new Error(transitionResult.error);
+        if (!responseValidation.isValid) {
+          throw new Error(responseValidation.error || 'Response validation failed');
         }
       }
 
@@ -73,7 +76,7 @@ export const useStageValidation = ({
       });
 
       onValidationError?.(errorMessage);
-      trackError('stage_validation_error', { error: errorMessage, stage });
+      trackError(error instanceof Error ? error : new Error(errorMessage));
       
       return false;
     }

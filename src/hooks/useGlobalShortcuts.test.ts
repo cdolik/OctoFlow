@@ -1,128 +1,148 @@
 import { renderHook, act } from '@testing-library/react';
 import { useGlobalShortcuts } from './useGlobalShortcuts';
+import { KeyboardShortcut } from '../types';
 
 describe('useGlobalShortcuts', () => {
-  const mockShortcuts = [
-    { key: 'ctrl+s', action: jest.fn() },
-    { key: 'shift+?', action: jest.fn() },
-    { key: 'alt+h', action: jest.fn() },
-    { key: 'esc', action: jest.fn() }
+  const mockShortcuts: KeyboardShortcut[] = [
+    {
+      key: 'n',
+      description: 'Next',
+      action: jest.fn()
+    },
+    {
+      key: 'p',
+      description: 'Previous',
+      action: jest.fn()
+    }
   ];
 
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  it('handles basic keyboard shortcuts', () => {
-    renderHook(() => useGlobalShortcuts({ shortcuts: mockShortcuts }));
+  it('triggers shortcut actions on keydown', () => {
+    renderHook(() => useGlobalShortcuts(mockShortcuts));
 
-    // Test Ctrl+S
     act(() => {
-      window.dispatchEvent(new KeyboardEvent('keydown', {
-        key: 's',
-        ctrlKey: true
-      }));
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'n' }));
     });
+
     expect(mockShortcuts[0].action).toHaveBeenCalled();
-
-    // Test Shift+?
-    act(() => {
-      window.dispatchEvent(new KeyboardEvent('keydown', {
-        key: '?',
-        shiftKey: true
-      }));
-    });
-    expect(mockShortcuts[1].action).toHaveBeenCalled();
   });
 
-  it('ignores shortcuts when disabled', () => {
-    renderHook(() => useGlobalShortcuts({
-      shortcuts: mockShortcuts,
-      disabled: true
-    }));
+  it('ignores shortcut when typing in form elements', () => {
+    renderHook(() => useGlobalShortcuts(mockShortcuts));
 
-    act(() => {
-      window.dispatchEvent(new KeyboardEvent('keydown', {
-        key: 's',
-        ctrlKey: true
-      }));
-    });
-    expect(mockShortcuts[0].action).not.toHaveBeenCalled();
-  });
-
-  it('respects enableInInputs option', () => {
-    renderHook(() => useGlobalShortcuts({
-      shortcuts: mockShortcuts,
-      enableInInputs: false
-    }));
-
+    // Create and focus an input element
     const input = document.createElement('input');
     document.body.appendChild(input);
     input.focus();
 
     act(() => {
-      input.dispatchEvent(new KeyboardEvent('keydown', {
-        key: 's',
-        ctrlKey: true,
-        bubbles: true
-      }));
+      const event = new KeyboardEvent('keydown', { key: 'n' });
+      Object.defineProperty(event, 'target', { value: input });
+      document.dispatchEvent(event);
     });
 
     expect(mockShortcuts[0].action).not.toHaveBeenCalled();
+
+    // Cleanup
     document.body.removeChild(input);
   });
 
-  it('allows dynamic shortcut registration', () => {
-    const { result } = renderHook(() => useGlobalShortcuts({
-      shortcuts: mockShortcuts
-    }));
-
-    const newShortcut = { key: 'ctrl+n', action: jest.fn() };
+  it('clears active shortcut on keyup', () => {
+    const { result } = renderHook(() => useGlobalShortcuts(mockShortcuts));
 
     act(() => {
-      result.current.registerShortcut(newShortcut);
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'n' }));
     });
+
+    expect(result.current.activeShortcut).toBe(mockShortcuts[0]);
 
     act(() => {
-      window.dispatchEvent(new KeyboardEvent('keydown', {
-        key: 'n',
-        ctrlKey: true
-      }));
+      document.dispatchEvent(new KeyboardEvent('keyup', { key: 'n' }));
     });
 
-    expect(newShortcut.action).toHaveBeenCalled();
+    expect(result.current.activeShortcut).toBeNull();
   });
 
-  it('allows shortcut unregistration', () => {
-    const { result } = renderHook(() => useGlobalShortcuts({
-      shortcuts: mockShortcuts
-    }));
+  it('handles shortcut enabling and disabling', () => {
+    const { result } = renderHook(() => useGlobalShortcuts(mockShortcuts));
 
+    // Disable shortcuts
     act(() => {
-      result.current.unregisterShortcut('ctrl+s');
+      result.current.disableShortcuts();
     });
 
+    expect(result.current.isEnabled).toBe(false);
+
     act(() => {
-      window.dispatchEvent(new KeyboardEvent('keydown', {
-        key: 's',
-        ctrlKey: true
-      }));
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'n' }));
     });
 
     expect(mockShortcuts[0].action).not.toHaveBeenCalled();
+
+    // Enable shortcuts
+    act(() => {
+      result.current.enableShortcuts();
+    });
+
+    expect(result.current.isEnabled).toBe(true);
+
+    act(() => {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'n' }));
+    });
+
+    expect(mockShortcuts[0].action).toHaveBeenCalled();
+  });
+
+  it('toggles shortcuts state', () => {
+    const { result } = renderHook(() => useGlobalShortcuts(mockShortcuts));
+
+    expect(result.current.isEnabled).toBe(true);
+
+    act(() => {
+      result.current.toggleShortcuts();
+    });
+
+    expect(result.current.isEnabled).toBe(false);
+
+    act(() => {
+      result.current.toggleShortcuts();
+    });
+
+    expect(result.current.isEnabled).toBe(true);
+  });
+
+  it('calls onShortcutTriggered callback', () => {
+    const onShortcutTriggered = jest.fn();
+    renderHook(() => 
+      useGlobalShortcuts(mockShortcuts, { onShortcutTriggered })
+    );
+
+    act(() => {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'n' }));
+    });
+
+    expect(onShortcutTriggered).toHaveBeenCalledWith(mockShortcuts[0]);
   });
 
   it('cleans up event listeners on unmount', () => {
-    const removeEventListenerSpy = jest.spyOn(window, 'removeEventListener');
-    const { unmount } = renderHook(() => useGlobalShortcuts({
-      shortcuts: mockShortcuts
-    }));
-
+    const removeEventListenerSpy = jest.spyOn(document, 'removeEventListener');
+    
+    const { unmount } = renderHook(() => useGlobalShortcuts(mockShortcuts));
     unmount();
 
-    expect(removeEventListenerSpy).toHaveBeenCalledWith(
-      'keydown',
-      expect.any(Function)
-    );
+    expect(removeEventListenerSpy).toHaveBeenCalledTimes(2); // keydown and keyup
+  });
+
+  it('handles case-insensitive shortcuts', () => {
+    renderHook(() => useGlobalShortcuts(mockShortcuts));
+
+    act(() => {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'N' }));
+    });
+
+    expect(mockShortcuts[0].action).toHaveBeenCalled();
   });
 });

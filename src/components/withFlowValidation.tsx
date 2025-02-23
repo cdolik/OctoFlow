@@ -1,91 +1,106 @@
-import React from 'react';
-import { Navigate, To } from 'react-router-dom';
+import React, { useCallback, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useTimeTracker } from '../hooks/useTimeTracker';
+import { useKeyboardShortcuts } from '../contexts/KeyboardShortcutsContext';
+import { trackCTAClick } from '../utils/analytics';
 
-export type Stage = 'pre-seed' | 'seed' | 'series-a';
-export type Responses = Record<string, number>;
-
-export interface FlowValidationProps {
-  currentStage: Stage;
-  responses: Responses;
-  stages: Stage[];
-  onStepChange?: (responses: Responses) => void;
+interface WithFlowValidationProps {
+  minTimePerQuestion?: number;
+  onValidationFailed?: (reason: string) => void;
+  onValidationSuccess?: () => void;
 }
 
-interface ValidationResult {
-  isValid: boolean;
-  error?: string;
-  redirectTo?: To;
-}
+export function withFlowValidation<P extends object>(
+  WrappedComponent: React.ComponentType<P>,
+  options: WithFlowValidationProps = {}
+) {
+  return function WithFlowValidationWrapper(props: P) {
+    const {
+      minTimePerQuestion = 5000,
+      onValidationFailed,
+      onValidationSuccess
+    } = options;
 
-export const withFlowValidation = <P extends FlowValidationProps>(
-  WrappedComponent: React.ComponentType<P>
-): React.FC<P> => {
-  const WithFlowValidation: React.FC<P> = (props: P) => {
-    const validateFlow = (): ValidationResult => {
-      const { currentStage, responses, stages } = props;
-      
-      if (!stages.includes(currentStage)) {
-        throw new Error(`Invalid stage: ${currentStage}`);
+    const navigate = useNavigate();
+    const location = useLocation();
+    const { disableShortcuts, enableShortcuts } = useKeyboardShortcuts();
+    const { elapsedTime, canProgress, isIdle } = useTimeTracker({
+      minTime: minTimePerQuestion,
+      onTimeUpdate: time => {
+        // Re-enable shortcuts once minimum time is met
+        if (time >= minTimePerQuestion) {
+          enableShortcuts();
+        }
       }
+    });
 
-      const currentIndex = stages.indexOf(currentStage);
-      const previousStage = stages[currentIndex - 1];
-      
-      // Check if previous stage exists and has responses
-      if (previousStage && !Object.keys(responses).some(key => key.startsWith(previousStage))) {
-        return {
-          isValid: false,
-          error: `Please complete ${previousStage} stage before proceeding`,
-          redirectTo: `/assessment/${previousStage}`
-        };
+    // Disable navigation shortcuts initially
+    useEffect(() => {
+      if (!canProgress) {
+        disableShortcuts();
       }
+    }, [canProgress, disableShortcuts]);
 
-      // Validate current stage progress
-      const currentStageKeys = Object.keys(responses).filter(key => key.startsWith(currentStage));
-      if (currentStageKeys.length === 0 && currentIndex > 0) {
-        return {
-          isValid: false,
-          error: `Please start the ${currentStage} assessment`,
-          redirectTo: '/stage-select'
-        };
-      }
-
-      return { isValid: true };
-    };
-
-    try {
-      const validation = validateFlow();
-      
-      if (!validation.isValid && validation.redirectTo) {
-        return (
-          <Navigate 
-            to={validation.redirectTo} 
-            state={{ error: validation.error }} 
-            replace 
-          />
+    const validateFlow = useCallback(async () => {
+      if (!canProgress) {
+        onValidationFailed?.(
+          `Please spend at least ${Math.ceil(minTimePerQuestion / 1000)} seconds reviewing the question`
         );
+        return false;
       }
 
-      return <WrappedComponent {...props} />;
-    } catch (error) {
-      console.error('Flow validation error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      return (
-        <Navigate 
-          to="/error" 
-          state={{ error: errorMessage }} 
-          replace 
-        />
-      );
-    }
+      if (isIdle) {
+        onValidationFailed?.('Please resume the assessment before continuing');
+        return false;
+      }
+
+      trackCTAClick('assessment_progression');
+      onValidationSuccess?.();
+      return true;
+    }, [
+      canProgress,
+      isIdle,
+      minTimePerQuestion,
+      onValidationFailed,
+      onValidationSuccess
+    ]);
+
+    // Intercept navigation attempts
+    useEffect(() => {
+      const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+        if (!canProgress) {
+          e.preventDefault();
+          e.returnValue = '';
+        }
+      };
+
+      window.addEventListener('beforeunload', handleBeforeUnload);
+      return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    }, [canProgress]);
+
+    // Handle programmatic navigation
+    useEffect(() => {
+      const unblock = navigate((to, from) => {
+        if (!canProgress) {
+          onValidationFailed?.(
+            `Please spend at least ${Math.ceil(minTimePerQuestion / 1000)} seconds reviewing the question`
+          );
+          return false;
+        }
+        return true;
+      });
+
+      return () => unblock();
+    }, [navigate, canProgress, minTimePerQuestion, onValidationFailed]);
+
+    return (
+      <WrappedComponent
+        {...props}
+        validateFlow={validateFlow}
+        elapsedTime={elapsedTime}
+        canProgress={canProgress}
+        isIdle={isIdle}
+      />
+    );
   };
-
-  WithFlowValidation.displayName = `WithFlowValidation(${getDisplayName(WrappedComponent)})`;
-  return WithFlowValidation;
-};
-
-function getDisplayName<P>(WrappedComponent: React.ComponentType<P>): string {
-  return WrappedComponent.displayName || WrappedComponent.name || 'Component';
 }
-
-export default withFlowValidation;

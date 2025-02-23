@@ -3,13 +3,7 @@ import { UseKeyboardNavigationConfig, UseKeyboardNavigationResult } from '../typ
 import { useErrorManagement } from './useErrorManagement';
 import { Stage } from '../types';
 import { trackCTAClick } from '../utils/analytics';
-
-interface KeyboardShortcut {
-  key: string;
-  description: string;
-  action: () => void;
-  allowInErrorState?: boolean;
-}
+import { KeyboardShortcut } from '../types';
 
 interface UseKeyboardNavigationOptions {
   stage?: Stage;
@@ -19,6 +13,16 @@ interface UseKeyboardNavigationOptions {
   onRetry?: () => void;
   disabled?: boolean;
   shortcuts?: KeyboardShortcut[];
+  isEnabled?: boolean;
+  enableArrowKeys?: boolean;
+  focusSelector?: string;
+  onShortcutTriggered?: (shortcut: KeyboardShortcut) => void;
+}
+
+interface KeyboardState {
+  activeShortcut: KeyboardShortcut | null;
+  focusIndex: number;
+  isListening: boolean;
 }
 
 export const useKeyboardNavigation = (options: UseKeyboardNavigationOptions = {}) => {
@@ -29,8 +33,14 @@ export const useKeyboardNavigation = (options: UseKeyboardNavigationOptions = {}
     getActiveErrors
   } = useErrorManagement({ stage: options.stage });
 
+  const [state, setState] = useState<KeyboardState>({
+    activeShortcut: null,
+    focusIndex: -1,
+    isListening: options.isEnabled ?? true
+  });
+
   const handleKeyPress = useCallback((event: KeyboardEvent) => {
-    if (options.disabled) return;
+    if (options.disabled || !state.isListening) return;
 
     // Handle error state shortcuts first
     if (activeErrorCount > 0) {
@@ -88,20 +98,71 @@ export const useKeyboardNavigation = (options: UseKeyboardNavigationOptions = {}
           event.preventDefault();
           shortcut.action();
           trackCTAClick(`keyboard_shortcut_${event.key}`);
+          options.onShortcutTriggered?.(shortcut);
         }
+    }
+
+    if (options.enableArrowKeys) {
+      switch (event.key) {
+        case 'ArrowUp':
+        case 'ArrowLeft':
+          event.preventDefault();
+          setState(prev => ({
+            ...prev,
+            focusIndex: prev.focusIndex > 0 ? prev.focusIndex - 1 : options.shortcuts?.length - 1 ?? 0
+          }));
+          break;
+        case 'ArrowDown':
+        case 'ArrowRight':
+          event.preventDefault();
+          setState(prev => ({
+            ...prev,
+            focusIndex: prev.focusIndex < (options.shortcuts?.length ?? 0) - 1 ? prev.focusIndex + 1 : 0
+          }));
+          break;
+        case 'Enter':
+        case ' ':
+          if (state.focusIndex >= 0 && state.focusIndex < (options.shortcuts?.length ?? 0)) {
+            event.preventDefault();
+            const selectedShortcut = options.shortcuts?.[state.focusIndex];
+            if (selectedShortcut) {
+              setState(prev => ({ ...prev, activeShortcut: selectedShortcut }));
+              selectedShortcut.action();
+              options.onShortcutTriggered?.(selectedShortcut);
+            }
+          }
+          break;
+      }
     }
   }, [
     options,
     activeErrorCount,
     isHandlingError,
     clearError,
-    getActiveErrors
+    getActiveErrors,
+    state.isListening,
+    state.focusIndex
   ]);
 
   useEffect(() => {
-    window.addEventListener('keydown', handleKeyPress);
-    return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [handleKeyPress]);
+    if (options.isEnabled) {
+      document.addEventListener('keydown', handleKeyPress);
+      return () => document.removeEventListener('keydown', handleKeyPress);
+    }
+  }, [options.isEnabled, handleKeyPress]);
+
+  useEffect(() => {
+    setState(prev => ({ ...prev, isListening: options.isEnabled ?? true }));
+  }, [options.isEnabled]);
+
+  useEffect(() => {
+    if (options.focusSelector && state.focusIndex >= 0) {
+      const elements = document.querySelectorAll(options.focusSelector);
+      if (elements[state.focusIndex]) {
+        (elements[state.focusIndex] as HTMLElement).focus();
+      }
+    }
+  }, [options.focusSelector, state.focusIndex]);
 
   const getShortcuts = useCallback(() => {
     const defaultShortcuts: KeyboardShortcut[] = [
@@ -135,10 +196,21 @@ export const useKeyboardNavigation = (options: UseKeyboardNavigationOptions = {}
     return [...defaultShortcuts, ...(options.shortcuts || [])];
   }, [options, activeErrorCount]);
 
+  const registerShortcut = useCallback((shortcut: KeyboardShortcut) => {
+    options.shortcuts?.push(shortcut);
+  }, [options.shortcuts]);
+
   return {
-    shortcuts: getShortcuts(),
+    shortcuts: getShortcuts().map(s => ({
+      ...s,
+      ariaLabel: `Press ${s.key} to ${s.description}`
+    })),
     isDisabled: options.disabled || isHandlingError,
-    hasActiveErrors: activeErrorCount > 0
+    hasActiveErrors: activeErrorCount > 0,
+    activeShortcut: state.activeShortcut,
+    focusIndex: state.focusIndex,
+    isListening: state.isListening,
+    registerShortcut
   };
 };
 

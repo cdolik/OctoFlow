@@ -1,85 +1,164 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useSessionGuard } from './useSessionGuard';
-import { useStateRecovery } from './useStateRecovery';
+import { useState, useCallback, useEffect } from 'react';
 import { Stage } from '../types';
-import { trackSessionRecovery } from '../utils/analytics';
+import { 
+  AssessmentState, 
+  AssessmentResponse, 
+  AssessmentSaveStatus,
+  AssessmentValidation 
+} from '../types/assessment';
+import { useStorage } from './useStorage';
+import { validateQuestionResponses } from '../utils/questionFiltering';
+import { questions } from '../data/questions';
+import { trackError, trackAssessmentComplete } from '../utils/analytics';
 
-interface UseAssessmentSessionConfig {
-  redirectPath?: string;
-  autoRecover?: boolean;
-  onRecoveryComplete?: (stage: Stage, responses: Record<string, number>) => void;
-}
-
-interface UseAssessmentSessionResult {
-  isLoading: boolean;
-  isAuthorized: boolean;
-  recoveredStage: Stage | null;
-  recoveredResponses: Record<string, number>;
-  error: Error | null;
-  restoreSession: () => Promise<boolean>;
-  clearSession: () => void;
+interface UseAssessmentSessionProps {
+  initialStage?: Stage;
+  autoSaveInterval?: number;
+  onValidationError?: (error: string) => void;
 }
 
 export const useAssessmentSession = ({
-  redirectPath = '/',
-  autoRecover = true,
-  onRecoveryComplete
-}: UseAssessmentSessionConfig = {}): UseAssessmentSessionResult => {
-  const [hasAttemptedRecovery, setHasAttemptedRecovery] = useState(false);
-  const { isLoading: isSessionLoading, isAuthorized, error: sessionError } = 
-    useSessionGuard({ redirectPath, persistSession: true });
-  const { 
-    isRecovering,
-    recoveredStage,
-    recoveredResponses,
-    error: recoveryError,
-    attemptRecovery,
-    clearRecoveredState
-  } = useStateRecovery();
+  initialStage,
+  autoSaveInterval = 5000,
+  onValidationError
+}: UseAssessmentSessionProps = {}) => {
+  const [saveStatus, setSaveStatus] = useState<AssessmentSaveStatus>({ 
+    status: 'saved', 
+    timestamp: Date.now() 
+  });
 
-  const restoreSession = useCallback(async (): Promise<boolean> => {
-    if (!isAuthorized) return false;
+  const { 
+    state, 
+    saveState, 
+    isLoading,
+    error: storageError,
+    recoverFromBackup 
+  } = useStorage({
+    autoSave: true,
+    backupInterval: autoSaveInterval
+  });
+
+  const validateSession = useCallback(async (
+    currentState: AssessmentState
+  ): Promise<AssessmentValidation> => {
+    try {
+      const validation = await validateQuestionResponses(
+        currentState.responses,
+        questions,
+        currentState.stage
+      );
+
+      return {
+        isValid: validation.isValid,
+        errors: validation.error ? [validation.error] : [],
+        warnings: [],
+        missingRequired: validation.details || [],
+        invalidScores: []
+      };
+    } catch (error) {
+      trackError(error instanceof Error ? error : new Error('Validation failed'));
+      return {
+        isValid: false,
+        errors: ['Session validation failed'],
+        warnings: [],
+        missingRequired: [],
+        invalidScores: []
+      };
+    }
+  }, []);
+
+  const saveResponse = useCallback(async (
+    questionId: string,
+    value: number,
+    timeSpent: number
+  ): Promise<boolean> => {
+    if (!state) return false;
 
     try {
-      const recovered = await attemptRecovery();
-      if (recovered && recoveredStage && onRecoveryComplete) {
-        onRecoveryComplete(recoveredStage, recoveredResponses);
-      }
-      trackSessionRecovery(recovered, !!recoveryError);
-      return recovered;
-    } catch (e) {
+      setSaveStatus({ status: 'saving' });
+
+      const response: AssessmentResponse = {
+        value,
+        timestamp: Date.now(),
+        questionId,
+        category: questions.find(q => q.id === questionId)?.category || '',
+        timeSpent
+      };
+
+      const newState: AssessmentState = {
+        ...state,
+        responses: {
+          ...state.responses,
+          [questionId]: response
+        },
+        metadata: {
+          ...state.metadata,
+          lastInteraction: Date.now()
+        }
+      };
+
+      const success = await saveState(newState);
+      
+      setSaveStatus({ 
+        status: success ? 'saved' : 'error',
+        ...(success ? { timestamp: Date.now() } : { error: new Error('Save failed') })
+      });
+
+      return success;
+    } catch (error) {
+      const saveError = error instanceof Error ? error : new Error('Save failed');
+      setSaveStatus({ status: 'error', error: saveError });
+      trackError(saveError);
       return false;
-    } finally {
-      setHasAttemptedRecovery(true);
     }
-  }, [
-    isAuthorized,
-    attemptRecovery,
-    recoveredStage,
-    recoveredResponses,
-    onRecoveryComplete,
-    recoveryError
-  ]);
+  }, [state, saveState]);
+
+  const completeSession = useCallback(async (): Promise<boolean> => {
+    if (!state) return false;
+
+    try {
+      const validation = await validateSession(state);
+      if (!validation.isValid) {
+        onValidationError?.(validation.errors.join(', '));
+        return false;
+      }
+
+      trackAssessmentComplete(state.responses, state.stage);
+      return true;
+    } catch (error) {
+      trackError(error instanceof Error ? error : new Error('Session completion failed'));
+      return false;
+    }
+  }, [state, validateSession, onValidationError]);
 
   useEffect(() => {
-    if (autoRecover && isAuthorized && !hasAttemptedRecovery) {
-      restoreSession().catch(console.error);
+    if (initialStage && !state) {
+      saveState({
+        stage: initialStage,
+        responses: {},
+        progress: {
+          questionIndex: 0,
+          totalQuestions: questions.filter(q => q.stages.includes(initialStage)).length,
+          isComplete: false,
+          lastUpdated: new Date().toISOString()
+        },
+        metadata: {
+          startTime: Date.now(),
+          lastInteraction: Date.now(),
+          completedCategories: [],
+          categoryScores: {}
+        }
+      });
     }
-  }, [autoRecover, isAuthorized, hasAttemptedRecovery, restoreSession]);
-
-  const clearSession = useCallback(() => {
-    clearRecoveredState();
-    setHasAttemptedRecovery(false);
-    sessionStorage.clear();
-  }, [clearRecoveredState]);
+  }, [initialStage, state, saveState]);
 
   return {
-    isLoading: isSessionLoading || isRecovering,
-    isAuthorized,
-    recoveredStage,
-    recoveredResponses,
-    error: sessionError || recoveryError,
-    restoreSession,
-    clearSession
+    state,
+    saveStatus,
+    isLoading,
+    error: storageError,
+    saveResponse,
+    completeSession,
+    recoverFromBackup
   };
 };
