@@ -1,175 +1,183 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Stage, Question } from '../types';
-import { useAssessmentSession } from '../hooks/useAssessmentSession';
-import { useStageTransition } from '../hooks/useStageTransition';
-import { getStageQuestions } from '../utils/questionFilters';
-import { saveAssessmentResponses } from '../utils/storage';
-import { stages } from '../data/stages';
+import { useStageManager } from '../hooks/useStageManager';
+import { useErrorManagement } from '../hooks/useErrorManagement';
+import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
+import { useStorage } from '../hooks/useStorage';
+import { filterQuestionsByStage } from '../utils/questionFiltering';
 import { questions } from '../data/questions';
 import LoadingSpinner from './LoadingSpinner';
-import StageTransition from './StageTransition';
-import AutoSave from './AutoSave';
+import ErrorFallback from './ErrorFallback';
 
 interface AssessmentProps {
   stage: Stage;
-  responses: Record<string, number>;
-  onComplete?: (stage: Stage) => void;
+  onStepChange?: (responses: Record<string, number>) => void;
 }
 
-const Assessment: React.FC<AssessmentProps> = ({ stage, responses: initialResponses, onComplete }) => {
+const Assessment: React.FC<AssessmentProps> = ({ stage, onStepChange }) => {
+  const navigate = useNavigate();
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [stageQuestions, setStageQuestions] = useState<Question[]>([]);
-  const [responses, setResponses] = useState<Record<string, number>>(initialResponses);
-  const [saveError, setSaveError] = useState<string | null>(null);
-
-  const stageDef = stages.find(s => s.id === stage);
+  
+  const {
+    state,
+    saveState,
+    isLoading: storageLoading
+  } = useStorage({
+    autoSave: true,
+    backupInterval: 5 * 60 * 1000 // 5 minutes
+  });
 
   const {
-    isLoading,
-    error: sessionError,
-    clearSession
-  } = useAssessmentSession({
-    redirectPath: '/stage-select',
-    autoRecover: true,
-    onRecoveryComplete: (recoveredStage, recoveredResponses) => {
-      if (recoveredStage === stage) {
-        setResponses(recoveredResponses);
-        const lastAnswered = Object.keys(recoveredResponses).length;
-        setCurrentQuestionIndex(Math.min(lastAnswered, stageQuestions.length - 1));
-      }
-    }
+    isTransitioning,
+    error: stageError,
+    transition
+  } = useStageManager({
+    onStageComplete: () => navigate('/summary')
   });
 
-  const { isTransitioning, progress } = useStageTransition({
-    currentStage: stage,
-    responses,
-    onTransitionComplete: () => onComplete?.(stage)
+  const {
+    handleError,
+    activeErrorCount,
+    isHandlingError
+  } = useErrorManagement({
+    stage,
+    onUnrecoverableError: () => navigate('/stage-select')
   });
 
-  useEffect(() => {
-    const filteredQuestions = getStageQuestions(stage, questions);
-    setStageQuestions(filteredQuestions);
-  }, [stage]);
+  const stageQuestions = filterQuestionsByStage(questions, stage);
 
-  const handleAnswer = useCallback(async (value: number) => {
-    if (!currentQuestion) return;
-
-    const newResponses = {
-      ...responses,
-      [currentQuestion.id]: value
-    };
-    setResponses(newResponses);
-
-    // Attempt to save responses
-    try {
-      const saved = await saveAssessmentResponses(newResponses, stage);
-      if (!saved) {
- {
-        setSaveError('Failed to save response. Your progress may not be preserved.');
-      } else {
-        setSaveError(null);
-      }
-    } catch (error) {
-      setSaveError('Error saving response. Please try again.');
-      return;
-    }
-
-    // Auto-advance to next question
+  const handleNext = useCallback(async () => {
     if (currentQuestionIndex < stageQuestions.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
+    } else {
+      try {
+        await transition('summary');
+      } catch (error) {
+        handleError(error instanceof Error ? error : new Error('Failed to transition'));
+      }
     }
-  }, [currentQuestion, responses, stage, currentQuestionIndex, stageQuestions.length]);
+  }, [currentQuestionIndex, stageQuestions.length, transition, handleError]);
 
-  const currentQuestion = stageQuestions[currentQuestionIndex];
+  const handlePrevious = useCallback(() => {
+    setCurrentQuestionIndex(prev => Math.max(0, prev - 1));
+  }, []);
 
-  if (isLoading) {
+  const handleAnswer = useCallback(async (value: number) => {
+    const currentQuestion = stageQuestions[currentQuestionIndex];
+    if (!currentQuestion) return;
+
+    try {
+      const newResponses = {
+        ...state?.responses,
+        [currentQuestion.id]: value
+      };
+
+      await saveState({
+        ...state,
+        responses: newResponses
+      });
+
+      onStepChange?.(newResponses);
+      handleNext();
+    } catch (error) {
+      handleError(error instanceof Error ? error : new Error('Failed to save response'));
+    }
+  }, [currentQuestionIndex, stageQuestions, state, saveState, onStepChange, handleNext, handleError]);
+
+  const { shortcuts, isDisabled } = useKeyboardNavigation({
+    stage,
+    onNext: handleNext,
+    onPrevious: handlePrevious,
+    onEscape: () => navigate('/stage-select'),
+    disabled: isHandlingError || isTransitioning,
+    shortcuts: [
+      {
+        key: '1',
+        description: 'Select first option',
+        action: () => handleAnswer(1)
+      },
+      {
+        key: '2',
+        description: 'Select second option',
+        action: () => handleAnswer(2)
+      },
+      {
+        key: '3',
+        description: 'Select third option',
+        action: () => handleAnswer(3)
+      },
+      {
+        key: '4',
+        description: 'Select fourth option',
+        action: () => handleAnswer(4)
+      }
+    ]
+  });
+
+  if (storageLoading) {
     return <LoadingSpinner />;
   }
 
-  if (sessionError) {
+  if (stageError || activeErrorCount > 0) {
     return (
-      <div className="error-container">
-        <h2>Session Error</h2>
-        <p>{sessionError.message}</p>
-        <button onClick={clearSession}>Start New Session</button>
-      </div>
-    );
-  }
-
-  if (isTransitioning) {
-    return (
-      <StageTransition
-        fromStage={stage}
-        toStage={stage}
-        progress={progress}
+      <ErrorFallback
+        error={stageError || new Error('Assessment error')}
+        resetError={() => window.location.reload()}
       />
     );
   }
 
-  if (!stageDef) {
-    return (
-      <div className="error-container">
-        <h2>Configuration Error</h2>
-        <p>Invalid stage configuration.</p>
-        <button onClick={() => window.location.href = '/stage-select'}>
-          Return to Stage Selection
-        </button>
-      </div>
-    );
-  }
+  const currentQuestion = stageQuestions[currentQuestionIndex];
 
   return (
-    <div className="assessment-container">
-      <div className="stage-indicator">
-        <h2>{stageDef.label}</h2>
-        <div className="stage-focus">
-          Focus Areas: {stageDef.focus.join(', ')}
-        </div>
+    <div className="assessment-container" role="main">
+      <div className="progress-bar">
+        <div 
+          className="progress"
+          style={{ width: `${(currentQuestionIndex / stageQuestions.length) * 100}%` }}
+          role="progressbar"
+          aria-valuenow={(currentQuestionIndex / stageQuestions.length) * 100}
+          aria-valuemin={0}
+          aria-valuemax={100}
+        />
       </div>
 
-      {saveError && (
-        <div className="error-message" role="alert">
-          {saveError}
+      {currentQuestion && (
+        <div className="question-container">
+          <h2 id="question-title">{currentQuestion.text}</h2>
+          <div 
+            className="options"
+            role="radiogroup"
+            aria-labelledby="question-title"
+          >
+            {currentQuestion.options.map((option, index) => (
+              <button
+                key={option.value}
+                onClick={() => handleAnswer(option.value)}
+                className={state?.responses?.[currentQuestion.id] === option.value ? 'selected' : ''}
+                disabled={isDisabled}
+                aria-checked={state?.responses?.[currentQuestion.id] === option.value}
+                role="radio"
+              >
+                <span className="option-number">{index + 1}</span>
+                {option.text}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
-      <div className="question-container">
-        {currentQuestion && (
-          <div className="question">
-            <h3>{currentQuestion.text}</h3>
-            <div className="options">
-              {currentQuestion.options.map(option => (
-                <button
-                  key={option.value}
-                  onClick={() => handleAnswer(option.value)}
-                  className={responses[currentQuestion.id] === option.value ? 'selected' : ''}
-                >
-                  {option.text}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+      <div className="navigation-help">
+        <h3>Keyboard Shortcuts</h3>
+        <ul>
+          {shortcuts.map(shortcut => (
+            <li key={shortcut.key}>
+              <kbd>{shortcut.key}</kbd> - {shortcut.description}
+            </li>
+          ))}
+        </ul>
       </div>
-
-      <div className="progress-container">
-        <div className="progress-bar">
-          <div 
-            className="progress"
-            style={{ width: `${(currentQuestionIndex / stageQuestions.length) * 100}%` }}
-          />
-        </div>
-        <div className="progress-stats">
-          <span>Question {currentQuestionIndex + 1} of {stageQuestions.length}</span>
-          <span>{Math.round((currentQuestionIndex / stageQuestions.length) * 100)}% Complete</span>
-        </div>
-      </div>
-
-      <AutoSave
-        data={responses}
-        onSave={saveAssessmentResponses}
-        onError={(error) => setSaveError(error.message)}
-      />
     </div>
   );
 };

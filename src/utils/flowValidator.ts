@@ -1,6 +1,5 @@
-import { Stage, StageValidationResult } from '../types';
+import { Stage, StageValidationResult, Question } from '../types';
 import { stages } from '../data/stages';
-import { questions } from '../data/questions';
 import { getAssessmentResponses } from './storage';
 import { validateStageResponses } from './questionFilters';
 
@@ -16,7 +15,8 @@ export const validateStageProgress = (
   if (nextIndex === -1) {
     return {
       isValid: false,
-      error: 'Invalid stage identifier'
+      error: 'Invalid stage identifier',
+      details: ['Stage does not exist']
     };
   }
 
@@ -30,19 +30,24 @@ export const validateStageProgress = (
     nextIndex - currentIndex === 1 || 
     nextIndex <= currentIndex
   ) {
-    return { isValid: true };
+    return { 
+      isValid: true,
+      details: ['Valid stage progression']
+    };
   }
 
   return {
     isValid: false,
-    error: 'Invalid stage progression',
-    details: ['Cannot skip stages forward']
+    error: 'Cannot skip stages forward',
+    details: ['Must complete stages in order'],
+    redirectTo: `/assessment/${currentStage}`
   };
 };
 
 export const validateStageTransition = (
   currentStage: Stage | null,
   nextStage: Stage,
+  stageQuestions: Question[],
   responses?: Record<string, number>
 ): StageValidationResult => {
   if (!responses) {
@@ -55,18 +60,20 @@ export const validateStageTransition = (
   }
 
   // Only validate responses if we're moving forward and have a current stage
-  if (currentStage && nextStage) {
-    const stageQuestions = questions.filter(q => q.stages.includes(currentStage));
-    const responseValidation = validateStageResponses(
-      responses,
-      stageQuestions,
-      currentStage
-    );
-
+  if (currentStage && nextStage && nextStage !== currentStage) {
+    const responseValidation = validateStageResponses(responses, stageQuestions, currentStage);
     if (!responseValidation.isValid) {
-      return responseValidation;
+      return {
+        isValid: false,
+        error: 'Incomplete stage responses',
+        details: responseValidation.details,
+        redirectTo: `/assessment/${currentStage}`
+      };
     }
   }
 
-  return { isValid: true };
+  return { 
+    isValid: true,
+    details: ['Valid stage transition']
+  };
 };

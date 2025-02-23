@@ -1,130 +1,146 @@
-import { Stage } from '../types';
+import { Stage, AssessmentState } from '../types';
+import { trackError } from './analytics';
 
-interface ErrorReport {
-  errorType: string;
-  message: string;
-  componentStack?: string;
-  timestamp: number;
+interface ErrorContext {
   stage?: Stage;
-  metadata?: Record<string, unknown>;
+  responses?: Record<string, number>;
+  metadata?: Record<string, any>;
+  timestamp: number;
 }
 
-type ErrorCallback = (error: ErrorReport) => void;
-const errorCallbacks: ErrorCallback[] = [];
+interface ErrorReport {
+  id: string;
+  error: Error;
+  context: ErrorContext;
+  recoveryAttempts: number;
+  resolved: boolean;
+  timestamp: number;
+}
 
-export const ErrorReporter = {
-  init() {
+class ErrorReporter {
+  private static instance: ErrorReporter;
+  private errors: Map<string, ErrorReport> = new Map();
+  private errorCallbacks: Set<(report: ErrorReport) => void> = new Set();
+
+  private constructor() {
     window.addEventListener('unhandledrejection', this.handleUnhandledRejection);
-    window.addEventListener('error', this.handleError);
-  },
+  }
 
-  cleanup() {
-    window.removeEventListener('unhandledrejection', this.handleUnhandledRejection);
-    window.removeEventListener('error', this.handleError);
-    errorCallbacks.length = 0;
-  },
+  static getInstance(): ErrorReporter {
+    if (!ErrorReporter.instance) {
+      ErrorReporter.instance = new ErrorReporter();
+    }
+    return ErrorReporter.instance;
+  }
 
-  subscribe(callback: ErrorCallback) {
-    errorCallbacks.push(callback);
-    return () => {
-      const index = errorCallbacks.indexOf(callback);
-      if (index > -1) {
-        errorCallbacks.splice(index, 1);
-      }
-    };
-  },
+  private generateErrorId(): string {
+    return `error-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  }
 
-  report(error: Error, componentStack?: string) {
+  private handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+    const error = event.reason instanceof Error ? event.reason : new Error(String(event.reason));
+    this.reportError(error);
+  };
+
+  reportError(error: Error, context: Partial<ErrorContext> = {}): string {
+    const errorId = this.generateErrorId();
     const report: ErrorReport = {
-      errorType: error.name,
-      message: error.message,
-      componentStack,
+      id: errorId,
+      error,
+      context: {
+        timestamp: Date.now(),
+        ...context
+      },
+      recoveryAttempts: 0,
+      resolved: false,
       timestamp: Date.now()
     };
 
-    errorCallbacks.forEach(callback => callback(report));
-    return report;
-  },
+    this.errors.set(errorId, report);
+    this.notifyErrorCallbacks(report);
 
-  getStoredErrors(): ErrorReport[] {
-    try {
-      const stored = sessionStorage.getItem('octoflow_errors');
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
-  },
+    trackError('error_reported', {
+      errorId,
+      message: error.message,
+      stage: context.stage,
+      timestamp: report.timestamp
+    });
 
-  clearErrors() {
-    try {
-      sessionStorage.removeItem('octoflow_errors');
-    } catch {
-      console.warn('Failed to clear error storage');
-    }
-  },
+    return errorId;
+  }
 
-  handleUnhandledRejection(event: PromiseRejectionEvent) {
-    const error = event.reason;
-    ErrorReporter.report(error instanceof Error ? error : new Error(String(error)));
-  },
-
-  handleError(event: ErrorEvent) {
-    if (event.error) {
-      ErrorReporter.report(event.error);
-    }
-  },
-
-  // Helper method to check if an error is recoverable
-  isRecoverable(error: ErrorReport): boolean {
-    const nonRecoverableErrors = [
-      'QuotaExceededError',
-      'SecurityError',
-      'SyntaxError'
-    ];
-
-    if (nonRecoverableErrors.includes(error.errorType)) {
-      return false;
-    }
-
-    // Storage-related errors are only recoverable if we have a stage
-    if (error.message.includes('storage') && !error.stage) {
-      return false;
-    }
-
-    return true;
-  },
-
-  // Attempt to recover from an error
-  async attemptRecovery(error: ErrorReport): Promise<boolean> {
-    if (!this.isRecoverable(error)) {
-      return false;
-    }
-
-    try {
-      // Store error for tracking
-      const storedErrors = this.getStoredErrors();
-      storedErrors.push(error);
-      sessionStorage.setItem('octoflow_errors', JSON.stringify(storedErrors));
-
-      // Different recovery strategies based on error type
-      if (error.message.includes('assessment state')) {
-        // Clear invalid state but preserve responses
-        const responses = sessionStorage.getItem('octoflow_responses');
-        sessionStorage.clear();
-        if (responses) {
-          sessionStorage.setItem('octoflow_responses', responses);
-        }
-        return true;
+  private notifyErrorCallbacks(report: ErrorReport): void {
+    this.errorCallbacks.forEach(callback => {
+      try {
+        callback(report);
+      } catch (error) {
+        console.error('Error in error callback:', error);
       }
+    });
+  }
 
-      if (error.message.includes('validation')) {
-        // For validation errors, we can usually recover by resetting to the last valid state
-        return true;
+  updateErrorStatus(errorId: string, updates: Partial<ErrorReport>): void {
+    const report = this.errors.get(errorId);
+    if (!report) return;
+
+    const updatedReport = {
+      ...report,
+      ...updates,
+      timestamp: Date.now()
+    };
+
+    this.errors.set(errorId, updatedReport);
+    this.notifyErrorCallbacks(updatedReport);
+  }
+
+  markErrorResolved(errorId: string): void {
+    this.updateErrorStatus(errorId, { resolved: true });
+  }
+
+  incrementRecoveryAttempt(errorId: string): void {
+    const report = this.errors.get(errorId);
+    if (!report) return;
+
+    this.updateErrorStatus(errorId, {
+      recoveryAttempts: report.recoveryAttempts + 1
+    });
+  }
+
+  getError(errorId: string): ErrorReport | undefined {
+    return this.errors.get(errorId);
+  }
+
+  getActiveErrors(): ErrorReport[] {
+    return Array.from(this.errors.values())
+      .filter(report => !report.resolved)
+      .sort((a, b) => b.timestamp - a.timestamp);
+  }
+
+  subscribeToErrors(callback: (report: ErrorReport) => void): () => void {
+    this.errorCallbacks.add(callback);
+    return () => this.errorCallbacks.delete(callback);
+  }
+
+  clearResolvedErrors(): void {
+    for (const [id, report] of this.errors.entries()) {
+      if (report.resolved) {
+        this.errors.delete(id);
       }
-
-      return false;
-    } catch {
-      return false;
     }
   }
-};
+
+  getErrorsForStage(stage: Stage): ErrorReport[] {
+    return Array.from(this.errors.values())
+      .filter(report => report.context.stage === stage)
+      .sort((a, b) => b.timestamp - a.timestamp);
+  }
+
+  dispose(): void {
+    window.removeEventListener('unhandledrejection', this.handleUnhandledRejection);
+    this.errors.clear();
+    this.errorCallbacks.clear();
+  }
+}
+
+export const errorReporter = ErrorReporter.getInstance();
+export default errorReporter;

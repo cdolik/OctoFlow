@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Stage, Responses } from './types';
 import Hero from './components/Hero';
@@ -9,6 +9,7 @@ import Results from './components/Results';
 import GlobalErrorBoundary from './components/GlobalErrorBoundary';
 import AssessmentErrorBoundary from './components/AssessmentErrorBoundary';
 import { stages } from './data/stages';
+import { useStageValidation } from './hooks/useStageValidation';
 
 interface AppProps {
   initialStage?: Stage;
@@ -19,13 +20,46 @@ const App: React.FC<AppProps> = ({ initialStage, onStepChange }) => {
   const [currentStage, setCurrentStage] = useState<Stage | null>(initialStage ?? null);
   const [responses, setResponses] = useState<Record<string, number>>({});
 
-  const handleStageSelect = (stage: Stage) => {
-    setCurrentStage(stage);
-  };
+  const { error: validationError } = useStageValidation({
+    currentStage,
+    responses
+  });
 
-  const handleResponseChange = (newResponses: Record<string, number>) => {
+  const handleStageSelect = useCallback((stage: Stage) => {
+    setCurrentStage(stage);
+  }, []);
+
+  const handleResponseChange = useCallback((newResponses: Record<string, number>) => {
     setResponses(newResponses);
     onStepChange?.(newResponses);
+  }, [onStepChange]);
+
+  const renderProtectedRoute = (
+    Component: React.ComponentType<any>,
+    props: Record<string, any>
+  ) => {
+    if (!currentStage) {
+      return <Navigate to="/stage-select" replace />;
+    }
+
+    if (validationError) {
+      return <Navigate to="/stage-select" state={{ error: validationError }} replace />;
+    }
+
+    return (
+      <AssessmentErrorBoundary
+        key={`${currentStage}-${Component.name}`}
+        onRecovery={() => handleStageSelect(currentStage)}
+      >
+        <Component
+          stage={currentStage}
+          responses={responses}
+          stages={stages.map(s => s.id)}
+          onStepChange={handleResponseChange}
+          {...props}
+        />
+      </AssessmentErrorBoundary>
+    );
   };
 
   return (
@@ -39,62 +73,15 @@ const App: React.FC<AppProps> = ({ initialStage, onStepChange }) => {
           />
           <Route
             path="/assessment"
-            element={
-              currentStage ? (
-                <AssessmentErrorBoundary
-                  key={currentStage}
-                  onRecovery={() => handleStageSelect(currentStage)}
-                >
-                  <Assessment
-                    stage={currentStage}
-                    responses={responses}
-                    stages={stages.map(s => s.id as Stage)}
-                    onStepChange={handleResponseChange}
-                  />
-                </AssessmentErrorBoundary>
-              ) : (
-                <Navigate to="/stage-select" replace />
-              )
-            }
+            element={renderProtectedRoute(Assessment, {})}
           />
           <Route
             path="/summary"
-            element={
-              currentStage ? (
-                <AssessmentErrorBoundary
-                  key={`summary-${currentStage}`}
-                  onRecovery={() => handleStageSelect(currentStage)}
-                >
-                  <Summary
-                    stage={currentStage}
-                    responses={responses}
-                    stages={stages.map(s => s.id as Stage)}
-                    onStepChange={handleResponseChange}
-                  />
-                </AssessmentErrorBoundary>
-              ) : (
-                <Navigate to="/stage-select" replace />
-              )
-            }
+            element={renderProtectedRoute(Summary, {})}
           />
           <Route
             path="/results"
-            element={
-              currentStage ? (
-                <AssessmentErrorBoundary
-                  key={`results-${currentStage}`}
-                  onRecovery={() => handleStageSelect(currentStage)}
-                >
-                  <Results
-                    stage={currentStage}
-                    responses={responses}
-                    stages={stages.map(s => s.id as Stage)}
-                  />
-                </AssessmentErrorBoundary>
-              ) : (
-                <Navigate to="/stage-select" replace />
-              )
-            }
+            element={renderProtectedRoute(Results, {})}
           />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

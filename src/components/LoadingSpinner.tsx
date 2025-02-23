@@ -2,68 +2,57 @@ import React from 'react';
 import './styles.css';
 
 interface LoadingSpinnerProps {
-  message?: string;
-  showProgress?: boolean;
-  progress?: number;
   size?: 'small' | 'medium' | 'large';
+  message?: string;
+  'aria-label'?: string;
 }
 
 const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
+  size = 'medium',
   message = 'Loading...',
-  showProgress = false,
-  progress = 0,
-  size = 'medium'
+  'aria-label': ariaLabel
 }) => {
-  const spinnerSize = {
-    small: 30,
-    medium: 50,
-    large: 70
-  }[size];
+  const spinnerSizes = {
+    small: 24,
+    medium: 32,
+    large: 48
+  };
 
   return (
-    <div 
-      className={`loading-container ${size}`} 
-      role="progressbar" 
-      aria-label={message}
-      aria-valuenow={showProgress ? progress : undefined}
+    <div
+      className={`loading-container size-${size}`}
+      role="status"
+      aria-label={ariaLabel || message}
+      aria-live="polite"
     >
-      <div className="loading-spinner">
-        <svg 
-          className="spinner" 
-          viewBox="0 0 50 50"
-          width={spinnerSize}
-          height={spinnerSize}
-        >
-          <circle
-            className="path"
-            cx="25"
-            cy="25"
-            r="20"
-            fill="none"
-            strokeWidth="4"
-          />
-          {showProgress && (
-            <circle
-              className="progress-circle"
-              cx="25"
-              cy="25"
-              r="20"
-              fill="none"
-              strokeWidth="4"
-              strokeDasharray={`${progress * 1.26} 126`}
-              transform="rotate(-90 25 25)"
-            />
-          )}
-        </svg>
-      </div>
-      <div className="loading-text">
+      <svg
+        width={spinnerSizes[size]}
+        height={spinnerSizes[size]}
+        viewBox="0 0 24 24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <circle
+          className="spinner-track"
+          cx="12"
+          cy="12"
+          r="10"
+          fill="none"
+          strokeWidth="3"
+        />
+        <circle
+          className="spinner-head"
+          cx="12"
+          cy="12"
+          r="10"
+          fill="none"
+          strokeWidth="3"
+          strokeDasharray="63"
+          strokeDashoffset="63"
+        />
+      </svg>
+      <span className="loading-text" aria-hidden="true">
         {message}
-        {showProgress && (
-          <span className="progress-text">
-            {Math.round(progress)}%
-          </span>
-        )}
-      </div>
+      </span>
     </div>
   );
 };

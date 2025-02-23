@@ -2943,3 +2943,56 @@ button:disabled {
   padding: 2rem;
   color: var(--text-muted);
 }
+
+/* Add styles for LoadingSpinner component */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.loading-container.size-small {
+  gap: 0.5rem;
+}
+
+.loading-container.size-large {
+  gap: 1.5rem;
+}
+
+.spinner-track {
+  stroke: var(--color-border-subtle);
+  opacity: 0.2;
+}
+
+.spinner-head {
+  stroke: var(--color-accent-fg);
+  stroke-linecap: round;
+  transform-origin: center;
+  animation: spin 1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.loading-text {
+  color: var(--color-fg-subtle);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.size-small .loading-text {
+  font-size: 0.75rem;
+}
+
+.size-large .loading-text {
+  font-size: 1rem;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

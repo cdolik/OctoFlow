@@ -2,17 +2,19 @@ import { useState, useEffect, useCallback } from 'react';
 import { Stage } from '../types';
 import { validateStageProgression } from '../utils/flowState';
 import { saveAssessmentResponses } from '../utils/storage';
-import { trackStageTransition } from '../utils/analytics';
+import { trackStageTransition, trackError } from '../utils/analytics';
 
 interface UseStageTransitionProps {
   currentStage: Stage;
   responses: Record<string, number>;
   onTransitionComplete?: (stage: Stage) => void;
+  onTransitionError?: (error: Error) => void;
 }
 
 interface TransitionState {
   isTransitioning: boolean;
   progress: number;
+  error: Error | null;
   fromStage?: Stage;
   toStage?: Stage;
 }
@@ -20,29 +22,42 @@ interface TransitionState {
 export const useStageTransition = ({ 
   currentStage, 
   responses, 
-  onTransitionComplete 
+  onTransitionComplete,
+  onTransitionError 
 }: UseStageTransitionProps) => {
   const [transitionState, setTransitionState] = useState<TransitionState>({
     isTransitioning: false,
-    progress: 0
+    progress: 0,
+    error: null
   });
 
-  const startTransition = useCallback((targetStage: Stage) => {
-    if (!validateStageProgression(currentStage, targetStage)) {
+  const startTransition = useCallback(async (targetStage: Stage) => {
+    try {
+      const validationResult = validateStageProgression(currentStage, targetStage);
+      if (!validationResult.isValid) {
+        throw new Error(validationResult.error);
+      }
+
+      setTransitionState({
+        isTransitioning: true,
+        progress: 0,
+        error: null,
+        fromStage: currentStage,
+        toStage: targetStage
+      });
+
+      // Ensure responses are saved before transition
+      await saveAssessmentResponses(responses);
+      trackStageTransition(currentStage, targetStage);
+      return true;
+    } catch (error) {
+      const transitionError = error instanceof Error ? error : new Error('Transition failed');
+      setTransitionState(prev => ({ ...prev, error: transitionError }));
+      onTransitionError?.(transitionError);
+      trackError(transitionError);
       return false;
     }
-
-    setTransitionState({
-      isTransitioning: true,
-      progress: 0,
-      fromStage: currentStage,
-      toStage: targetStage
-    });
-
-    saveAssessmentResponses(responses);
-    trackStageTransition(currentStage, targetStage);
-    return true;
-  }, [currentStage, responses]);
+  }, [currentStage, responses, onTransitionError]);
 
   useEffect(() => {
     if (transitionState.isTransitioning && transitionState.toStage) {
@@ -52,7 +67,11 @@ export const useStageTransition = ({
           if (newProgress >= 1 && prev.toStage) {
             clearInterval(timer);
             onTransitionComplete?.(prev.toStage);
-            return { isTransitioning: false, progress: 0 };
+            return { 
+              isTransitioning: false, 
+              progress: 0,
+              error: null 
+            };
           }
           return { ...prev, progress: newProgress };
         });
@@ -63,7 +82,11 @@ export const useStageTransition = ({
   }, [transitionState.isTransitioning, transitionState.toStage, onTransitionComplete]);
 
   const cancelTransition = useCallback(() => {
-    setTransitionState({ isTransitioning: false, progress: 0 });
+    setTransitionState({ 
+      isTransitioning: false, 
+      progress: 0,
+      error: null 
+    });
   }, []);
 
   useEffect(() => {

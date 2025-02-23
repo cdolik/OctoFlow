@@ -24,6 +24,7 @@ export interface SessionGuardResult {
 export interface TransitionState {
   isTransitioning: boolean;
   progress: number;
+  error: Error | null;
   fromStage?: Stage;
   toStage?: Stage;
 }
@@ -31,7 +32,7 @@ export interface TransitionState {
 export interface KeyboardShortcut {
   key: string;
   description: string;
-  action?: () => void;
+  action: () => void;
 }
 
 export interface StageKeyboardConfig {
@@ -58,21 +59,23 @@ export interface ComponentFlowProps extends FlowValidationProps {
   transitionState?: TransitionState;
 }
 
+export interface StageBenchmarks {
+  deploymentFreq: string;
+  securityLevel: number;
+  costEfficiency: number;
+  expectedScores: {
+    'github-ecosystem': number;
+    'security': number;
+    'automation': number;
+  };
+}
+
 export interface StageDefinition {
   id: Stage;
   label: string;
   description: string;
   focus: string[];
-  benchmarks: {
-    deploymentFreq: string;
-    securityLevel: number;
-    costEfficiency: number;
-    expectedScores: {
-      'github-ecosystem': number;
-      'security': number;
-      'automation': number;
-    };
-  };
+  benchmarks: StageBenchmarks;
   questionFilter: (q: Question) => boolean;
 }
 
@@ -80,7 +83,6 @@ export interface Question {
   id: string;
   text: string;
   category: string;
-  tooltipTerm?: string;
   weight: number;
   stages: Stage[];
   options: Array<{
@@ -149,4 +151,25 @@ export interface StageScores {
   overallScore: number;
   categoryScores: Record<string, number>;
   recommendations: string[];
+}
+
+export interface StorageState {
+  version: string;
+  currentStage: Stage | null;
+  responses: Record<string, number>;
+  metadata: {
+    lastSaved: string;
+    lastTransition?: string;
+    stageStartTime?: number;
+    timeSpent: number;
+    attemptCount: number;
+  };
+}
+
+export interface AssessmentState extends StorageState {
+  progress: {
+    questionIndex: number;
+    totalQuestions: number;
+    isComplete: boolean;
+  };
 }

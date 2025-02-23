@@ -1,4 +1,4 @@
-import { Stage, AssessmentState } from '../types';
+import { Stage, AssessmentState, StorageState } from '../types';
 import { validateStageResponses } from './questionFilters';
 import { questions } from '../data/questions';
 
@@ -7,8 +7,8 @@ const STATE_VERSION = '1.1';
 
 export const getAssessmentResponses = (): Record<string, number> | null => {
   try {
-    const state = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || '{}');
-    return state.responses || null;
+    const state = getAssessmentData();
+    return state.responses;
   } catch {
     return null;
   }
@@ -23,35 +23,22 @@ export const getAssessmentMetadata = (): { stage: Stage; lastSaved: string; ques
   }
 };
 
-export const saveAssessmentResponses = (
-  responses: Record<string, number>,
-  stage: Stage
-): boolean => {
+export const saveAssessmentResponses = async (
+  responses: Record<string, number>
+): Promise<boolean> => {
   try {
-    const stageQuestions = questions.filter(q => q.stages.includes(stage));
-    const validation = validateStageResponses(responses, stageQuestions, stage);
-    
-    if (!validation.isValid) {
-      console.warn('Invalid responses detected:', validation.error);
-      // Still save but flag as incomplete
-      const state = getAssessmentState();
-      state.metadata.isComplete = false;
-      state.responses = responses;
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      return false;
-    }
-
-    const state = getAssessmentState();
-    state.responses = responses;
-    state.metadata = {
-      ...state.metadata,
-      stage,
-      lastSaved: new Date().toISOString(),
-      questionCount: stageQuestions.length,
-      isComplete: true
+    const currentState = getAssessmentData();
+    const newState = {
+      ...currentState,
+      responses,
+      metadata: {
+        ...currentState.metadata,
+        lastSaved: new Date().toISOString()
+      }
     };
 
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(newState));
+    await createBackup(newState);
     return true;
   } catch (error) {
     console.error('Error saving assessment responses:', error);
@@ -84,15 +71,71 @@ export const getAssessmentState = (): AssessmentState => {
   }
 };
 
-const createInitialState = (): AssessmentState => ({
+const createInitialState = (): StorageState => ({
   version: STATE_VERSION,
   responses: {},
   currentStage: null,
-  scores: null,
   metadata: {
-    lastSaved: null,
-    questionCount: 0,
+    lastSaved: new Date().toISOString(),
     timeSpent: 0,
-    isComplete: false
+    attemptCount: 0
   }
 });
+
+const CURRENT_VERSION = '1.1';
+
+export const getAssessmentData = (): StorageState => {
+  try {
+    const data = sessionStorage.getItem('octoflow');
+    if (!data) return createInitialState();
+
+    const state = JSON.parse(data);
+    return migrateState(state);
+  } catch {
+    return createInitialState();
+  }
+};
+
+const createBackup = async (state: StorageState): Promise<void> => {
+  try {
+    localStorage.setItem('octoflow_backup', JSON.stringify({
+      ...state,
+      metadata: {
+        ...state.metadata,
+        backupTime: Date.now()
+      }
+    }));
+  } catch {
+    // Backup creation failure is non-critical
+  }
+};
+
+const migrateState = (oldState: StorageState | Record<string, unknown>): StorageState => {
+  const currentVersion = (oldState as StorageState).version || '1.0';
+  
+  if (currentVersion === CURRENT_VERSION) {
+    return oldState as StorageState;
+  }
+
+  // Migration paths
+  const migrations: Record<string, (state: StorageState | Record<string, unknown>) => StorageState> = {
+    '1.0': (state) => ({
+      version: CURRENT_VERSION,
+      currentStage: (state as any).currentStage || null,
+      responses: (state as any).responses || {},
+      metadata: {
+        lastSaved: (state as any).metadata?.lastSaved || new Date().toISOString(),
+        timeSpent: (state as any).metadata?.timeSpent || 0,
+        attemptCount: ((state as any).metadata?.attemptCount || 0) + 1
+      }
+    })
+  };
+
+  const migration = migrations[currentVersion];
+  return migration ? migration(oldState) : createInitialState();
+};
+
+export const clearAssessmentData = (): void => {
+  sessionStorage.removeItem('octoflow');
+  localStorage.removeItem('octoflow_backup');
+};
