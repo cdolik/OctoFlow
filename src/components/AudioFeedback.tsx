@@ -1,103 +1,101 @@
 import React, { useEffect, useRef, useCallback } from 'react';
-import { useKeyboardShortcuts } from '../contexts/KeyboardShortcutsContext';
-
-interface AudioContextRef {
-  context: AudioContext | null;
-  gainNode: GainNode | null;
-}
 
 interface AudioFeedbackProps {
-  volume?: number;
+  children: React.ReactNode;
   enabled?: boolean;
 }
 
-const AudioFeedback: React.FC<AudioFeedbackProps> = ({
-  volume = 0.1,
-  enabled = true
-}) => {
-  const audioContextRef = useRef<AudioContextRef>({
-    context: null,
-    gainNode: null
-  });
-  const { activeShortcut } = useKeyboardShortcuts();
+type SoundType = 'success' | 'error' | 'info' | 'navigation' | 'complete';
 
-  const initAudioContext = useCallback(() => {
-    if (!audioContextRef.current.context) {
-      const context = new AudioContext();
-      const gainNode = context.createGain();
-      gainNode.gain.value = volume;
-      gainNode.connect(context.destination);
-      
-      audioContextRef.current = { context, gainNode };
+export function AudioFeedback({ children, enabled = true }: AudioFeedbackProps): JSX.Element {
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const gainNodeRef = useRef<GainNode | null>(null);
+
+  const createAudioContext = useCallback(() => {
+    if (!audioContextRef.current) {
+      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      gainNodeRef.current = audioContextRef.current.createGain();
+      gainNodeRef.current.connect(audioContextRef.current.destination);
+      gainNodeRef.current.gain.value = 0.3; // Set volume to 30%
     }
-  }, [volume]);
+    return audioContextRef.current;
+  }, []);
 
-  const playTone = useCallback((frequency: number, duration: number) => {
-    if (!enabled || !audioContextRef.current.context || !audioContextRef.current.gainNode) {
-      return;
+  const playSound = useCallback((type: SoundType) => {
+    if (!enabled) return;
+
+    const ctx = createAudioContext();
+    const oscillator = ctx.createOscillator();
+    const gainNode = gainNodeRef.current!;
+
+    // Configure sound based on type
+    switch (type) {
+      case 'success':
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(880, ctx.currentTime); // A5
+        oscillator.frequency.setValueAtTime(1108.73, ctx.currentTime + 0.1); // C#6
+        break;
+      case 'error':
+        oscillator.type = 'triangle';
+        oscillator.frequency.setValueAtTime(440, ctx.currentTime); // A4
+        oscillator.frequency.setValueAtTime(415.30, ctx.currentTime + 0.1); // G#4
+        break;
+      case 'info':
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(659.25, ctx.currentTime); // E5
+        break;
+      case 'navigation':
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(523.25, ctx.currentTime); // C5
+        break;
+      case 'complete':
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(523.25, ctx.currentTime); // C5
+        oscillator.frequency.setValueAtTime(659.25, ctx.currentTime + 0.1); // E5
+        oscillator.frequency.setValueAtTime(783.99, ctx.currentTime + 0.2); // G5
+        break;
     }
 
-    const { context, gainNode } = audioContextRef.current;
-    const oscillator = context.createOscillator();
-    
-    oscillator.type = 'sine';
-    oscillator.frequency.setValueAtTime(frequency, context.currentTime);
     oscillator.connect(gainNode);
-    
     oscillator.start();
-    oscillator.stop(context.currentTime + duration);
-  }, [enabled]);
-
-  const playShortcutFeedback = useCallback(() => {
-    playTone(440, 0.1); // A4 note, short duration
-  }, [playTone]);
-
-  const playTimerCompleteFeedback = useCallback(() => {
-    playTone(523.25, 0.2); // C5 note, slightly longer duration
-  }, [playTone]);
-
-  const playErrorFeedback = useCallback(() => {
-    // Play two tones in sequence for error
-    playTone(466.16, 0.1); // Bb4
-    setTimeout(() => playTone(415.30, 0.1), 100); // Ab4
-  }, [playTone]);
+    oscillator.stop(ctx.currentTime + (type === 'complete' ? 0.3 : 0.15));
+  }, [enabled, createAudioContext]);
 
   useEffect(() => {
-    const handleUserInteraction = () => {
-      initAudioContext();
-    };
-
-    window.addEventListener('click', handleUserInteraction, { once: true });
-    window.addEventListener('keydown', handleUserInteraction, { once: true });
-
+    // Cleanup audio context on unmount
     return () => {
-      window.removeEventListener('click', handleUserInteraction);
-      window.removeEventListener('keydown', handleUserInteraction);
-      
-      if (audioContextRef.current.context) {
-        audioContextRef.current.context.close();
+      if (audioContextRef.current?.state !== 'closed') {
+        audioContextRef.current?.close();
       }
     };
-  }, [initAudioContext]);
+  }, []);
 
-  // Play feedback when shortcuts are used
-  useEffect(() => {
-    if (activeShortcut) {
-      playShortcutFeedback();
-    }
-  }, [activeShortcut, playShortcutFeedback]);
+  // Create context to provide playSound to children
+  const audioContext = React.useMemo(() => ({
+    playSound,
+    enabled
+  }), [playSound, enabled]);
 
-  return null; // This is a non-visual component
-};
+  return (
+    <AudioFeedbackContext.Provider value={audioContext}>
+      {children}
+    </AudioFeedbackContext.Provider>
+  );
+}
 
-export const playTimerComplete = () => {
-  const event = new CustomEvent('timerComplete');
-  window.dispatchEvent(event);
-};
+// Context for audio feedback
+interface AudioFeedbackContextType {
+  playSound: (type: SoundType) => void;
+  enabled: boolean;
+}
 
-export const playError = () => {
-  const event = new CustomEvent('audioError');
-  window.dispatchEvent(event);
-};
+export const AudioFeedbackContext = React.createContext<AudioFeedbackContextType | null>(null);
 
-export default AudioFeedback;
+// Custom hook for using audio feedback
+export function useAudioFeedback() {
+  const context = React.useContext(AudioFeedbackContext);
+  if (!context) {
+    throw new Error('useAudioFeedback must be used within an AudioFeedback provider');
+  }
+  return context;
+}

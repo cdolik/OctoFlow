@@ -1,17 +1,25 @@
-import { Stage, StageValidationResult, Question } from '../types';
-import { stages } from '../data/stages';
-import { getAssessmentResponses } from './storage';
+import { Stage, StageValidationResult, Question, StorageState } from '../types';
+import { getAssessmentResponses, getAssessmentMetadata } from './storage';
 import { validateStageResponses } from './questionFilters';
+
+export const FLOW_STATES = {
+  INITIAL: 'initial',
+  ASSESSMENT: 'assessment',
+  REVIEW: 'review',
+  COMPLETE: 'complete',
+  ERROR: 'error'
+} as const;
+
+export type FlowState = typeof FLOW_STATES[keyof typeof FLOW_STATES];
 
 export const validateStageProgress = (
   currentStage: Stage | null,
   nextStage: Stage
 ): StageValidationResult => {
-  const stageOrder = stages.map(s => s.id);
-  const currentIndex = currentStage ? stageOrder.indexOf(currentStage) : -1;
-  const nextIndex = stageOrder.indexOf(nextStage);
+  const stages: Stage[] = ['pre-seed', 'seed', 'series-a', 'series-b'];
+  const currentIndex = currentStage ? stages.indexOf(currentStage) : -1;
+  const nextIndex = stages.indexOf(nextStage);
 
-  // Invalid stage identifier
   if (nextIndex === -1) {
     return {
       isValid: false,
@@ -44,36 +52,80 @@ export const validateStageProgress = (
   };
 };
 
-export const validateStageTransition = (
+export function validateStorageState(state: unknown): state is StorageState {
+  if (!state || typeof state !== 'object') {
+    return false;
+  }
+
+  const typedState = state as Partial<StorageState>;
+
+  return !!(
+    typedState.version &&
+    typedState.responses &&
+    typedState.metadata?.lastSaved &&
+    typeof typedState.metadata.timeSpent === 'number' &&
+    typeof typedState.metadata.attemptCount === 'number'
+  );
+}
+
+export function validateStageTransition(
   currentStage: Stage | null,
-  nextStage: Stage,
-  stageQuestions: Question[],
-  responses?: Record<string, number>
-): StageValidationResult => {
-  if (!responses) {
-    responses = getAssessmentResponses() || {};
+  targetStage: Stage,
+  state: StorageState | null
+): StageValidationResult {
+  const stageOrder: Stage[] = ['pre-seed', 'seed', 'series-a', 'series-b'];
+  
+  // Allow any stage if no current stage
+  if (!currentStage) {
+    return { isValid: true };
   }
 
-  const progressValidation = validateStageProgress(currentStage, nextStage);
-  if (!progressValidation.isValid) {
-    return progressValidation;
+  const currentIndex = stageOrder.indexOf(currentStage);
+  const targetIndex = stageOrder.indexOf(targetStage);
+
+  if (targetIndex === -1) {
+    return {
+      isValid: false,
+      error: 'Invalid stage identifier',
+      details: ['Stage does not exist']
+    };
   }
 
-  // Only validate responses if we're moving forward and have a current stage
-  if (currentStage && nextStage && nextStage !== currentStage) {
-    const responseValidation = validateStageResponses(responses, stageQuestions, currentStage);
-    if (!responseValidation.isValid) {
-      return {
-        isValid: false,
-        error: 'Incomplete stage responses',
-        details: responseValidation.details,
-        redirectTo: `/assessment/${currentStage}`
-      };
-    }
+  // Can't skip stages forward
+  if (targetIndex > currentIndex + 1) {
+    return {
+      isValid: false,
+      error: 'Cannot skip stages forward',
+      details: ['Must complete stages in order'],
+      redirectTo: `/assessment/${currentStage}`
+    };
   }
 
-  return { 
-    isValid: true,
-    details: ['Valid stage transition']
-  };
-};
+  // Can move to next stage or any previous stage
+  return { isValid: true };
+}
+
+export function validateStageRequirements(
+  stage: Stage,
+  questions: Question[],
+  responses: Record<string, number>
+): StageValidationResult {
+  const stageQuestions = questions.filter(q => q.stages.includes(stage));
+  const requiredResponses = new Set(stageQuestions.map(q => q.id));
+  const providedResponses = new Set(Object.keys(responses));
+
+  const missingResponses = Array.from(requiredResponses)
+    .filter(id => !providedResponses.has(id));
+
+  if (missingResponses.length > 0) {
+    return {
+      isValid: false,
+      error: 'Missing responses',
+      details: missingResponses.map(id => 
+        `Question ${id} requires a response`
+      )
+    };
+  }
+
+  return { isValid: true };
+}

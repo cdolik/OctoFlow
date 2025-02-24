@@ -1,237 +1,143 @@
-import { Stage } from '../types';
+import { Stage, AssessmentState } from '../types';
 
 interface AnalyticsEvent {
-  timestamp: number;
-  sessionId: string;
-  flowState: FlowState;
-  userAgent: string;
+  name: string;
+  properties: Record<string, unknown>;
+  timestamp: string;
 }
 
-interface FlowState {
-  stage?: Stage;
-  currentState?: string;
-  progress: number;
-  lastInteraction?: number;
-}
+const ANALYTICS_QUEUE_KEY = 'octoflow_analytics_queue';
 
-interface NavigatorWithConnection extends Navigator {
-  connection?: {
-    effectiveType: string;
-    downlink: number;
-    rtt: number;
-  };
-}
+class AnalyticsManager {
+  private static instance: AnalyticsManager;
+  private queue: AnalyticsEvent[] = [];
+  private isProcessing = false;
 
-const events: AnalyticsEvent[] = [];
-
-const logEvent = (eventName: string, data: Record<string, unknown>): void => {
-  const baseData: AnalyticsEvent = {
-    timestamp: Date.now(),
-    sessionId: getSessionId(),
-    flowState: getCurrentFlowState(),
-    userAgent: navigator.userAgent
-  };
-  console.log(`[Analytics] ${eventName}:`, {
-    ...baseData,
-    ...data
-  });
-  events.push(baseData);
-};
-
-const getSessionId = (): string => {
-  let sessionId = sessionStorage.getItem('octoflow_session');
-  if (!sessionId) {
-    sessionId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    sessionStorage.setItem('octoflow_session', sessionId);
+  private constructor() {
+    this.loadQueue();
+    window.addEventListener('online', this.processQueue.bind(this));
+    window.addEventListener('beforeunload', this.saveQueue.bind(this));
   }
-  return sessionId;
-};
 
-const getCurrentFlowState = (): FlowState => {
-  try {
-    const state = JSON.parse(sessionStorage.getItem('octoflow') || '{}');
-    return {
-      stage: state.stage,
-      currentState: state.currentState,
-      progress: state.metadata?.questionCount || 0,
-      lastInteraction: state.metadata?.lastInteraction
+  static getInstance(): AnalyticsManager {
+    if (!AnalyticsManager.instance) {
+      AnalyticsManager.instance = new AnalyticsManager();
+    }
+    return AnalyticsManager.instance;
+  }
+
+  private loadQueue(): void {
+    try {
+      const savedQueue = localStorage.getItem(ANALYTICS_QUEUE_KEY);
+      if (savedQueue) {
+        this.queue = JSON.parse(savedQueue);
+      }
+    } catch (error) {
+      console.error('Failed to load analytics queue:', error);
+    }
+  }
+
+  private saveQueue(): void {
+    try {
+      localStorage.setItem(ANALYTICS_QUEUE_KEY, JSON.stringify(this.queue));
+    } catch (error) {
+      console.error('Failed to save analytics queue:', error);
+    }
+  }
+
+  private async processQueue(): Promise<void> {
+    if (this.isProcessing || !navigator.onLine || this.queue.length === 0) {
+      return;
+    }
+
+    this.isProcessing = true;
+    const batch = this.queue.slice(0, 10); // Process 10 events at a time
+
+    try {
+      await this.sendEvents(batch);
+      this.queue = this.queue.slice(batch.length);
+      this.saveQueue();
+      
+      if (this.queue.length > 0) {
+        setTimeout(() => this.processQueue(), 1000); // Process next batch after 1s
+      }
+    } catch (error) {
+      console.error('Failed to process analytics queue:', error);
+    } finally {
+      this.isProcessing = false;
+    }
+  }
+
+  private async sendEvents(events: AnalyticsEvent[]): Promise<void> {
+    // Implementation would depend on your analytics provider
+    // This is a placeholder that logs to console in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Analytics events:', events);
+      return;
+    }
+
+    // In production, send to your analytics service
+    // await fetch('/api/analytics', {
+    //   method: 'POST',
+    //   headers: { 'Content-Type': 'application/json' },
+    //   body: JSON.stringify(events)
+    // });
+  }
+
+  track(name: string, properties: Record<string, unknown>): void {
+    const event: AnalyticsEvent = {
+      name,
+      properties,
+      timestamp: new Date().toISOString()
     };
-  } catch {
-    return { progress: 0 };
+
+    this.queue.push(event);
+    this.processQueue();
   }
-};
+}
 
-export const trackStageSelect = (stage: Stage): void => {
-  logEvent('stage_selected', { 
+// Analytics tracking functions
+export function trackAssessmentComplete(stage: Stage, state: AssessmentState): void {
+  const analytics = AnalyticsManager.getInstance();
+  analytics.track('assessment_complete', {
     stage,
-    source: window.location.pathname
+    timeSpent: state.metadata.timeSpent,
+    questionCount: state.progress.totalQuestions,
+    completedCount: Object.keys(state.responses).length,
+    averageScore: calculateAverageScore(state)
   });
-};
+}
 
-export const trackAssessmentStart = (stage: Stage): void => {
-  logEvent('assessment_started', { stage, timestamp: Date.now() });
-};
-
-export const trackCategoryComplete = (categoryId: string, averageScore: number): void => {
-  logEvent('category_completed', { 
-    categoryId, 
-    averageScore,
-    timestamp: Date.now()
-  });
-};
-
-export const trackQuestionAnswer = (
-  questionId: string,
-  answer: number,
-  timeSpent: number
-): void => {
-  logEvent('question_answered', { 
-    questionId, 
-    answer,
-    timeSpent,
-    isCorrection: isAnswerCorrection(questionId)
-  });
-};
-
-export const trackAssessmentComplete = (
-  scores: Record<string, number>,
-  stage: Stage
-): void => {
-  logEvent('assessment_completed', { 
-    scores,
+export function trackAssessmentStart(stage: Stage): void {
+  const analytics = AnalyticsManager.getInstance();
+  analytics.track('assessment_start', {
     stage,
-    completionTime: getAssessmentDuration(),
-    questionCount: Object.keys(scores).length
+    timestamp: new Date().toISOString()
   });
-};
+}
 
-export const trackResourceClick = (resourceType: string, url: string): void => {
-  logEvent('resource_clicked', {
-    resourceType,
-    url,
-    timestamp: Date.now()
+export function trackStageTransition(from: Stage, to: Stage): void {
+  const analytics = AnalyticsManager.getInstance();
+  analytics.track('stage_transition', {
+    from,
+    to,
+    timestamp: new Date().toISOString()
   });
-};
+}
 
-export const trackError = (error: Error, context?: Record<string, unknown>): void => {
-  logEvent('error_occurred', {
-    type: error.name,
+export function trackError(error: Error, context?: Record<string, unknown>): void {
+  const analytics = AnalyticsManager.getInstance();
+  analytics.track('error', {
     message: error.message,
     stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
-    currentRoute: window.location.pathname,
-    errorCount: getErrorCount(),
-    ...context
+    context
   });
-};
+}
 
-export const trackStageTransition = (fromStage: Stage | null, toStage: Stage): void => {
-  logEvent('stage_transition', {
-    from: fromStage,
-    to: toStage,
-    timestamp: Date.now()
-  });
-};
-
-const isAnswerCorrection = (questionId: string): boolean => {
-  try {
-    const responses = JSON.parse(sessionStorage.getItem('octoflow') || '{}')?.responses || {};
-    return questionId in responses;
-  } catch {
-    return false;
-  }
-};
-
-const getAssessmentDuration = (): number => {
-  try {
-    const metadata = JSON.parse(sessionStorage.getItem('octoflow') || '{}')?.metadata || {};
-    return metadata.startTime ? Date.now() - metadata.startTime : 0;
-  } catch {
-    return 0;
-  }
-};
-
-const getErrorCount = (): number => {
-  try {
-    const metadata = JSON.parse(sessionStorage.getItem('octoflow') || '{}')?.metadata || {};
-    return (metadata.errorCount || 0) + 1;
-  } catch {
-    return 1;
-  }
-};
-
-const getCurrentAssessmentContext = (): AssessmentContext => {
-  try {
-    const state = JSON.parse(sessionStorage.getItem('octoflow') || '{}');
-    return {
-      stage: state.stage,
-      progress: state.metadata?.questionCount || 0,
-      lastAction: state.metadata?.lastAction
-    };
-  } catch {
-    return { progress: 0 };
-  }
-};
-
-const getTimeSinceLastInteraction = (): number | null => {
-  try {
-    const state = JSON.parse(sessionStorage.getItem('octoflow') || '{}');
-    return state?.metadata?.lastInteraction ? 
-      Date.now() - state.metadata.lastInteraction : 
-      null;
-  } catch {
-    return null;
-  }
-};
-
-const updateLastInteraction = (): void => {
-  try {
-    const state = JSON.parse(sessionStorage.getItem('octoflow') || '{}');
-    state.metadata = {
-      ...state.metadata,
-      lastInteraction: Date.now()
-    };
-    sessionStorage.setItem('octoflow', JSON.stringify(state));
-  } catch {
-    // Fail silently - analytics should not break the app
-  }
-};
-
-const getConnectionInfo = (): ConnectionInfo | null => {
-  if (!('connection' in navigator)) return null;
-  const connection = (navigator as NavigatorWithConnection).connection;
-  return {
-    type: connection?.effectiveType || '',
-    downlink: connection?.downlink || 0,
-    rtt: connection?.rtt || 0
-  };
-};
-
-const getStorageSize = (): StorageSize | null => {
-  try {
-    const octoflowSize = new Blob([sessionStorage.getItem('octoflow') || '']).size;
-    const responsesSize = new Blob([sessionStorage.getItem('assessment_responses') || '']).size;
-    return {
-      octoflow: octoflowSize,
-      responses: responsesSize,
-      total: octoflowSize + responsesSize
-    };
-  } catch {
-    return null;
-  }
-};
-
-const getCurrentSessionContext = (): SessionContext => {
-  return {
-    ...getCurrentFlowState(),
-    storageHealth: getStorageSize() !== null,
-    hasLocalStorageBackup: !!localStorage.getItem('octoflow_session_backup'),
-    errorCount: (JSON.parse(localStorage.getItem('octoflow_errors') || '[]') as unknown[]).length
-  };
-};
-
-export const getAnalyticsEvents = (): AnalyticsEvent[] => [...events];
-
-// Clear events (mainly for testing)
-export const clearAnalyticsEvents = (): void => {
-  events.length = 0;
-};
+// Helper functions
+function calculateAverageScore(state: AssessmentState): number {
+  const scores = Object.values(state.responses);
+  if (scores.length === 0) return 0;
+  
+  return scores.reduce((sum, score) => sum + score, 0) / scores.length;
+}

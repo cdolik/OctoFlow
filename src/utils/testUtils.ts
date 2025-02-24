@@ -5,6 +5,8 @@ import type { Stage, StageInfo } from 'octoflow';
 import type { ReactElement, ComponentType } from 'react';
 import React from 'react';
 import { stages } from '../data/stages';
+import { Stage, StorageState, AssessmentState } from '../types';
+import { FLOW_STATES } from './flowValidator';
 
 // Chart.js test utilities
 export const mockChartInstance = (chartConfig = {}) => {
@@ -85,44 +87,71 @@ export const mockStageInfo: StageInfo = {
 };
 
 export const mockResponses = {
-  'pre-seed': { q1: 1, q2: 2 },
-  'seed': { q1: 3, q2: 4 },
-  'series-a': { q1: 5, q2: 6 }
+  'branch-strategy': 3,
+  'pr-review': 4,
+  'ci-practices': 3
 };
 
-interface MockStorageState {
-  stage: Stage | null;
+interface MockState {
+  stage: Stage;
   responses: Record<string, number>;
+  flowState?: string;
   metadata?: {
-    startTime: number;
-    lastSaved: number;
-    questionCount: number;
+    lastSaved: string;
+    timeSpent: number;
+    attemptCount: number;
+    [key: string]: unknown;
   };
 }
 
-export const createMockState = (
-  stage: Stage = 'pre-seed',
-  responses: Record<string, number> = {}
-): MockStorageState => ({
-  stage,
-  responses,
-  metadata: {
-    startTime: Date.now() - 1000,
-    lastSaved: Date.now(),
-    questionCount: Object.keys(responses).length
-  }
-});
+export const createMockState = ({
+  stage = 'pre-seed',
+  responses = {},
+  flowState = FLOW_STATES.ASSESSMENT,
+  metadata = {}
+}: Partial<MockState> = {}): StorageState => {
+  return {
+    version: '1.1',
+    currentStage: stage,
+    responses,
+    metadata: {
+      lastSaved: new Date().toISOString(),
+      timeSpent: 0,
+      attemptCount: 1,
+      ...metadata
+    }
+  };
+};
 
-export const mockAssessmentFlow = async (stage: Stage): Promise<MockStorageState> => {
-  sessionStorage.clear();
-  const responses: Record<string, number> = {};
-  const questionCount = 5;
+export const createMockAssessmentState = (
+  baseState: Partial<MockState> = {}
+): AssessmentState => {
+  const state = createMockState(baseState);
+  return {
+    ...state,
+    progress: {
+      questionIndex: 0,
+      totalQuestions: 0,
+      isComplete: false
+    }
+  };
+};
 
-  for (let i = 1; i <= questionCount; i++) {
-    responses[`question${i}`] = Math.floor(Math.random() * 4) + 1;
-  }
-
-  return createMockState(stage, responses);
+export const mockLocalStorage = () => {
+  const store: Record<string, string> = {};
+  
+  return {
+    getItem: (key: string): string | null => store[key] || null,
+    setItem: (key: string, value: string): void => {
+      store[key] = value;
+    },
+    removeItem: (key: string): void => {
+      delete store[key];
+    },
+    clear: (): void => {
+      Object.keys(store).forEach(key => delete store[key]);
+    }
+  };
 };
 
 export const mockStorage = () => {

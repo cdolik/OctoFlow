@@ -33,21 +33,21 @@ export const STAGE_CONFIG: Record<Stage, StageDefinition> = {
         'automation': 2.0
       }
     },
-    questionFilter: (q: Question) => ['security', 'deployment', 'collaboration'].includes(q.category)
+    questionFilter: (q: Question) => true
   },
   'series-a': {
     id: 'series-a',
     label: 'Series A',
-    description: 'Scaling operations and team',
-    focus: ['security', 'release', 'governance'],
+    description: 'Scale engineering processes and security',
+    focus: ['scale', 'security'],
     benchmarks: {
-      deploymentFreq: 'multiple/day',
+      deploymentFreq: '3/day',
       securityLevel: 3,
       costEfficiency: 0.6,
       expectedScores: {
         'github-ecosystem': 3.5,
         'security': 3.0,
-        'automation': 3.0
+        'automation': 3.5
       }
     },
     questionFilter: (q: Question) => true
@@ -68,6 +68,73 @@ export const STAGE_CONFIG: Record<Stage, StageDefinition> = {
       }
     },
     questionFilter: (q: Question) => true
+  }
+};
+
+export const StageConfig: Record<Stage, StageDefinition> = {
+  'pre-seed': {
+    id: 'pre-seed',
+    title: 'Pre-Seed Stage',
+    focus: ['CI/CD Basics', 'Code Review', 'Security Essentials'],
+    benchmarks: {
+      expectedScores: {
+        'github-ecosystem': 0.5,
+        'workflow': 0.4,
+        'automation': 0.3,
+        'security': 0.6,
+        'release': 0.3,
+        'governance': 0.2,
+        'optimization': 0.2
+      }
+    }
+  },
+  'seed': {
+    id: 'seed',
+    title: 'Seed Stage',
+    focus: ['Branch Protection', 'Team Collaboration', 'Deployment Strategy'],
+    benchmarks: {
+      expectedScores: {
+        'github-ecosystem': 0.7,
+        'workflow': 0.6,
+        'automation': 0.5,
+        'security': 0.7,
+        'release': 0.5,
+        'governance': 0.4,
+        'optimization': 0.4
+      }
+    }
+  },
+  'series-a': {
+    id: 'series-a',
+    title: 'Series A',
+    focus: ['Team Scaling', 'Compliance', 'Advanced Security'],
+    benchmarks: {
+      expectedScores: {
+        'github-ecosystem': 0.8,
+        'workflow': 0.8,
+        'automation': 0.7,
+        'security': 0.9,
+        'release': 0.7,
+        'governance': 0.6,
+        'optimization': 0.6
+      }
+    }
+  },
+  'series-b': {
+    id: 'series-b',
+    title: 'Series B',
+    focus: ['Enterprise Scale', 'Advanced Security', 'Full Automation'],
+    benchmarks: {
+      expectedScores: {
+        'github-ecosystem': 0.9,
+        'workflow': 0.9,
+        'automation': 0.9,
+        'security': 1.0,
+        'release': 0.8,
+        'governance': 0.8,
+        'optimization': 0.8
+      }
+    }
   }
 };
 

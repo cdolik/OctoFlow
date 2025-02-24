@@ -1,6 +1,12 @@
-import { Stage, StageValidationResult } from '../types';
-import { stages } from '../data/stages';
+import { Stage, StorageState } from '../types';
 import { getAssessmentResponses, getAssessmentMetadata } from './storage';
+
+export interface ValidationResult {
+  isValid: boolean;
+  error?: string;
+  details?: string[];
+  redirectTo?: string;
+}
 
 export const getResumePoint = (): {
   stage: Stage | null;
@@ -27,59 +33,52 @@ export const getResumePoint = (): {
 export const validateStageProgression = (
   currentStage: Stage | null, 
   targetStage: Stage
-): StageValidationResult => {
+): ValidationResult => {
+  const stages: Stage[] = ['pre-seed', 'seed', 'series-a', 'series-b'];
+  const currentIndex = currentStage ? stages.indexOf(currentStage) : -1;
+  const targetIndex = stages.indexOf(targetStage);
+
   // Allow starting at any stage if no current stage
   if (!currentStage) {
     return { isValid: true };
   }
 
-  const stageOrder = stages.map(s => s.id);
-  const currentIdx = stageOrder.indexOf(currentStage);
-  const targetIdx = stageOrder.indexOf(targetStage);
-  
-  if (currentIdx === -1 || targetIdx === -1) {
+  if (targetIndex === -1) {
     return {
       isValid: false,
-      error: 'Invalid stage identifier'
+      error: 'Invalid stage identifier',
+      details: ['Stage does not exist']
     };
   }
 
   // Allow:
-  // 1. Moving to the next stage
+  // 1. Moving to next stage
   // 2. Moving to any previous stage
   // 3. Staying in current stage
   if (
-    targetIdx === currentIdx + 1 || // Next stage
-    targetIdx <= currentIdx || // Previous stage or current stage
-    currentIdx === -1 // First stage selection
+    targetIndex === currentIndex + 1 || // Next stage
+    targetIndex <= currentIndex || // Previous stage or current stage
+    currentIndex === -1 // First stage selection
   ) {
     return { isValid: true };
   }
 
   return {
     isValid: false,
-    error: 'Cannot skip stages forward'
+    error: 'Cannot skip stages forward',
+    details: ['Must complete stages in order'],
+    redirectTo: `/assessment/${currentStage}`
   };
 };
 
 export const getNextStage = (currentStage: Stage): Stage | null => {
-  const stageOrder = stages.map(s => s.id);
-  const currentIdx = stageOrder.indexOf(currentStage);
-  
-  if (currentIdx === -1 || currentIdx === stageOrder.length - 1) {
-    return null;
-  }
-  
-  return stageOrder[currentIdx + 1];
+  const stages: Stage[] = ['pre-seed', 'seed', 'series-a', 'series-b'];
+  const currentIndex = stages.indexOf(currentStage);
+  return currentIndex < stages.length - 1 ? stages[currentIndex + 1] : null;
 };
 
 export const getPreviousStage = (currentStage: Stage): Stage | null => {
-  const stageOrder = stages.map(s => s.id);
-  const currentIdx = stageOrder.indexOf(currentStage);
-  
-  if (currentIdx <= 0) {
-    return null;
-  }
-  
-  return stageOrder[currentIdx - 1];
+  const stages: Stage[] = ['pre-seed', 'seed', 'series-a', 'series-b'];
+  const currentIndex = stages.indexOf(currentStage);
+  return currentIndex > 0 ? stages[currentIndex - 1] : null;
 };

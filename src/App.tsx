@@ -1,93 +1,48 @@
-import React, { useState, useCallback } from 'react';
-import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { Stage, Responses } from './types';
-import Hero from './components/Hero';
-import StageSelector from './components/StageSelector';
-import Assessment from './components/Assessment';
-import Summary from './components/Summary';
-import Results from './components/Results';
-import GlobalErrorBoundary from './components/GlobalErrorBoundary';
-import AssessmentErrorBoundary from './components/AssessmentErrorBoundary';
-import { stages } from './data/stages';
-import { useStageValidation } from './hooks/useStageValidation';
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router } from 'react-router-dom';
+import { Stage } from './types';
+import { getAssessmentState } from './utils/storage';
+import { GlobalErrorBoundary } from './components/GlobalErrorBoundary';
+import { AppRoutes } from './components/AppRoutes';
+import { ErrorProvider } from './contexts/ErrorContext';
+import './App.css';
 
-interface AppProps {
-  initialStage?: Stage;
-  onStepChange?: (responses: Responses) => void;
-}
+function App() {
+  const [currentStage, setCurrentStage] = useState<Stage | null>(null);
 
-const App: React.FC<AppProps> = ({ initialStage, onStepChange }) => {
-  const [currentStage, setCurrentStage] = useState<Stage | null>(initialStage ?? null);
-  const [responses, setResponses] = useState<Record<string, number>>({});
-
-  const { error: validationError } = useStageValidation({
-    currentStage,
-    responses
-  });
-
-  const handleStageSelect = useCallback((stage: Stage) => {
-    setCurrentStage(stage);
+  useEffect(() => {
+    const state = getAssessmentState();
+    if (state?.currentStage) {
+      setCurrentStage(state.currentStage);
+    }
   }, []);
 
-  const handleResponseChange = useCallback((newResponses: Record<string, number>) => {
-    setResponses(newResponses);
-    onStepChange?.(newResponses);
-  }, [onStepChange]);
+  const handleStageSelect = (stage: Stage) => {
+    setCurrentStage(stage);
+  };
 
-  const renderProtectedRoute = (
-    Component: React.ComponentType<any>,
-    props: Record<string, any>
-  ) => {
-    if (!currentStage) {
-      return <Navigate to="/stage-select" replace />;
-    }
+  const handleAssessmentComplete = () => {
+    // Assessment completion logic handled by route component
+  };
 
-    if (validationError) {
-      return <Navigate to="/stage-select" state={{ error: validationError }} replace />;
-    }
-
-    return (
-      <AssessmentErrorBoundary
-        key={`${currentStage}-${Component.name}`}
-        onRecovery={() => handleStageSelect(currentStage)}
-      >
-        <Component
-          stage={currentStage}
-          responses={responses}
-          stages={stages.map(s => s.id)}
-          onStepChange={handleResponseChange}
-          {...props}
-        />
-      </AssessmentErrorBoundary>
-    );
+  const handleAssessmentError = () => {
+    setCurrentStage(null);
   };
 
   return (
-    <Router>
-      <GlobalErrorBoundary>
-        <Routes>
-          <Route path="/" element={<Hero onSelect={handleStageSelect} />} />
-          <Route
-            path="/stage-select"
-            element={<StageSelector onSelect={handleStageSelect} initialStage={currentStage} />}
+    <ErrorProvider>
+      <Router>
+        <GlobalErrorBoundary>
+          <AppRoutes
+            currentStage={currentStage}
+            onStageSelect={handleStageSelect}
+            onAssessmentComplete={handleAssessmentComplete}
+            onAssessmentError={handleAssessmentError}
           />
-          <Route
-            path="/assessment"
-            element={renderProtectedRoute(Assessment, {})}
-          />
-          <Route
-            path="/summary"
-            element={renderProtectedRoute(Summary, {})}
-          />
-          <Route
-            path="/results"
-            element={renderProtectedRoute(Results, {})}
-          />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </GlobalErrorBoundary>
-    </Router>
+        </GlobalErrorBoundary>
+      </Router>
+    </ErrorProvider>
   );
-};
+}
 
 export default App;

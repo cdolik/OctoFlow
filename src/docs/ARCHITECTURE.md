@@ -1,146 +1,137 @@
 # OctoFlow Architecture
 
-## Core Concepts
+## Overview
 
-### Stage-Based Assessment Flow
-OctoFlow implements a strict stage progression model to ensure users complete assessments in a logical order:
+OctoFlow is a React-based assessment platform built with TypeScript, focusing on accessibility, reliable state management, and smooth user experience. The application uses modern React patterns and hooks for state management and side effects.
 
-```
-pre-seed → seed → series-a → series-b
-```
-
-Each stage has:
-- Stage-specific question filtering
-- Category weightings
-- Performance benchmarks
-- Focused improvement areas
-
-### Data Model
-
-```typescript
-Stage Flow:
-Assessment State → Response Validation → Score Calculation → Recommendations
-```
-
-Key interfaces:
-- `StageDefinition`: Core stage configuration
-- `StorageState`: Persistent assessment data
-- `ScoreResult`: Calculated assessment results
-
-### Error Handling Strategy
-
-1. **Hierarchical Boundaries**
-   - `GlobalErrorBoundary`: Application-wide errors
-   - `AssessmentErrorBoundary`: Stage-specific errors
-   - Component-level error states
-
-2. **Recovery Mechanisms**
-   - Auto-save with periodic backups
-   - State recovery from backup storage
-   - Graceful degradation
-
-### Stage Validation
-
-The system enforces:
-1. Sequential stage progression
-2. Complete question responses
-3. Valid score ranges (1-4)
-4. Category-specific weightings
-
-### Storage Management
-
-- Primary storage in SessionStorage
-- Periodic backups with configurable intervals
-- Merge strategy for partial updates
-- Recovery from backup on storage failure
-
-### Performance Optimization
-
-1. **Rendering**
-   - Memoized calculations
-   - Deferred loading
-   - Error boundary isolation
-
-2. **Data Management**
-   - Efficient state updates
-   - Batched storage operations
-   - Progressive loading
-
-## Implementation Details
-
-### Core Components
-
-1. **StageSelector**
-   - Stage filtering
-   - Progress visualization
-   - Requirement validation
-
-2. **Assessment**
-   - Question rendering
-   - Response validation
-   - Auto-save integration
-
-3. **Summary**
-   - Response review
-   - Stage completion checks
-   - Navigation guards
-
-4. **Results**
-   - Score calculation
-   - Benchmark comparison
-   - Recommendation generation
+## Core Systems
 
 ### State Management
 
-```typescript
-interface ApplicationState {
-  currentStage: Stage | null;
-  responses: Record<string, number>;
-  progress: {
-    questionIndex: number;
-    totalQuestions: number;
-    isComplete: boolean;
-  };
-}
-```
+- **Storage System**: Uses IndexedDB for persistent storage with a fallback to LocalStorage
+- **User Preferences**: Centralized preference management with real-time updates
+- **Assessment Flow**: Stage-based progression with validation and recovery mechanisms
+
+### Component Architecture
+
+#### Higher Order Components (HOCs)
+- `withAutoSave`: Provides automatic saving functionality with retry logic
+- `withFlowValidation`: Ensures proper stage progression and validation
+- `withMemo`: Performance optimization for expensive renders
+
+#### Core Components
+- `ErrorFallback`: Handles error display and recovery
+- `LoadingSpinner`: Provides visual feedback with accessibility
+- `Timer`: Manages time-based interactions
+- `NavigationGuard`: Prevents accidental navigation loss
+- `PreferencesPanel`: Manages user settings
+- `StageTransition`: Handles stage progression
 
 ### Data Flow
 
-1. User selects stage
-2. System loads stage-specific questions
-3. Responses auto-save to storage
-4. Validation ensures completion
-5. Scores calculate on completion
-6. Recommendations generate based on gaps
+```
+User Action → Component → HOC Validation → State Update → Storage → UI Update
+                     ↓
+             Audio Feedback
+                     ↓
+         Accessibility Announcement
+```
 
-### Testing Strategy
+### Error Handling
 
-1. **Unit Tests**
-   - Individual utility functions
-   - Hook behavior
-   - Component rendering
+1. **Error Boundaries**: Catch and handle React rendering errors
+2. **API Error Recovery**: Implements exponential backoff
+3. **State Recovery**: Automatic state restoration from persistence
+4. **Validation Errors**: Proper user feedback with recovery options
 
-2. **Integration Tests**
-   - Complete user flows
-   - Error recovery
-   - Storage persistence
+### Accessibility Features
 
-3. **Edge Cases**
-   - Network failures
-   - Storage quota limits
-   - Invalid state transitions
+- ARIA live regions for dynamic content
+- Keyboard navigation support
+- Audio feedback system
+- High contrast mode support
+- Motion reduction options
+- Screen reader optimizations
+
+## State Persistence
+
+### Storage Strategy
+```
+IndexedDB (Primary)
+    ↓
+LocalStorage (Fallback)
+    ↓
+Memory (Temporary)
+```
+
+### Saved Data Types
+- Assessment progress
+- User preferences
+- Stage completion status
+- Time tracking data
+
+## Testing Strategy
+
+### Unit Tests
+- Component behavior testing
+- Hook functionality verification
+- Utility function coverage
+
+### Integration Tests
+- User flow validation
+- Error recovery scenarios
+- Storage system reliability
+
+### Accessibility Tests
+- ARIA attribute verification
+- Keyboard navigation testing
+- Screen reader compatibility
+
+## Performance Optimizations
+
+1. **Code Splitting**
+   - Route-based splitting
+   - Component lazy loading
+   - Dynamic imports for heavy features
+
+2. **Rendering Optimization**
+   - Memoization of expensive calculations
+   - Debounced state updates
+   - Virtual scrolling for large lists
+
+3. **Resource Management**
+   - Efficient audio resource loading
+   - Optimized asset caching
+   - Background data persistence
+
+## Deployment
+
+### GitHub Pages Deployment
+- Automated through GitHub Actions
+- Environment-specific builds
+- Cache optimization
+- Continuous integration checks
+
+### Build Process
+1. Test execution
+2. Type checking
+3. Asset optimization
+4. Bundle generation
+5. Deployment verification
 
 ## Future Considerations
 
-### Planned Enhancements
-- Persistent storage solution
-- Enhanced analytics tracking
-- Mobile responsiveness
-- PDF export capability
-- Team collaboration features
+1. **Scalability**
+   - Additional assessment types
+   - Enhanced data analytics
+   - Multi-language support
 
-### Migration Path
-1. Implement storage versioning
-2. Add data migration utilities
-3. Maintain backward compatibility
-4. Progressive feature rollout
+2. **Performance**
+   - Worker thread utilization
+   - Service worker implementation
+   - Advanced caching strategies
+
+3. **Accessibility**
+   - Enhanced voice navigation
+   - Customizable feedback systems
+   - Additional accommodation options

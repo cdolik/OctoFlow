@@ -1,46 +1,54 @@
 import { Category } from '../types';
+import { questions } from './questions';
 
-export const categories: Category[] = [
+const categories: Category[] = [
   {
     id: 'github-ecosystem',
-    title: 'GitHub Ecosystem',
-    description: 'Effective use of GitHub features and integrations.',
-    weight: 1.0
+    title: 'GitHub Enterprise Adoption & Collaboration',
+    description: 'Core GitHub features and collaboration practices',
+    weight: 1.0,
+    questions: questions.filter(q => q.category === 'github-ecosystem')
   },
   {
     id: 'workflow',
-    title: 'Workflow',
-    description: 'Optimizing your development workflow for efficiency and collaboration.',
-    weight: 0.8
+    title: 'Development Workflow',
+    description: 'Branch strategy and code review practices',
+    weight: 0.8,
+    questions: questions.filter(q => q.category === 'workflow')
   },
   {
     id: 'automation',
-    title: 'Automation',
-    description: 'Implementing automation to streamline repetitive tasks and improve consistency.',
-    weight: 0.9
+    title: 'CI/CD & Automation',
+    description: 'Continuous integration and deployment practices',
+    weight: 0.9,
+    questions: questions.filter(q => q.category === 'automation')
   },
   {
     id: 'security',
-    title: 'Security',
-    description: 'Enhancing security practices to protect your code and infrastructure.',
-    weight: 1.0
+    title: 'Security & Compliance',
+    description: 'Security features and best practices',
+    weight: 1.0,
+    questions: questions.filter(q => q.category === 'security')
   },
   {
     id: 'release',
     title: 'Release Management',
-    description: 'Managing releases effectively to ensure smooth deployments and rollbacks.',
-    weight: 0.7
+    description: 'Release process and deployment practices',
+    weight: 0.7,
+    questions: questions.filter(q => q.category === 'release')
   },
   {
     id: 'governance',
-    title: 'Governance',
-    description: 'Implementing governance practices to ensure compliance and accountability.',
-    weight: 0.6
+    title: 'Repository Governance',
+    description: 'Repository settings and access control',
+    weight: 0.6,
+    questions: questions.filter(q => q.category === 'governance')
   },
   {
     id: 'optimization',
-    title: 'Optimization',
-    description: 'Optimizing processes and practices for better performance and efficiency.',
-    weight: 0.8
+    title: 'Performance & Optimization',
+    description: 'Repository and workflow optimization',
+    weight: 0.8,
+    questions: questions.filter(q => q.category === 'optimization')
   }
 ];

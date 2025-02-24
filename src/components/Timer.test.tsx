@@ -2,8 +2,10 @@ import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import Timer from './Timer';
 import { useTimeTracker } from '../hooks/useTimeTracker';
+import { useAudioFeedback } from './AudioFeedback';
 
 jest.mock('../hooks/useTimeTracker');
+jest.mock('./AudioFeedback');
 
 describe('Timer', () => {
   const mockTimeTracker = {
@@ -13,9 +15,19 @@ describe('Timer', () => {
     resume: jest.fn()
   };
 
+  const mockPlaySound = jest.fn();
+
   beforeEach(() => {
+    jest.useFakeTimers();
     jest.clearAllMocks();
     (useTimeTracker as jest.Mock).mockReturnValue(mockTimeTracker);
+    (useAudioFeedback as jest.Mock).mockReturnValue({
+      playSound: mockPlaySound
+    });
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   it('displays formatted time correctly', () => {
@@ -134,5 +146,156 @@ describe('Timer', () => {
     expect(useTimeTracker).toHaveBeenCalledWith(expect.objectContaining({
       onTimeUpdate: mockOnTimeUpdate
     }));
+  });
+
+  it('starts automatically when autoStart is true', () => {
+    render(<Timer autoStart={true} duration={60000} />);
+    
+    act(() => {
+      jest.advanceTimersByTime(1000);
+    });
+
+    expect(screen.getByText('0:59')).toBeInTheDocument();
+  });
+
+  it('remains paused when autoStart is false', () => {
+    render(<Timer autoStart={false} duration={60000} />);
+    
+    act(() => {
+      jest.advanceTimersByTime(1000);
+    });
+
+    expect(screen.getByText('1:00')).toBeInTheDocument();
+  });
+
+  it('toggles timer state on button click', () => {
+    render(<Timer autoStart={false} duration={60000} />);
+    
+    const startButton = screen.getByLabelText('Start timer');
+    fireEvent.click(startButton);
+    expect(mockPlaySound).toHaveBeenCalledWith('navigation');
+
+    act(() => {
+      jest.advanceTimersByTime(1000);
+    });
+
+    expect(screen.getByText('0:59')).toBeInTheDocument();
+
+    const pauseButton = screen.getByLabelText('Pause timer');
+    fireEvent.click(pauseButton);
+    expect(mockPlaySound).toHaveBeenCalledWith('navigation');
+  });
+
+  it('resets timer to initial duration', () => {
+    render(<Timer duration={60000} />);
+    
+    act(() => {
+      jest.advanceTimersByTime(5000);
+    });
+
+    const resetButton = screen.getByLabelText('Reset timer');
+    fireEvent.click(resetButton);
+
+    expect(screen.getByText('1:00')).toBeInTheDocument();
+    expect(mockPlaySound).toHaveBeenCalledWith('info');
+  });
+
+  it('triggers warning at threshold', () => {
+    const onWarning = jest.fn();
+    render(
+      <Timer 
+        duration={60000}
+        warningThreshold={30000}
+        onWarning={onWarning}
+      />
+    );
+
+    act(() => {
+      jest.advanceTimersByTime(31000);
+    });
+
+    expect(onWarning).toHaveBeenCalled();
+    expect(mockPlaySound).toHaveBeenCalledWith('info');
+    expect(screen.getByRole('timer')).toHaveClass('warning');
+  });
+
+  it('triggers critical at threshold', () => {
+    const onCritical = jest.fn();
+    render(
+      <Timer 
+        duration={60000}
+        criticalThreshold={10000}
+        onCritical={onCritical}
+      />
+    );
+
+    act(() => {
+      jest.advanceTimersByTime(51000);
+    });
+
+    expect(onCritical).toHaveBeenCalled();
+    expect(mockPlaySound).toHaveBeenCalledWith('error');
+    expect(screen.getByRole('timer')).toHaveClass('critical');
+  });
+
+  it('calls onComplete when timer finishes', () => {
+    const onComplete = jest.fn();
+    render(
+      <Timer 
+        duration={5000}
+        onComplete={onComplete}
+      />
+    );
+
+    act(() => {
+      jest.advanceTimersByTime(5000);
+    });
+
+    expect(onComplete).toHaveBeenCalled();
+    expect(mockPlaySound).toHaveBeenCalledWith('complete');
+  });
+
+  it('updates progress bar correctly', () => {
+    render(<Timer duration={100000} showRemaining={true} />);
+    
+    const progressBar = screen.getByRole('progressbar');
+    
+    expect(progressBar).toHaveAttribute('aria-valuenow', '100');
+
+    act(() => {
+      jest.advanceTimersByTime(50000);
+    });
+
+    expect(progressBar).toHaveAttribute('aria-valuenow', '50');
+  });
+
+  it('announces time remaining via LiveRegion', () => {
+    render(<Timer duration={120000} />);
+
+    expect(screen.getByText('2 minutes 0 seconds remaining')).toBeInTheDocument();
+
+    act(() => {
+      jest.advanceTimersByTime(61000);
+    });
+
+    expect(screen.getByText('59 seconds remaining')).toBeInTheDocument();
+  });
+
+  it('handles pause state in LiveRegion', () => {
+    render(<Timer autoStart={true} duration={60000} />);
+    
+    const pauseButton = screen.getByLabelText('Pause timer');
+    fireEvent.click(pauseButton);
+
+    expect(screen.getByText('Timer paused')).toBeInTheDocument();
+  });
+
+  it('cleans up interval on unmount', () => {
+    const { unmount } = render(<Timer duration={60000} />);
+    
+    const clearIntervalSpy = jest.spyOn(global, 'clearInterval');
+    unmount();
+    
+    expect(clearIntervalSpy).toHaveBeenCalled();
   });
 });

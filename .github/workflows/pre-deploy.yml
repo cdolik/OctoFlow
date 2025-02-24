@@ -1,0 +1,67 @@
+name: Pre-deployment Testing
+
+on:
+  pull_request:
+    branches:
+      - main
+      - staging
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type checking
+        run: npm run type-check
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm run test -- --coverage
+
+      - name: Build
+        run: npm run build
+        env:
+          CI: true
+
+      - name: Accessibility audit
+        run: |
+          npm install -g pa11y
+          pa11y-ci ./build/**/*.html
+
+      - name: Bundle size analysis
+        run: |
+          npm run build
+          npm run analyze
+
+      - name: Performance testing
+        run: |
+          npm install -g lighthouse
+          npm run start:prod &
+          sleep 5
+          lighthouse http://localhost:3000 \
+            --output json \
+            --output html \
+            --output-path ./lighthouse-report \
+            --chrome-flags="--headless --no-sandbox"
+
+      - name: Upload test artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-reports
+          path: |
+            coverage/
+            lighthouse-report/
+            build/bundle-analysis.json

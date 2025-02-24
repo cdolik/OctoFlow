@@ -1,140 +1,126 @@
-# 🚀 OctoFlow – Startup Engineering Health Check
+# OctoFlow
 
-An interactive assessment tool to evaluate and optimize GitHub engineering workflows.
+A React-based assessment platform focused on accessibility and reliable state management.
 
-## 🛠 Core Features (MVP)
+## Features
 
-- Stage-based assessment flow with strict validation
-- Auto-save with error recovery
-- Weighted scoring system with benchmarks
-- Stage-specific recommendations
+- 🔄 Automatic state persistence with retry mechanisms
+- ⌨️ Full keyboard navigation support
+- 🔊 Screen reader optimizations and audio feedback
+- 📱 Responsive design with mobile-first approach
+- 🎨 Customizable themes and accessibility options
+- ⚡ Performance optimized with code splitting
+- 🔍 Comprehensive error tracking and recovery
 
-## 🏗 Technical Foundation
+## Getting Started
 
-### Stage Progression
-- Pre-seed → Seed → Series A → Series B
-- Each stage has specific:
-  - Question filtering
-  - Category weights
-  - Performance benchmarks
+### Prerequisites
 
-### Type Safety
-```typescript
-type Stage = 'pre-seed' | 'seed' | 'series-a' | 'series-b';
+- Node.js >= 18
+- npm >= 7
 
-interface StageDefinition {
-  id: Stage;
-  label: string;
-  description: string;
-  focus: string[];
-  benchmarks: {
-    deploymentFreq: string;
-    securityLevel: number;
-    costEfficiency: number;
-    expectedScores: Record<string, number>;
-  };
-  questionFilter: (q: Question) => boolean;
-}
-```
-
-## 🚀 Quick Start
+### Installation
 
 ```bash
-# Install dependencies
+git clone https://github.com/yourusername/OctoFlow.git
+cd OctoFlow
 npm install
+```
 
-# Start development server
+### Development
+
+```bash
 npm start
+```
 
-# Run tests
+### Testing
+
+```bash
+# Run all tests
 npm test
 
-# Build for production
+# Run tests with coverage
+npm test -- --coverage
+
+# Run specific tests
+npm test -- ComponentName
+```
+
+### Building
+
+```bash
 npm run build
 ```
 
-## 🧪 Testing Strategy
+## Architecture
 
-### Unit Tests
-```bash
-# Run specific test suites
-npm test userFlow
-npm test stageValidation
-npm test scoring
-```
+### Core Systems
 
-### Test Coverage
-```bash
-# Generate coverage report
-npm test -- --coverage
-```
+- **State Management**: IndexedDB-based persistence with LocalStorage fallback
+- **Accessibility**: ARIA live regions, keyboard navigation, audio feedback
+- **Error Handling**: Comprehensive error boundaries and recovery mechanisms
+- **Performance**: Code splitting, memoization, and performance monitoring
 
-### Key Test Areas
-1. Stage progression validation
-2. Response persistence
-3. Score calculation
-4. Error recovery
-5. Auto-save functionality
+### Key Components
 
-## 🔍 Development Guidelines
+- `withAutoSave`: Automatic state persistence HOC
+- `withFlowValidation`: Stage progression validation HOC
+- `NavigationGuard`: Prevents accidental navigation loss
+- `ErrorBoundary`: Graceful error handling and recovery
+- `AccessibilityProvider`: Screen reader and keyboard navigation support
 
-### Code Organization
-```
-src/
-  ├── components/   # React components
-  ├── data/        # Stage and question definitions
-  ├── hooks/       # Custom React hooks
-  ├── types/       # TypeScript definitions
-  └── utils/       # Utility functions
-```
+## Deployment
 
-### Best Practices
-1. Use TypeScript for type safety
-2. Write tests for new features
-3. Follow error boundary pattern
-4. Maintain auto-save functionality
-5. Document significant changes
+The application is automatically deployed to GitHub Pages using GitHub Actions. The deployment process includes:
 
-## 🎯 MVP Scope
+1. Running tests and generating coverage reports
+2. Building the application with production optimizations
+3. Deploying to GitHub Pages
+4. Verifying deployment success
 
-### Included Features
-- ✅ Stage-based assessment
-- ✅ Auto-save functionality
-- ✅ Error recovery
-- ✅ Keyboard navigation
-- ✅ Question filtering
-- ✅ Basic analytics
+## Contributing
 
-### Deferred Features
-- 📋 PDF Export
-- 💾 IndexedDB storage
-- 📱 Mobile optimization
-- 👥 Team collaboration
-- 🔄 GitHub integration
+Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
 
-## 🐛 Error Handling
+### Development Guidelines
 
-### Recovery Strategy
-1. Component-level boundaries
-2. Storage backups
-3. State restoration
-4. Graceful degradation
+1. Write tests for all new features
+2. Ensure accessibility compliance
+3. Optimize performance for large datasets
+4. Follow TypeScript best practices
+5. Document all public APIs
 
-### Error Reporting
-Errors are tracked with context for debugging.
+## Performance Optimization
 
-## 📈 Performance
-
-### Optimization Focus
+- Route-based code splitting
+- Component lazy loading
+- Memoization of expensive calculations
 - Efficient state updates
-- Memoized calculations
-- Progressive loading
-- Error isolation
+- Asset optimization
 
-## 🤝 Contributing
+## Accessibility Features
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for:
-- Development setup
-- Testing guidelines
-- PR process
-- Architecture overview
+- ARIA live regions for dynamic content
+- Keyboard navigation patterns
+- Screen reader optimizations
+- Audio feedback system
+- High contrast mode
+- Motion reduction options
+
+## Error Handling
+
+1. Automatic retry with exponential backoff
+2. State recovery mechanisms
+3. Comprehensive error reporting
+4. User-friendly error messages
+5. Development mode detailed errors
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Acknowledgments
+
+- React Team for the core framework
+- Testing Library for the excellent testing utilities
+- The open source community for various incorporated libraries

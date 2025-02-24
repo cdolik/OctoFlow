@@ -9,6 +9,8 @@ import { useStageManager } from '../hooks/useStageManager';
 import { useStorage } from '../hooks/useStorage';
 import { useErrorManagement } from '../hooks/useErrorManagement';
 import { filterQuestionsByStage } from '../utils/questionFiltering';
+import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
+import { createMockState } from '../utils/testUtils';
 
 jest.mock('react-router-dom', () => ({
   ...jest.requireActual('react-router-dom'),
@@ -20,6 +22,7 @@ jest.mock('../hooks/useErrorManagement');
 jest.mock('../utils/questionFiltering');
 jest.mock('../hooks/useAssessmentSession');
 jest.mock('../utils/analytics');
+jest.mock('../hooks/useKeyboardNavigation');
 
 describe('Assessment', () => {
   const mockQuestions = [
@@ -82,6 +85,9 @@ describe('Assessment', () => {
       saveResponse: mockSaveResponse,
       completeSession: mockCompleteSession,
       isLoading: false
+    });
+    (useKeyboardNavigation as jest.Mock).mockReturnValue({
+      isEnabled: true
     });
   });
 
@@ -364,5 +370,116 @@ describe('Assessment', () => {
     // At last question, next should be disabled
     fireEvent.keyDown(document, { key: 'ArrowRight' });
     expect(trackCTAClick).not.toHaveBeenCalledWith('next_question');
+  });
+
+  const mockOnStepChange = jest.fn();
+  const mockOnComplete = jest.fn();
+
+  it('renders loading state', () => {
+    (useAssessmentSession as jest.Mock).mockReturnValue({
+      isLoading: true,
+      state: null,
+      error: null
+    });
+
+    render(<Assessment stage="pre-seed" />);
+    expect(screen.getByText(/Loading assessment/)).toBeInTheDocument();
+  });
+
+  it('renders error state', () => {
+    (useAssessmentSession as jest.Mock).mockReturnValue({
+      isLoading: false,
+      state: null,
+      error: new Error('Test error')
+    });
+
+    render(<Assessment stage="pre-seed" />);
+    expect(screen.getByRole('alert')).toHaveTextContent('Test error');
+  });
+
+  it('handles navigation between questions', () => {
+    render(
+      <Assessment 
+        stage="pre-seed" 
+        onStepChange={mockOnStepChange}
+      />
+    );
+
+    fireEvent.click(screen.getByText('Next'));
+    expect(mockOnStepChange).toHaveBeenCalledWith(1);
+
+    fireEvent.click(screen.getByText('Previous'));
+    expect(mockOnStepChange).toHaveBeenCalledWith(-1);
+  });
+
+  it('shows keyboard shortcuts when enabled', () => {
+    render(<Assessment stage="pre-seed" />);
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByText('Keyboard Shortcuts for pre-seed')).toBeInTheDocument();
+  });
+
+  it('shows correct save status', () => {
+    (useAssessmentSession as jest.Mock).mockReturnValue({
+      ...useAssessmentSession(),
+      saveStatus: { status: 'saving' }
+    });
+
+    render(<Assessment stage="pre-seed" />);
+    expect(screen.getByText('Saving...')).toBeInTheDocument();
+  });
+
+  it('completes session on last question', async () => {
+    (useAssessmentSession as jest.Mock).mockReturnValue({
+      ...useAssessmentSession(),
+      state: {
+        ...createMockState({ currentStage: 'pre-seed' }),
+        progress: {
+          questionIndex: 9,
+          totalQuestions: 10,
+          isComplete: false
+        }
+      }
+    });
+
+    mockCompleteSession.mockResolvedValue(true);
+
+    render(
+      <Assessment 
+        stage="pre-seed" 
+        onComplete={mockOnComplete}
+      />
+    );
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Complete'));
+    });
+
+    expect(mockCompleteSession).toHaveBeenCalled();
+    expect(mockOnComplete).toHaveBeenCalled();
+  });
+
+  it('shows progress percentage', () => {
+    render(<Assessment stage="pre-seed" />);
+    
+    const progressBar = screen.getByRole('progressbar');
+    expect(progressBar).toHaveAttribute('aria-valuenow', '0');
+    expect(progressBar).toHaveTextContent('0% Complete');
+  });
+
+  it('prevents navigation when at boundaries', () => {
+    (useAssessmentSession as jest.Mock).mockReturnValue({
+      ...useAssessmentSession(),
+      state: {
+        ...createMockState({ currentStage: 'pre-seed' }),
+        progress: {
+          questionIndex: 0,
+          totalQuestions: 10,
+          isComplete: false
+        }
+      }
+    });
+
+    render(<Assessment stage="pre-seed" />);
+    expect(screen.getByText('Previous')).toBeDisabled();
   });
 });

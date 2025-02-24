@@ -1,139 +1,92 @@
-import React, { useState, useEffect } from 'react';
-import { useGlobalShortcuts } from '../hooks/useGlobalShortcuts';
-import { KeyboardShortcut } from '../types/flowValidation';
+import React, { useEffect, useRef } from 'react';
+import { KeyboardShortcut } from '../types';
+import { useErrorManagement } from '../hooks/useErrorManagement';
 import './styles.css';
 
 interface AccessibleShortcutHelperProps {
   shortcuts: KeyboardShortcut[];
-  showAdvanced?: boolean;
+  stage?: string;
+  visible?: boolean;
   onClose?: () => void;
 }
 
-export const AccessibleShortcutHelper: React.FC<AccessibleShortcutHelperProps> = ({
+export function AccessibleShortcutHelper({
   shortcuts,
-  showAdvanced = false,
+  stage,
+  visible = true,
   onClose
-}) => {
-  const [isVisible, setIsVisible] = useState(false);
-  const [focusedIndex, setFocusedIndex] = useState(-1);
-
-  useGlobalShortcuts({
-    shortcuts: [
-      {
-        key: '?',
-        action: () => setIsVisible(prev => !prev)
-      },
-      {
-        key: 'esc',
-        action: () => {
-          if (isVisible) {
-            setIsVisible(false);
-            onClose?.();
-          }
-        }
-      }
-    ]
-  });
+}: AccessibleShortcutHelperProps): JSX.Element {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const { activeErrorCount } = useErrorManagement({ stage });
 
   useEffect(() => {
-    if (isVisible) {
-      // Announce to screen readers
-      const announcement = document.createElement('div');
-      announcement.setAttribute('role', 'alert');
-      announcement.setAttribute('aria-live', 'polite');
-      announcement.textContent = 'Keyboard shortcuts panel opened. Press Escape to close.';
-      document.body.appendChild(announcement);
-      
-      setTimeout(() => document.body.removeChild(announcement), 1000);
+    if (visible && dialogRef.current) {
+      dialogRef.current.focus();
     }
-  }, [isVisible]);
+  }, [visible]);
 
   const handleKeyDown = (event: React.KeyboardEvent) => {
-    switch (event.key) {
-      case 'ArrowDown':
-        event.preventDefault();
-        setFocusedIndex(prev => 
-          prev < shortcuts.length - 1 ? prev + 1 : prev
-        );
-        break;
-      case 'ArrowUp':
-        event.preventDefault();
-        setFocusedIndex(prev => prev > 0 ? prev - 1 : prev);
-        break;
-      case 'Enter':
-        if (focusedIndex >= 0) {
-          shortcuts[focusedIndex].action();
-        }
-        break;
+    if (event.key === 'Escape' && onClose) {
+      onClose();
     }
   };
 
-  if (!isVisible) return null;
+  const filteredShortcuts = shortcuts.filter(s => 
+    activeErrorCount === 0 || s.allowInErrorState
+  );
+
+  if (!visible) return null;
 
   return (
     <div
+      ref={dialogRef}
       role="dialog"
-      aria-label="Keyboard shortcuts"
+      aria-label="Keyboard Shortcuts"
+      tabIndex={-1}
       className="shortcut-helper"
       onKeyDown={handleKeyDown}
     >
       <div className="shortcut-header">
-        <h2>Keyboard Shortcuts</h2>
-        <button
-          aria-label="Close keyboard shortcuts"
-          onClick={() => {
-            setIsVisible(false);
-            onClose?.();
-          }}
-          className="close-button"
-        >
-          ×
-        </button>
-      </div>
-
-      <div className="shortcut-list" role="list">
-        {shortcuts.map((shortcut, index) => (
-          <div
-            key={shortcut.key}
-            role="listitem"
-            tabIndex={0}
-            className={`shortcut-item ${focusedIndex === index ? 'focused' : ''}`}
-            onFocus={() => setFocusedIndex(index)}
-            onClick={() => shortcut.action()}
+        <h2>Keyboard Shortcuts {stage && `for ${stage}`}</h2>
+        {onClose && (
+          <button
+            onClick={onClose}
+            aria-label="Close keyboard shortcuts"
+            className="close-button"
           >
-            <kbd className="shortcut-key">{shortcut.key}</kbd>
-            <span className="shortcut-description">{shortcut.description}</span>
+            ×
+          </button>
+        )}
+      </div>
+      
+      <div className="shortcut-grid" role="list">
+        {filteredShortcuts.map((shortcut, index) => (
+          <div
+            key={`${shortcut.key}-${index}`}
+            className="shortcut-item"
+            role="listitem"
+          >
+            <kbd aria-label={`Press ${shortcut.key}`}>{shortcut.key}</kbd>
+            <span>{shortcut.description}</span>
+            {shortcut.allowInErrorState && (
+              <span className="error-state-badge" aria-label="Available during errors">
+                Error Safe
+              </span>
+            )}
           </div>
         ))}
       </div>
 
-      {showAdvanced && (
-        <div className="advanced-shortcuts" role="region" aria-label="Advanced shortcuts">
-          <h3>Advanced Shortcuts</h3>
-          <p>These shortcuts are available in all views</p>
-          <ul>
-            <li>
-              <kbd>Ctrl + /</kbd>
-              <span>Toggle this help panel</span>
-            </li>
-            <li>
-              <kbd>Ctrl + S</kbd>
-              <span>Force save current progress</span>
-            </li>
-            <li>
-              <kbd>Ctrl + Z</kbd>
-              <span>Undo last response</span>
-            </li>
-          </ul>
-        </div>
-      )}
-
-      <div className="shortcut-footer">
+      <div className="shortcut-footer" role="complementary">
         <p>
-          Press <kbd>Tab</kbd> to navigate, <kbd>Enter</kbd> to select,
-          and <kbd>Esc</kbd> to close
+          Press <kbd>?</kbd> to toggle this help dialog at any time
+          {activeErrorCount > 0 && (
+            <span className="error-note">
+              Note: Some shortcuts are disabled during errors
+            </span>
+          )}
         </p>
       </div>
     </div>
   );
-};
+}

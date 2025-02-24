@@ -1,124 +1,122 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
-import { StorageState } from '../types';
-import { trackError } from '../utils/analytics';
-
-interface UseStorageConfig {
-  autoSave?: boolean;
-  backupInterval?: number;
-}
+import { useState, useEffect, useCallback } from 'react';
+import { IndexedDBAdapter } from '../utils/storage/IndexedDBAdapter';
+import { StorageState, Stage } from '../types';
 
 interface UseStorageResult {
   state: StorageState | null;
-  saveState: (newState: StorageState) => Promise<boolean>;
-  isLoading: boolean;
-  error: Error | null;
+  saveState: (state: StorageState) => Promise<boolean>;
+  clearState: () => Promise<void>;
+  isSessionActive: boolean;
+  timeUntilExpiration: number;
 }
 
-const STORAGE_KEY = 'octoflow';
-const DEFAULT_BACKUP_INTERVAL = 5 * 60 * 1000; // 5 minutes
+const SESSION_TIMEOUT = 24 * 60 * 60 * 1000; // 24 hours
+const storageAdapter = new IndexedDBAdapter();
 
-export const useStorage = ({
-  autoSave = true,
-  backupInterval = DEFAULT_BACKUP_INTERVAL
-}: UseStorageConfig = {}): UseStorageResult => {
+export function useStorage(): UseStorageResult {
   const [state, setState] = useState<StorageState | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-  const lastSaveAttempt = useRef<number>(Date.now());
-  const backupTimeoutRef = useRef<NodeJS.Timeout>();
+  const [lastActivity, setLastActivity] = useState<number>(Date.now());
 
-  // Load initial state
+  // Initialize storage
   useEffect(() => {
-    try {
-      const savedState = sessionStorage.getItem(STORAGE_KEY);
+    const initStorage = async () => {
+      await storageAdapter.initialize();
+      const savedState = await storageAdapter.getState('current');
       if (savedState) {
-        const parsed = JSON.parse(savedState) as StorageState;
-        setState(parsed);
+        setState(savedState);
       }
-    } catch (err) {
-      const error = err instanceof Error ? err : new Error('Failed to load state');
-      setError(error);
-      trackError(error, { context: 'useStorage.init' });
-    } finally {
-      setIsLoading(false);
-    }
+    };
+
+    initStorage();
   }, []);
 
-  // Set up periodic backup
+  // Track user activity
   useEffect(() => {
-    if (!autoSave) return;
-
-    const backup = async () => {
-      try {
-        if (state) {
-          const backupKey = `${STORAGE_KEY}_backup`;
-          await sessionStorage.setItem(backupKey, JSON.stringify(state));
-          lastSaveAttempt.current = Date.now();
-        }
-      } catch (err) {
-        const error = err instanceof Error ? err : new Error('Backup failed');
-        trackError(error, { context: 'useStorage.backup' });
-      }
+    const updateActivity = () => {
+      setLastActivity(Date.now());
     };
 
-    backupTimeoutRef.current = setInterval(backup, backupInterval);
+    const events = ['mousedown', 'keydown', 'touchstart', 'scroll'];
+    events.forEach(event => {
+      window.addEventListener(event, updateActivity);
+    });
 
     return () => {
-      if (backupTimeoutRef.current) {
-        clearInterval(backupTimeoutRef.current);
-      }
+      events.forEach(event => {
+        window.removeEventListener(event, updateActivity);
+      });
     };
-  }, [autoSave, backupInterval, state]);
+  }, []);
 
+  // Save state
   const saveState = useCallback(async (newState: StorageState): Promise<boolean> => {
     try {
-      // Merge with existing state to prevent data loss
-      const merged = {
-        ...state,
+      // Add metadata
+      const stateWithMeta = {
         ...newState,
         metadata: {
-          ...state?.metadata,
           ...newState.metadata,
-          lastSaved: new Date().toISOString()
+          lastSaved: new Date().toISOString(),
+          lastModified: Date.now()
         }
       };
 
-      await sessionStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
-      setState(merged);
-      lastSaveAttempt.current = Date.now();
-      setError(null);
-      return true;
-    } catch (err) {
-      const error = err instanceof Error ? err : new Error('Failed to save state');
-      setError(error);
-      trackError(error, { context: 'useStorage.save' });
-      return false;
-    }
-  }, [state]);
+      // Save to IndexedDB
+      await storageAdapter.saveState({
+        ...stateWithMeta,
+        id: 'current'
+      });
 
-  // Attempt to recover from backup if main storage fails
-  const recoverFromBackup = useCallback(async (): Promise<boolean> => {
-    try {
-      const backupKey = `${STORAGE_KEY}_backup`;
-      const backup = sessionStorage.getItem(backupKey);
-      if (backup) {
-        const recovered = JSON.parse(backup) as StorageState;
-        await saveState(recovered);
-        return true;
+      // Update local state
+      setState(stateWithMeta);
+
+      // Create backup for completed stages
+      if (newState.currentStage) {
+        const stage = newState.currentStage as Stage;
+        const isStageComplete = newState.stages?.[stage]?.isComplete;
+        
+        if (isStageComplete) {
+          await storageAdapter.saveState({
+            ...stateWithMeta,
+            id: `backup_${stage}`
+          });
+        }
       }
-      return false;
-    } catch (err) {
-      const error = err instanceof Error ? err : new Error('Recovery failed');
-      trackError(error, { context: 'useStorage.recover' });
+
+      return true;
+    } catch (error) {
+      console.error('Failed to save state:', error);
       return false;
     }
-  }, [saveState]);
+  }, []);
+
+  // Clear state
+  const clearState = useCallback(async () => {
+    try {
+      await storageAdapter.clearAll();
+      setState(null);
+    } catch (error) {
+      console.error('Failed to clear state:', error);
+    }
+  }, []);
+
+  // Calculate session status
+  const timeSinceLastActivity = Date.now() - lastActivity;
+  const timeUntilExpiration = Math.max(0, SESSION_TIMEOUT - timeSinceLastActivity);
+  const isSessionActive = timeUntilExpiration > 0;
+
+  // Auto-save on session expiration
+  useEffect(() => {
+    if (!isSessionActive && state) {
+      saveState(state);
+    }
+  }, [isSessionActive, state, saveState]);
 
   return {
     state,
     saveState,
-    isLoading,
-    error,
-    recoverFromBackup
+    clearState,
+    isSessionActive,
+    timeUntilExpiration
   };
-};
+}

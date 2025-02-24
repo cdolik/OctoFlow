@@ -4,15 +4,19 @@ import { ErrorProvider } from '../contexts/ErrorContext';
 import ErrorFallback from './ErrorFallback';
 import { useErrorManagement } from '../hooks/useErrorManagement';
 import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
+import { useAudioFeedback } from './AudioFeedback';
+import { AssessmentError } from '../types/errors';
 
 jest.mock('../hooks/useErrorManagement');
 jest.mock('../hooks/useKeyboardNavigation');
+jest.mock('./AudioFeedback');
 
 describe('ErrorFallback', () => {
   const mockError = new Error('Test error');
   const mockReset = jest.fn();
   const mockResetError = jest.fn();
   const mockRecoverError = jest.fn();
+  const mockPlaySound = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -24,6 +28,9 @@ describe('ErrorFallback', () => {
     });
     (useKeyboardNavigation as jest.Mock).mockReturnValue({
       shortcuts: []
+    });
+    (useAudioFeedback as jest.Mock).mockReturnValue({
+      playSound: mockPlaySound
     });
   });
 
@@ -307,5 +314,146 @@ describe('ErrorFallback', () => {
 
     const dialog = screen.getByRole('alertdialog');
     expect(document.activeElement).toBe(dialog);
+  });
+
+  it('plays error sound on mount', () => {
+    render(
+      <ErrorFallback 
+        error={new Error('Test error')}
+      />
+    );
+
+    expect(mockPlaySound).toHaveBeenCalledWith('error');
+  });
+
+  it('displays appropriate error message based on error code', () => {
+    const storageError = new Error('Storage failed') as AssessmentError;
+    storageError.code = 'STORAGE_ERROR';
+
+    const { rerender } = render(
+      <ErrorFallback error={storageError} />
+    );
+    expect(screen.getByText(/Unable to save your progress/)).toBeInTheDocument();
+
+    const networkError = new Error('Network failed') as AssessmentError;
+    networkError.code = 'NETWORK_ERROR';
+    rerender(<ErrorFallback error={networkError} />);
+    expect(screen.getByText(/Unable to connect to the server/)).toBeInTheDocument();
+  });
+
+  it('handles critical errors differently', () => {
+    const criticalError = new Error('Critical failure') as AssessmentError;
+    criticalError.severity = 'critical';
+
+    render(<ErrorFallback error={criticalError} />);
+    expect(screen.getByText('Critical Error')).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveClass('critical');
+  });
+
+  it('shows technical details when showDetails is true', () => {
+    const error = new Error('Test error');
+    const errorInfo = {
+      componentStack: '\n    at Component\n    at App'
+    };
+
+    render(
+      <ErrorFallback 
+        error={error}
+        errorInfo={errorInfo}
+        showDetails={true}
+      />
+    );
+
+    expect(screen.getByText('Technical Details')).toBeInTheDocument();
+    const details = screen.getByText(errorInfo.componentStack);
+    expect(details).toBeInTheDocument();
+  });
+
+  it('handles error recovery when error is recoverable', () => {
+    const resetError = jest.fn();
+    const recoverableError = new Error('Recoverable error') as AssessmentError;
+    recoverableError.recoverable = true;
+
+    render(
+      <ErrorFallback 
+        error={recoverableError}
+        resetError={resetError}
+      />
+    );
+
+    const retryButton = screen.getByRole('button', { name: /Try again/i });
+    fireEvent.click(retryButton);
+
+    expect(resetError).toHaveBeenCalled();
+    expect(mockPlaySound).toHaveBeenCalledWith('info');
+  });
+
+  it('does not show retry button for non-recoverable errors', () => {
+    const nonRecoverableError = new Error('Non-recoverable error') as AssessmentError;
+    nonRecoverableError.recoverable = false;
+
+    render(
+      <ErrorFallback 
+        error={nonRecoverableError}
+        resetError={jest.fn()}
+      />
+    );
+
+    expect(screen.queryByRole('button', { name: /Try again/i })).not.toBeInTheDocument();
+  });
+
+  it('provides appropriate action text based on error code', () => {
+    const validationError = new Error('Invalid input') as AssessmentError;
+    validationError.code = 'VALIDATION_ERROR';
+
+    render(
+      <ErrorFallback 
+        error={validationError}
+        resetError={jest.fn()}
+      />
+    );
+
+    expect(screen.getByRole('button', { name: /Review and correct your input/i })).toBeInTheDocument();
+  });
+
+  it('maintains proper ARIA attributes for accessibility', () => {
+    render(
+      <ErrorFallback 
+        error={new Error('Test error')}
+      />
+    );
+
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveAttribute('aria-live', 'assertive');
+  });
+
+  it('handles refresh page action', () => {
+    const locationReload = jest.fn();
+    Object.defineProperty(window, 'location', {
+      value: { reload: locationReload },
+      writable: true
+    });
+
+    render(
+      <ErrorFallback 
+        error={new Error('Test error')}
+      />
+    );
+
+    fireEvent.click(screen.getByText('Refresh Page'));
+    expect(locationReload).toHaveBeenCalled();
+  });
+
+  it('announces errors to screen readers via LiveRegion', () => {
+    const error = new Error('Accessibility test error') as AssessmentError;
+    error.severity = 'critical';
+
+    render(
+      <ErrorFallback 
+        error={error}
+      />
+    );
+
+    expect(screen.getByText('Critical error: Accessibility test error')).toBeInTheDocument();
   });
 });

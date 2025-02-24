@@ -4,6 +4,7 @@ import { useErrorManagement } from './useErrorManagement';
 import { Stage } from '../types';
 import { trackCTAClick } from '../utils/analytics';
 import { KeyboardShortcut } from '../types';
+import { useError } from '../contexts/ErrorContext';
 
 interface UseKeyboardNavigationOptions {
   stage?: Stage;
@@ -17,6 +18,8 @@ interface UseKeyboardNavigationOptions {
   enableArrowKeys?: boolean;
   focusSelector?: string;
   onShortcutTriggered?: (shortcut: KeyboardShortcut) => void;
+  allowInErrorState?: boolean;
+  onError?: (error: Error) => void;
 }
 
 interface KeyboardState {
@@ -33,6 +36,8 @@ export const useKeyboardNavigation = (options: UseKeyboardNavigationOptions = {}
     getActiveErrors
   } = useErrorManagement({ stage: options.stage });
 
+  const { error: contextError } = useError();
+
   const [state, setState] = useState<KeyboardState>({
     activeShortcut: null,
     focusIndex: -1,
@@ -41,6 +46,11 @@ export const useKeyboardNavigation = (options: UseKeyboardNavigationOptions = {}
 
   const handleKeyPress = useCallback((event: KeyboardEvent) => {
     if (options.disabled || !state.isListening) return;
+
+    // Don't handle keyboard events if there's an error, unless explicitly allowed
+    if (contextError && !options.allowInErrorState) {
+      return;
+    }
 
     // Handle error state shortcuts first
     if (activeErrorCount > 0) {
@@ -141,7 +151,8 @@ export const useKeyboardNavigation = (options: UseKeyboardNavigationOptions = {}
     clearError,
     getActiveErrors,
     state.isListening,
-    state.focusIndex
+    state.focusIndex,
+    contextError
   ]);
 
   useEffect(() => {
@@ -210,7 +221,9 @@ export const useKeyboardNavigation = (options: UseKeyboardNavigationOptions = {}
     activeShortcut: state.activeShortcut,
     focusIndex: state.focusIndex,
     isListening: state.isListening,
-    registerShortcut
+    registerShortcut,
+    isEnabled: !contextError || options.allowInErrorState,
+    clearError
   };
 };
 

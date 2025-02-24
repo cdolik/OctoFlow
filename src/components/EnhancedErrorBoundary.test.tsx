@@ -1,9 +1,14 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { HashRouter } from 'react-router-dom';
 import { EnhancedErrorBoundary } from './EnhancedErrorBoundary';
 import { ErrorProvider } from '../contexts/ErrorContext';
 import { ValidationFailedError } from '../utils/errorHandling';
+import { useAudioFeedback } from './AudioFeedback';
+import { trackError } from '../utils/analytics';
+
+jest.mock('./AudioFeedback');
+jest.mock('../utils/analytics');
 
 // Test component that throws an error
 const ThrowError: React.FC<{ error?: Error }> = ({ error }) => {
@@ -20,13 +25,19 @@ const Wrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 );
 
 describe('EnhancedErrorBoundary', () => {
+  const mockPlaySound = jest.fn();
+
   beforeEach(() => {
     jest.spyOn(console, 'error').mockImplementation(() => {});
     sessionStorage.clear();
+    (useAudioFeedback as jest.Mock).mockReturnValue({
+      playSound: mockPlaySound
+    });
   });
 
   afterEach(() => {
     jest.restoreAllMocks();
+    jest.clearAllMocks();
   });
 
   it('renders children when no error occurs', () => {
@@ -128,5 +139,110 @@ describe('EnhancedErrorBoundary', () => {
     );
 
     expect(screen.getByText(/missing responses/i)).toBeInTheDocument();
+  });
+
+  it('shows error UI and plays error sound when error occurs', () => {
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+    
+    render(
+      <Wrapper>
+        <EnhancedErrorBoundary>
+          <ThrowError message="Test error" />
+        </EnhancedErrorBoundary>
+      </Wrapper>
+    );
+
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.getByText('Test error')).toBeInTheDocument();
+    expect(mockPlaySound).toHaveBeenCalledWith('error');
+
+    consoleError.mockRestore();
+  });
+
+  it('tracks errors with analytics', () => {
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+    
+    render(
+      <Wrapper>
+        <EnhancedErrorBoundary component="TestComponent">
+          <ThrowError message="Analytics test error" />
+        </EnhancedErrorBoundary>
+      </Wrapper>
+    );
+
+    expect(trackError).toHaveBeenCalledWith(
+      expect.any(Error),
+      expect.objectContaining({
+        component: 'TestComponent'
+      })
+    );
+
+    consoleError.mockRestore();
+  });
+
+  it('handles retry attempts with audio feedback', () => {
+    const mockOnRecover = jest.fn();
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    render(
+      <Wrapper>
+        <EnhancedErrorBoundary onRecover={mockOnRecover} maxRetries={2}>
+          <ThrowError message="Retry test error" />
+        </EnhancedErrorBoundary>
+      </Wrapper>
+    );
+
+    // First retry
+    fireEvent.click(screen.getByText('Try Again'));
+    expect(mockPlaySound).toHaveBeenCalledWith('info');
+    expect(mockOnRecover).toHaveBeenCalled();
+
+    // Second retry (max reached)
+    act(() => {
+      // Simulate error after retry
+      render(
+        <Wrapper>
+          <EnhancedErrorBoundary onRecover={mockOnRecover} maxRetries={2}>
+            <ThrowError message="Retry test error" />
+          </EnhancedErrorBoundary>
+        </Wrapper>
+      );
+    });
+
+    fireEvent.click(screen.getByText('Try Again'));
+    expect(screen.getByText(/Maximum retry attempts reached/)).toBeInTheDocument();
+    expect(mockPlaySound).toHaveBeenLastCalledWith('error');
+
+    consoleError.mockRestore();
+  });
+
+  it('maintains retry count across retries', () => {
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    render(
+      <Wrapper>
+        <EnhancedErrorBoundary maxRetries={3}>
+          <ThrowError message="Retry count test error" />
+        </EnhancedErrorBoundary>
+      </Wrapper>
+    );
+
+    const retryButton = screen.getByText('Try Again');
+    expect(retryButton).toHaveAttribute('aria-label', 'Retry (Attempt 1 of 3)');
+
+    fireEvent.click(retryButton);
+    
+    // Re-render to simulate error after retry
+    render(
+      <Wrapper>
+        <EnhancedErrorBoundary maxRetries={3}>
+          <ThrowError message="Retry count test error" />
+        </EnhancedErrorBoundary>
+      </Wrapper>
+    );
+
+    expect(screen.getByText('Try Again')).toHaveAttribute('aria-label', 'Retry (Attempt 2 of 3)');
+
+    consoleError.mockRestore();
   });
 });

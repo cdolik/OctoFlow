@@ -1,138 +1,119 @@
-import { Stage, AssessmentState } from '../../types';
-import storage from './indexedDB';
+import { StorageState, AssessmentState } from '../../types';
+import { validateStorageState } from '../flowValidator';
 
-class StorageManager {
-  private hasIndexedDB: boolean;
+const STORAGE_KEY = 'octoflow';
+const BACKUP_KEY = 'octoflow_backup';
+const CURRENT_VERSION = '1.1';
 
-  constructor() {
-    this.hasIndexedDB = this.checkIndexedDBSupport();
-  }
+export class StorageManager {
+  private static instance: StorageManager;
 
-  private checkIndexedDBSupport(): boolean {
-    try {
-      return 'indexedDB' in window;
-    } catch {
-      return false;
+  private constructor() {}
+
+  static getInstance(): StorageManager {
+    if (!StorageManager.instance) {
+      StorageManager.instance = new StorageManager();
     }
+    return StorageManager.instance;
   }
 
   async saveState(state: AssessmentState): Promise<boolean> {
     try {
-      // Always try to save to session storage first for quick access
-      sessionStorage.setItem('octoflow', JSON.stringify(state));
-
-      // If IndexedDB is available, save there as backup
-      if (this.hasIndexedDB) {
-        await storage.saveState(state);
+      const currentState = await this.getState();
+      if (currentState) {
+        await this.backup(currentState);
       }
 
+      const stateWithMetadata: AssessmentState = {
+        ...state,
+        version: CURRENT_VERSION,
+        metadata: {
+          ...state.metadata,
+          lastSaved: new Date().toISOString(),
+          timeSpent: state.metadata.timeSpent || 0,
+          attemptCount: (state.metadata.attemptCount || 0) + 1
+        }
+      };
+
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(stateWithMetadata));
       return true;
-    } catch (error) {
-      console.error('Storage error:', error);
+    } catch {
       return false;
     }
   }
 
   async getState(): Promise<AssessmentState | null> {
     try {
-      // Try session storage first
-      const sessionData = sessionStorage.getItem('octoflow');
-      if (sessionData) {
-        return JSON.parse(sessionData);
+      const stored = sessionStorage.getItem(STORAGE_KEY);
+      if (!stored) {
+        return this.getBackup();
       }
 
-      // Fall back to IndexedDB if available
-      if (this.hasIndexedDB) {
-        return await storage.getState();
-      }
-
-      return null;
-    } catch (error) {
-      console.error('Error retrieving state:', error);
+      const state = JSON.parse(stored);
+      return validateStorageState(state) ? state : null;
+    } catch {
       return null;
     }
   }
 
-  async createBackup(): Promise<boolean> {
+  private async backup(state: AssessmentState): Promise<void> {
     try {
-      const state = await this.getState();
-      if (!state) return false;
-
-      if (this.hasIndexedDB) {
-        await storage.saveBackup(state);
-      }
-
-      // Also save to session storage with timestamp
-      const backup = {
+      sessionStorage.setItem(BACKUP_KEY, JSON.stringify({
         ...state,
-        timestamp: Date.now(),
-        isBackup: true
-      };
-      sessionStorage.setItem('octoflow_backup', JSON.stringify(backup));
-
-      return true;
-    } catch (error) {
-      console.error('Backup creation failed:', error);
-      return false;
-    }
-  }
-
-  async restoreFromBackup(): Promise<AssessmentState | null> {
-    try {
-      // Try IndexedDB first
-      if (this.hasIndexedDB) {
-        const backup = await storage.getLatestBackup();
-        if (backup) return backup;
-      }
-
-      // Fall back to session storage backup
-      const sessionBackup = sessionStorage.getItem('octoflow_backup');
-      if (sessionBackup) {
-        return JSON.parse(sessionBackup);
-      }
-
-      return null;
-    } catch (error) {
-      console.error('Backup restoration failed:', error);
-      return null;
-    }
-  }
-
-  async clearStorage(): Promise<void> {
-    try {
-      sessionStorage.clear();
-      
-      if (this.hasIndexedDB) {
-        await storage.clearOldBackups();
-      }
-    } catch (error) {
-      console.error('Storage cleanup failed:', error);
-    }
-  }
-
-  async migrateToLatestVersion(currentState: AssessmentState): Promise<AssessmentState> {
-    const VERSION = '1.1';
-    
-    if (!currentState.version || currentState.version !== VERSION) {
-      // Create backup before migration
-      await this.createBackup();
-
-      // Perform migration
-      const migratedState: AssessmentState = {
-        ...currentState,
-        version: VERSION,
         metadata: {
-          ...currentState.metadata,
-          migrationDate: new Date().toISOString(),
-          previousVersion: currentState.version || '1.0'
+          ...state.metadata,
+          lastBackup: new Date().toISOString()
         }
-      };
+      }));
+    } catch {
+      // Ignore backup failures
+    }
+  }
 
-      // Save migrated state
-      await this.saveState(migratedState);
-      return migratedState;
+  private async getBackup(): Promise<AssessmentState | null> {
+    try {
+      const backup = sessionStorage.getItem(BACKUP_KEY);
+      if (!backup) return null;
+
+      const state = JSON.parse(backup);
+      return validateStorageState(state) ? state : null;
+    } catch {
+      return null;
+    }
+  }
+
+  clearStorage(): void {
+    try {
+      sessionStorage.removeItem(STORAGE_KEY);
+      sessionStorage.removeItem(BACKUP_KEY);
+    } catch {
+      // Ignore cleanup errors
+    }
+  }
+
+  async migrateState(oldState: AssessmentState): Promise<AssessmentState> {
+    if (!oldState.version || oldState.version === CURRENT_VERSION) {
+      return oldState;
     }
 
-    return currentState;
+    // Perform version-specific migrations
+    const migratedState: AssessmentState = {
+      ...oldState,
+      version: CURRENT_VERSION,
+      metadata: {
+        ...oldState.metadata,
+        lastTransition: new Date().toISOString(),
+        timeSpent: oldState.metadata.timeSpent || 0,
+        attemptCount: oldState.metadata.attemptCount || 1
+      },
+      progress: {
+        ...oldState.progress,
+        isComplete: oldState.progress.isComplete || false
+      }
+    };
+
+    // Save migrated state
+    await this.saveState(migratedState);
+    return migratedState;
   }
 }

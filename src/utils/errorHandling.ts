@@ -6,7 +6,20 @@ import {
   StateError,
   ErrorSeverity
 } from '../types/errors';
-import { trackErrorWithRecovery } from './analytics';
+import { trackErrorWithRecovery, trackError } from './analytics';
+import { StorageState } from '../types';
+
+export interface ErrorHandlingOptions {
+  maxRetries?: number;
+  retryDelay?: number;
+  recoveryFn?: () => Promise<boolean>;
+}
+
+export interface ErrorResult {
+  handled: boolean;
+  recovered?: boolean;
+  error: Error;
+}
 
 class BaseAssessmentError extends Error implements AssessmentError {
   severity: ErrorSeverity;
@@ -95,28 +108,69 @@ export class StateTransitionError extends BaseAssessmentError implements StateEr
 }
 
 export const handleError = async (
-  error: AssessmentError,
-  recover?: () => Promise<boolean>
-): Promise<boolean> => {
-  // Track the error
-  trackErrorWithRecovery(error, !!recover, false);
+  error: Error,
+  options: ErrorHandlingOptions = {}
+): Promise<ErrorResult> => {
+  const {
+    maxRetries = 3,
+    retryDelay = 1000,
+    recoveryFn
+  } = options;
 
-  // Attempt recovery if possible
-  if (error.recoverable && recover) {
+  trackError(error);
+
+  if (!recoveryFn) {
+    return {
+      handled: true,
+      recovered: false,
+      error
+    };
+  }
+
+  let retries = 0;
+  while (retries < maxRetries) {
     try {
-      const recovered = await recover();
-      trackErrorWithRecovery(error, true, recovered);
-      return recovered;
-    } catch (recoveryError) {
-      console.error('Recovery failed:', recoveryError);
-      trackErrorWithRecovery(error, true, false);
-      return false;
+      const recovered = await recoveryFn();
+      if (recovered) {
+        return {
+          handled: true,
+          recovered: true,
+          error
+        };
+      }
+    } catch (retryError) {
+      trackError(retryError as Error);
+    }
+
+    retries++;
+    if (retries < maxRetries) {
+      await new Promise(resolve => setTimeout(resolve, retryDelay));
     }
   }
 
-  return false;
+  return {
+    handled: true,
+    recovered: false,
+    error
+  };
 };
 
 export const isAssessmentError = (error: unknown): error is AssessmentError => {
   return error instanceof BaseAssessmentError;
 };
+
+export function validateStorageState(state: unknown): state is StorageState {
+  if (!state || typeof state !== 'object') {
+    return false;
+  }
+
+  const typedState = state as Partial<StorageState>;
+
+  return !!(
+    typedState.version &&
+    typedState.responses &&
+    typedState.metadata?.lastSaved &&
+    typeof typedState.metadata.timeSpent === 'number' &&
+    typeof typedState.metadata.attemptCount === 'number'
+  );
+}

@@ -5,12 +5,24 @@ interface TimeTrackerOptions {
   onTimeUpdate?: (time: number) => void;
   minTime?: number;
   idleTimeout?: number;
+  /** Optional callback when timer becomes idle */
+  onIdle?: () => void;
+  /** Optional callback when timer resumes from idle */
+  onResume?: () => void;
+}
+
+interface TimeTrackerState {
+  elapsedTime: number;
+  isIdle: boolean;
+  canProgress: boolean;
 }
 
 export const useTimeTracker = ({
   onTimeUpdate,
   minTime = 1000, // Minimum time in ms before allowing progression
-  idleTimeout = 30000 // Time in ms before considering user idle
+  idleTimeout = 30000, // Time in ms before considering user idle
+  onIdle,
+  onResume
 }: TimeTrackerOptions = {}) => {
   const [elapsedTime, setElapsedTime] = useState(0);
   const [isIdle, setIsIdle] = useState(false);
@@ -23,14 +35,19 @@ export const useTimeTracker = ({
       clearTimeout(idleTimerRef.current);
     }
 
+    if (isIdle) {
+      onResume?.();
+    }
+
     setIsIdle(false);
     enableShortcuts();
 
     idleTimerRef.current = setTimeout(() => {
       setIsIdle(true);
       disableShortcuts();
+      onIdle?.();
     }, idleTimeout);
-  }, [idleTimeout, disableShortcuts, enableShortcuts]);
+  }, [idleTimeout, disableShortcuts, enableShortcuts, isIdle, onIdle, onResume]);
 
   useEffect(() => {
     const updateTimer = () => {
@@ -87,10 +104,14 @@ export const useTimeTracker = ({
 
   const canProgress = elapsedTime >= minTime;
 
-  return {
+  const state: TimeTrackerState = {
     elapsedTime,
     isIdle,
-    canProgress,
+    canProgress
+  };
+
+  return {
+    ...state,
     reset,
     pause,
     resume

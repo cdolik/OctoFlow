@@ -1,146 +1,152 @@
-import { Stage, AssessmentState } from '../types';
-import { trackError } from './analytics';
-
-interface ErrorContext {
-  stage?: Stage;
-  responses?: Record<string, number>;
-  metadata?: Record<string, any>;
-  timestamp: number;
-}
+import { Stage } from '../types';
 
 interface ErrorReport {
-  id: string;
   error: Error;
-  context: ErrorContext;
+  componentStack?: string;
+  stage?: Stage;
+  timestamp: string;
+  userPreferences?: Record<string, unknown>;
   recoveryAttempts: number;
-  resolved: boolean;
-  timestamp: number;
 }
 
-class ErrorReporter {
-  private static instance: ErrorReporter;
-  private errors: Map<string, ErrorReport> = new Map();
-  private errorCallbacks: Set<(report: ErrorReport) => void> = new Set();
+interface ErrorMetrics {
+  totalErrors: number;
+  recoverableErrors: number;
+  criticalErrors: number;
+  recoveryRate: number;
+}
+
+class ErrorReportingService {
+  private static instance: ErrorReportingService;
+  private errors: ErrorReport[] = [];
+  private readonly MAX_STORED_ERRORS = 50;
 
   private constructor() {
-    window.addEventListener('unhandledrejection', this.handleUnhandledRejection);
+    // Initialize error storage
+    this.loadStoredErrors();
+    window.addEventListener('unload', () => this.persistErrors());
   }
 
-  static getInstance(): ErrorReporter {
-    if (!ErrorReporter.instance) {
-      ErrorReporter.instance = new ErrorReporter();
+  static getInstance(): ErrorReportingService {
+    if (!ErrorReportingService.instance) {
+      ErrorReportingService.instance = new ErrorReportingService();
     }
-    return ErrorReporter.instance;
+    return ErrorReportingService.instance;
   }
 
-  private generateErrorId(): string {
-    return `error-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-  }
-
-  private handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-    const error = event.reason instanceof Error ? event.reason : new Error(String(event.reason));
-    this.reportError(error);
-  };
-
-  reportError(error: Error, context: Partial<ErrorContext> = {}): string {
-    const errorId = this.generateErrorId();
-    const report: ErrorReport = {
-      id: errorId,
+  async reportError(
+    error: Error,
+    componentStack?: string,
+    stage?: Stage,
+    userPreferences?: Record<string, unknown>
+  ): Promise<void> {
+    const errorReport: ErrorReport = {
       error,
-      context: {
-        timestamp: Date.now(),
-        ...context
-      },
-      recoveryAttempts: 0,
-      resolved: false,
-      timestamp: Date.now()
+      componentStack,
+      stage,
+      timestamp: new Date().toISOString(),
+      userPreferences,
+      recoveryAttempts: 0
     };
 
-    this.errors.set(errorId, report);
-    this.notifyErrorCallbacks(report);
+    this.errors.unshift(errorReport);
 
-    trackError('error_reported', {
-      errorId,
-      message: error.message,
-      stage: context.stage,
-      timestamp: report.timestamp
-    });
+    // Keep only recent errors
+    if (this.errors.length > this.MAX_STORED_ERRORS) {
+      this.errors = this.errors.slice(0, this.MAX_STORED_ERRORS);
+    }
 
-    return errorId;
-  }
-
-  private notifyErrorCallbacks(report: ErrorReport): void {
-    this.errorCallbacks.forEach(callback => {
-      try {
-        callback(report);
-      } catch (error) {
-        console.error('Error in error callback:', error);
-      }
-    });
-  }
-
-  updateErrorStatus(errorId: string, updates: Partial<ErrorReport>): void {
-    const report = this.errors.get(errorId);
-    if (!report) return;
-
-    const updatedReport = {
-      ...report,
-      ...updates,
-      timestamp: Date.now()
-    };
-
-    this.errors.set(errorId, updatedReport);
-    this.notifyErrorCallbacks(updatedReport);
-  }
-
-  markErrorResolved(errorId: string): void {
-    this.updateErrorStatus(errorId, { resolved: true });
-  }
-
-  incrementRecoveryAttempt(errorId: string): void {
-    const report = this.errors.get(errorId);
-    if (!report) return;
-
-    this.updateErrorStatus(errorId, {
-      recoveryAttempts: report.recoveryAttempts + 1
-    });
-  }
-
-  getError(errorId: string): ErrorReport | undefined {
-    return this.errors.get(errorId);
-  }
-
-  getActiveErrors(): ErrorReport[] {
-    return Array.from(this.errors.values())
-      .filter(report => !report.resolved)
-      .sort((a, b) => b.timestamp - a.timestamp);
-  }
-
-  subscribeToErrors(callback: (report: ErrorReport) => void): () => void {
-    this.errorCallbacks.add(callback);
-    return () => this.errorCallbacks.delete(callback);
-  }
-
-  clearResolvedErrors(): void {
-    for (const [id, report] of this.errors.entries()) {
-      if (report.resolved) {
-        this.errors.delete(id);
-      }
+    // Persist immediately for critical errors
+    if (this.isCriticalError(error)) {
+      await this.persistErrors();
+      this.notifyDevTeam(errorReport);
     }
   }
 
-  getErrorsForStage(stage: Stage): ErrorReport[] {
-    return Array.from(this.errors.values())
-      .filter(report => report.context.stage === stage)
-      .sort((a, b) => b.timestamp - a.timestamp);
+  async updateRecoveryAttempts(error: Error): Promise<void> {
+    const errorReport = this.errors.find(
+      report => report.error.message === error.message
+    );
+
+    if (errorReport) {
+      errorReport.recoveryAttempts++;
+      await this.persistErrors();
+    }
   }
 
-  dispose(): void {
-    window.removeEventListener('unhandledrejection', this.handleUnhandledRejection);
-    this.errors.clear();
-    this.errorCallbacks.clear();
+  getErrorMetrics(): ErrorMetrics {
+    const totalErrors = this.errors.length;
+    const criticalErrors = this.errors.filter(
+      report => this.isCriticalError(report.error)
+    ).length;
+    const recoveredErrors = this.errors.filter(
+      report => report.recoveryAttempts > 0 && 
+                report.error.name !== 'RecoveryFailedError'
+    ).length;
+
+    return {
+      totalErrors,
+      recoverableErrors: totalErrors - criticalErrors,
+      criticalErrors,
+      recoveryRate: totalErrors ? (recoveredErrors / totalErrors) * 100 : 0
+    };
+  }
+
+  getRecentErrors(limit = 10): ErrorReport[] {
+    return this.errors.slice(0, limit);
+  }
+
+  async clearErrors(): Promise<void> {
+    this.errors = [];
+    await this.persistErrors();
+  }
+
+  private isCriticalError(error: Error): boolean {
+    return (
+      error.name === 'SecurityError' ||
+      error.name === 'QuotaExceededError' ||
+      error.name === 'RecoveryFailedError' ||
+      error instanceof TypeError ||
+      error.message.includes('critical')
+    );
+  }
+
+  private async persistErrors(): Promise<void> {
+    try {
+      localStorage.setItem(
+        'errorReports',
+        JSON.stringify(this.errors)
+      );
+    } catch (error) {
+      console.error('Failed to persist error reports:', error);
+    }
+  }
+
+  private loadStoredErrors(): void {
+    try {
+      const storedErrors = localStorage.getItem('errorReports');
+      if (storedErrors) {
+        this.errors = JSON.parse(storedErrors);
+      }
+    } catch (error) {
+      console.error('Failed to load stored error reports:', error);
+    }
+  }
+
+  private notifyDevTeam(errorReport: ErrorReport): void {
+    // In production, this would send to your error tracking service
+    if (process.env.NODE_ENV === 'production') {
+      console.error(
+        'Critical Error:',
+        errorReport.error.message,
+        '\nStack:', errorReport.error.stack,
+        '\nComponent Stack:', errorReport.componentStack,
+        '\nStage:', errorReport.stage,
+        '\nTimestamp:', errorReport.timestamp
+      );
+    }
   }
 }
 
-export const errorReporter = ErrorReporter.getInstance();
-export default errorReporter;
+export const errorReportingService = ErrorReportingService.getInstance();
+export default errorReportingService;

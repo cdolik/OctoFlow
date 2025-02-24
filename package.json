@@ -2,7 +2,7 @@
   "name": "octoflow",
   "version": "0.1.0",
   "private": true,
-  "homepage": "https://cdolik.github.io/OctoFlow/",
+  "homepage": "https://octoflow.github.io/OctoFlow/",
   "dependencies": {
     "@testing-library/react": "^13.4.0",
     "@types/react": "^18.2.0",
@@ -48,16 +48,17 @@
   },
   "scripts": {
     "preinstall": "npx npm-force-resolutions",
-    "predeploy": "npm run build",
-    "deploy": "gh-pages -d build",
+    "predeploy": "npm run verify",
+    "deploy": "gh-pages -b gh-pages -d build",
+    "verify": "npm run typecheck && npm run test && npm run build",
     "start": "react-scripts start",
     "build": "react-scripts build",
-    "test": "react-scripts test",
+    "test": "react-scripts test --watchAll=false",
+    "test:watch": "react-scripts test",
     "eject": "react-scripts eject",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext .js,.jsx,.ts,.tsx",
-    "lint:fix": "eslint src --ext .js,.jsx,.ts,.tsx --fix",
-    "install": "npm install --legacy-peer-deps"
+    "lint:fix": "eslint src --ext .js,.jsx,.ts,.tsx --fix"
   },
   "eslintConfig": {
     "extends": [

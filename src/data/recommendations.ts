@@ -1,116 +1,84 @@
-import { Stage, Recommendation } from '../types';
+import { Recommendation, Stage } from '../types';
 
-export const RECOMMENDATIONS: Record<Stage, Recommendation[]> = {
+export const recommendations: Record<Stage, Recommendation[]> = {
   'pre-seed': [
     {
-      title: 'Set up branch protection rules',
-      description: 'Enable basic branch protection for your main branch to prevent direct pushes.',
-      priority: 'high',
-      effort: 'low',
+      id: 'bp-1',
+      title: 'Enable Branch Protection',
+      description: 'Set up branch protection rules for your main branch',
+      effort: 'Low',
+      impact: 1,
       category: 'security',
-      links: [
-        {
-          text: 'About protected branches',
-          url: 'https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/defining-the-mergeability-of-pull-requests/about-protected-branches'
-        }
-      ]
+      stage: 'pre-seed'
     },
     {
-      title: 'Implement basic CI workflow',
-      description: 'Set up a simple GitHub Actions workflow for continuous integration.',
-      priority: 'high',
-      effort: 'medium',
+      id: 'ci-1',
+      title: 'Implement Basic CI',
+      description: 'Set up basic continuous integration with GitHub Actions',
+      effort: 'Medium',
+      impact: 0.8,
       category: 'automation',
-      links: [
-        {
-          text: 'Quickstart for GitHub Actions',
-          url: 'https://docs.github.com/en/actions/quickstart'
-        }
-      ]
+      stage: 'pre-seed'
     }
   ],
   'seed': [
     {
-      title: 'Configure CODEOWNERS',
-      description: 'Define code ownership to automatically request reviews from the right team members.',
-      priority: 'medium',
-      effort: 'low',
-      category: 'workflow',
-      links: [
-        {
-          text: 'About code owners',
-          url: 'https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners'
-        }
-      ]
+      id: 'sec-1',
+      title: 'Enable Code Scanning',
+      description: 'Set up code scanning with CodeQL',
+      effort: 'Low',
+      impact: 0.9,
+      category: 'security',
+      stage: 'seed'
     },
     {
-      title: 'Enable Dependabot',
-      description: 'Automate dependency updates and security alerts.',
-      priority: 'high',
-      effort: 'low',
-      category: 'security',
-      links: [
-        {
-          text: 'Configuring Dependabot security updates',
-          url: 'https://docs.github.com/en/code-security/dependabot/dependabot-security-updates/configuring-dependabot-security-updates'
-        }
-      ]
+      id: 'auto-1',
+      title: 'Automate Dependency Updates',
+      description: 'Configure Dependabot for automated dependency management',
+      effort: 'Low',
+      impact: 0.7,
+      category: 'automation',
+      stage: 'seed'
     }
   ],
   'series-a': [
     {
-      title: 'Implement advanced CI/CD',
-      description: 'Set up comprehensive CI/CD pipelines with staging environments.',
-      priority: 'high',
-      effort: 'high',
-      category: 'automation',
-      links: [
-        {
-          text: 'Using environments for deployment',
-          url: 'https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment'
-        }
-      ]
+      id: 'gov-1',
+      title: 'Implement CODEOWNERS',
+      description: 'Set up CODEOWNERS file for automated code review assignments',
+      effort: 'High',
+      impact: 0.9,
+      category: 'governance',
+      stage: 'series-a'
     },
     {
-      title: 'Configure security scanning',
-      description: 'Enable code scanning with CodeQL and secret scanning.',
-      priority: 'high',
-      effort: 'medium',
+      id: 'sec-2',
+      title: 'Advanced Security Features',
+      description: 'Enable secret scanning and dependency review',
+      effort: 'Medium',
+      impact: 0.8,
       category: 'security',
-      links: [
-        {
-          text: 'About code scanning',
-          url: 'https://docs.github.com/en/code-security/code-scanning/automatically-scanning-your-code-for-vulnerabilities-and-errors/about-code-scanning'
-        }
-      ]
+      stage: 'series-a'
     }
   ],
   'series-b': [
     {
-      title: 'Implement compliance controls',
-      description: 'Set up audit logging and compliance reporting.',
-      priority: 'high',
-      effort: 'high',
-      category: 'governance',
-      links: [
-        {
-          text: 'About audit logging',
-          url: 'https://docs.github.com/en/organizations/keeping-your-organization-secure/managing-security-settings-for-your-organization/reviewing-the-audit-log-for-your-organization'
-        }
-      ]
+      id: 'ent-1',
+      title: 'Enterprise Security Controls',
+      description: 'Implement enterprise-grade security policies',
+      effort: 'High',
+      impact: 1,
+      category: 'security',
+      stage: 'series-b'
     },
     {
-      title: 'Advanced workflow optimization',
-      description: 'Implement custom GitHub Apps and advanced automation.',
-      priority: 'medium',
-      effort: 'high',
-      category: 'optimization',
-      links: [
-        {
-          text: 'About GitHub Apps',
-          url: 'https://docs.github.com/en/developers/apps/getting-started-with-apps/about-apps'
-        }
-      ]
+      id: 'auto-2',
+      title: 'Full CI/CD Automation',
+      description: 'Implement comprehensive CI/CD pipelines',
+      effort: 'High',
+      impact: 0.9,
+      category: 'automation',
+      stage: 'series-b'
     }
   ]
 };

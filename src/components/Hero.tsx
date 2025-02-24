@@ -1,12 +1,12 @@
 import React from 'react';
+import { Stage } from '../types';
 import './styles.css';
 
-interface HeroProps {
-  onStageSelect: (stage: string) => void;
-  onSelect: (value: string) => void; // standardized prop for selection
+export interface HeroProps {
+  onSelect: (stage: Stage) => void;
 }
 
-const Hero: React.FC<HeroProps> = ({ onStageSelect, onSelect: _onSelect }) => {
+export function Hero({ onSelect }: HeroProps): JSX.Element {
   return (
     <section className="hero" role="banner">
       <h1>Engineering Health Check for Startups</h1>
@@ -21,13 +21,12 @@ const Hero: React.FC<HeroProps> = ({ onStageSelect, onSelect: _onSelect }) => {
         <li>🔒 No tracking – Your data stays private</li>
         <li>🚀 Get GitHub-optimized results</li>
       </ul>
-      <button 
-        className="cta-button" 
-        onClick={() => onStageSelect('start')}
-        aria-label="Start assessment"
-      >
-        Start Free Checkup →
-      </button>
+      <div className="stage-selection">
+        <button onClick={() => onSelect('pre-seed')}>Pre-Seed Stage</button>
+        <button onClick={() => onSelect('seed')}>Seed Stage</button>
+        <button onClick={() => onSelect('series-a')}>Series A</button>
+        <button onClick={() => onSelect('series-b')}>Series B</button>
+      </div>
       <div className="trust-badges" role="complementary">
         <span>Based on:</span>
         <img src="/badges/well-architected-badge.svg" alt="GitHub Well-Architected" />

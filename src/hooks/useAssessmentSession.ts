@@ -1,164 +1,97 @@
-import { useState, useCallback, useEffect } from 'react';
-import { Stage } from '../types';
-import { 
-  AssessmentState, 
-  AssessmentResponse, 
-  AssessmentSaveStatus,
-  AssessmentValidation 
-} from '../types/assessment';
+import { useState, useCallback } from 'react';
+import { AssessmentState } from '../types';
 import { useStorage } from './useStorage';
-import { validateQuestionResponses } from '../utils/questionFiltering';
-import { questions } from '../data/questions';
-import { trackError, trackAssessmentComplete } from '../utils/analytics';
+import { useError } from '../contexts/ErrorContext';
+import { trackAssessmentComplete } from '../utils/analytics';
 
-interface UseAssessmentSessionProps {
-  initialStage?: Stage;
-  autoSaveInterval?: number;
-  onValidationError?: (error: string) => void;
+export interface UseAssessmentSessionProps {
+  initialData?: AssessmentState;
 }
 
-export const useAssessmentSession = ({
-  initialStage,
-  autoSaveInterval = 5000,
-  onValidationError
-}: UseAssessmentSessionProps = {}) => {
+export interface AssessmentSaveStatus {
+  status: 'idle' | 'saving' | 'saved' | 'error';
+  lastSaved?: string;
+  error?: Error;
+}
+
+export function useAssessmentSession(props?: UseAssessmentSessionProps) {
   const [saveStatus, setSaveStatus] = useState<AssessmentSaveStatus>({ 
-    status: 'saved', 
-    timestamp: Date.now() 
+    status: 'idle' 
   });
-
-  const { 
-    state, 
-    saveState, 
-    isLoading,
-    error: storageError,
-    recoverFromBackup 
-  } = useStorage({
-    autoSave: true,
-    backupInterval: autoSaveInterval
-  });
-
-  const validateSession = useCallback(async (
-    currentState: AssessmentState
-  ): Promise<AssessmentValidation> => {
-    try {
-      const validation = await validateQuestionResponses(
-        currentState.responses,
-        questions,
-        currentState.stage
-      );
-
-      return {
-        isValid: validation.isValid,
-        errors: validation.error ? [validation.error] : [],
-        warnings: [],
-        missingRequired: validation.details || [],
-        invalidScores: []
-      };
-    } catch (error) {
-      trackError(error instanceof Error ? error : new Error('Validation failed'));
-      return {
-        isValid: false,
-        errors: ['Session validation failed'],
-        warnings: [],
-        missingRequired: [],
-        invalidScores: []
-      };
-    }
-  }, []);
+  const { state, saveState, isLoading, error } = useStorage();
+  const { handleError } = useError();
 
   const saveResponse = useCallback(async (
-    questionId: string,
+    questionId: number,
     value: number,
     timeSpent: number
   ): Promise<boolean> => {
     if (!state) return false;
 
     try {
-      setSaveStatus({ status: 'saving' });
-
-      const response: AssessmentResponse = {
-        value,
-        timestamp: Date.now(),
-        questionId,
-        category: questions.find(q => q.id === questionId)?.category || '',
-        timeSpent
-      };
-
       const newState: AssessmentState = {
         ...state,
         responses: {
           ...state.responses,
-          [questionId]: response
+          [questionId]: value
         },
         metadata: {
           ...state.metadata,
-          lastInteraction: Date.now()
+          lastSaved: new Date().toISOString(),
+          timeSpent: state.metadata.timeSpent + timeSpent
         }
       };
 
       const success = await saveState(newState);
-      
-      setSaveStatus({ 
+      setSaveStatus({
         status: success ? 'saved' : 'error',
-        ...(success ? { timestamp: Date.now() } : { error: new Error('Save failed') })
+        lastSaved: success ? new Date().toISOString() : undefined
       });
 
       return success;
-    } catch (error) {
-      const saveError = error instanceof Error ? error : new Error('Save failed');
-      setSaveStatus({ status: 'error', error: saveError });
-      trackError(saveError);
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error('Failed to save response');
+      setSaveStatus({ status: 'error', error });
+      handleError(error);
       return false;
     }
-  }, [state, saveState]);
+  }, [state, saveState, handleError]);
 
   const completeSession = useCallback(async (): Promise<boolean> => {
     if (!state) return false;
 
     try {
-      const validation = await validateSession(state);
-      if (!validation.isValid) {
-        onValidationError?.(validation.errors.join(', '));
-        return false;
-      }
-
-      trackAssessmentComplete(state.responses, state.stage);
-      return true;
-    } catch (error) {
-      trackError(error instanceof Error ? error : new Error('Session completion failed'));
-      return false;
-    }
-  }, [state, validateSession, onValidationError]);
-
-  useEffect(() => {
-    if (initialStage && !state) {
-      saveState({
-        stage: initialStage,
-        responses: {},
+      // Mark session as complete in state
+      const newState: AssessmentState = {
+        ...state,
         progress: {
-          questionIndex: 0,
-          totalQuestions: questions.filter(q => q.stages.includes(initialStage)).length,
-          isComplete: false,
-          lastUpdated: new Date().toISOString()
+          ...state.progress,
+          isComplete: true
         },
         metadata: {
-          startTime: Date.now(),
-          lastInteraction: Date.now(),
-          completedCategories: [],
-          categoryScores: {}
+          ...state.metadata,
+          lastSaved: new Date().toISOString()
         }
-      });
+      };
+
+      const success = await saveState(newState);
+      if (success) {
+        trackAssessmentComplete(state.responses, state.currentStage!);
+      }
+      return success;
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error('Failed to complete session');
+      handleError(error);
+      return false;
     }
-  }, [initialStage, state, saveState]);
+  }, [state, saveState, handleError]);
 
   return {
     state,
     saveStatus,
     isLoading,
-    error: storageError,
+    error,
     saveResponse,
-    completeSession,
-    recoverFromBackup
+    completeSession
   };
-};
+}

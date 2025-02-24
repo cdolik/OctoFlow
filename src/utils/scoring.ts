@@ -1,106 +1,74 @@
 import { Stage, Question, StageDefinition, ScoreResult } from '../types';
-import { categories } from '../data/categories';
-import { getStageConfig } from '../data/StageConfig';
-import { questions } from '../data/questions';
-import { filterQuestionsByStage, getQuestionWeight } from './questionFiltering';
 
-interface CategoryScore {
+export interface CategoryScore {
   score: number;
-  weight: number;
-  questionCount: number;
+  questions: number;
+  maxScore: number;
 }
 
-export const calculateStageScores = (
+export function calculateScores(
+  responses: Record<string, number>,
+  questions: Question[],
   stage: Stage,
-  responses: Record<string, number>
-): ScoreResult => {
-  const stageConfig = getStageConfig(stage);
-  const categoryScores: Record<string, number> = {};
-  const categoryWeights: Record<string, CategoryScore> = {};
+  stageConfig: StageDefinition
+): ScoreResult {
+  const categoryScores: Record<string, CategoryScore> = {};
+  const validQuestions = questions.filter(q => q.stages.includes(stage));
 
-  // Initialize category weights and scores
-  categories.forEach(category => {
-    categoryWeights[category.id] = {
-      score: 0,
-      weight: category.weight || 1,
-      questionCount: 0
-    };
-    categoryScores[category.id] = 0;
-  });
-
-  // Filter questions for this stage
-  const stageQuestions = filterQuestionsByStage(questions, stage);
-
-  // Calculate scores per category
-  stageQuestions.forEach(question => {
+  // Calculate raw scores by category
+  validQuestions.forEach(question => {
     const response = responses[question.id];
-    if (response && question.category) {
-      const weight = getQuestionWeight(question, stage);
-      categoryWeights[question.category].score += response * weight;
-      categoryWeights[question.category].weight += weight;
-      categoryWeights[question.category].questionCount++;
-    }
+    if (typeof response !== 'number') return;
+
+    const category = categoryScores[question.category] || {
+      score: 0,
+      questions: 0,
+      maxScore: 0
+    };
+
+    category.score += response * question.weight;
+    category.questions += 1;
+    category.maxScore += 4 * question.weight; // 4 is max score
+    categoryScores[question.category] = category;
   });
 
-  // Calculate weighted averages and identify gaps
-  const gaps: string[] = [];
-  let totalScore = 0;
+  // Calculate normalized scores (0-100)
+  const normalizedScores: Record<string, number> = {};
   let totalWeight = 0;
+  let weightedScore = 0;
 
-  Object.entries(categoryWeights).forEach(([category, data]) => {
-    if (data.questionCount > 0) {
-      const avgScore = data.score / data.weight;
-      categoryScores[category] = avgScore;
-      
-      // Track gaps against benchmarks
-      const benchmark = stageConfig.benchmarks.expectedScores[category];
-      if (benchmark && avgScore < benchmark) {
-        gaps.push(category);
-      }
+  Object.entries(categoryScores).forEach(([category, score]) => {
+    if (score.maxScore === 0) return;
 
-      totalScore += avgScore * data.weight;
-      totalWeight += data.weight;
-    }
+    const normalized = (score.score / score.maxScore) * 100;
+    normalizedScores[category] = normalized;
+
+    const categoryWeight = stageConfig.benchmarks.expectedScores[category] || 1;
+    totalWeight += categoryWeight;
+    weightedScore += normalized * categoryWeight;
   });
 
-  const overallScore = totalWeight > 0 ? totalScore / totalWeight : 0;
-  const answeredCount = Object.keys(responses).length;
-  const totalQuestions = stageQuestions.length;
+  const overallScore = totalWeight > 0 ? weightedScore / totalWeight : 0;
 
   return {
     overallScore,
-    categoryScores,
-    benchmarks: stageConfig.benchmarks.expectedScores,
-    completionRate: totalQuestions > 0 ? answeredCount / totalQuestions : 0,
-    gaps
+    categoryScores: normalizedScores,
+    level: getScoreLevel(overallScore)
   };
-};
+}
 
-export const validateScore = (score: number): boolean => {
-  return Number.isInteger(score) && score >= 1 && score <= 4;
-};
+export function getScoreLevel(score: number): 'Low' | 'Medium' | 'High' {
+  if (score >= 75) return 'High';
+  if (score >= 50) return 'Medium';
+  return 'Low';
+}
 
-export const getScoreLevel = (score: number): { level: string; description: string } => {
-  if (score >= 3.5) {
-    return { 
-      level: 'Advanced',
-      description: 'Your engineering practices are highly optimized'
-    };
-  }
-  if (score >= 2.5) {
-    return { 
-      level: 'Proactive',
-      description: 'Good practices in place with room for automation'
-    };
-  }
-  if (score >= 1.5) {
-    return { 
-      level: 'Basic',
-      description: 'Foundation set, focus on standardization'
-    };
-  }
-  return { 
-    level: 'Initial',
-    description: 'Start implementing GitHub best practices'
-  };
-};
+export function validateScore(
+  score: number,
+  stage: Stage,
+  category: string,
+  stageConfig: StageDefinition
+): boolean {
+  const benchmark = stageConfig.benchmarks.expectedScores[category];
+  return score >= (benchmark || 0);
+}
