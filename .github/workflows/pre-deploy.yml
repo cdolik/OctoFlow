@@ -55,9 +55,10 @@ jobs:
             --output json \
             --output html \
             --output-path ./lighthouse-report \
-            --chrome-flags="--headless --no-sandbox"
+            --chrome-flags="--headless --no-sandbox" \
+            --quiet
 
-      - name: Upload test artifacts
+      - name: Store test artifacts
         uses: actions/upload-artifact@v3
         with:
           name: test-reports

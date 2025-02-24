@@ -2,7 +2,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import App from '../../App';
 import { Stage } from '../../types';
-import { getAssessmentResponses, getAssessmentMetadata } from '../../utils/storage';
+import { getAssessmentResponses } from '../../utils/storage';
 import { validateStageSequence } from '../../data/StageConfig';
 import { calculateStageScores } from '../../utils/scoring';
 import { filterQuestionsByStage } from '../../utils/questionFiltering';
@@ -44,6 +44,7 @@ describe('Stage Flow Integration', () => {
       // Should prevent skipping stages
       if (i < stages.length - 2) {
         const skipStage = stages[i + 2];
+        // eslint-disable-next-line jest/no-conditional-expect
         expect(validateStageSequence(currentStage, skipStage)).toBe(false);
       }
     }
@@ -88,6 +89,7 @@ describe('Stage Flow Integration', () => {
     // Should show error with recovery option
     await waitFor(() => {
       expect(screen.getByText(/We encountered an issue/i)).toBeInTheDocument();
+      // eslint-disable-next-line testing-library/no-wait-for-multiple-assertions
       expect(screen.getByText(/Try to Resume/i)).toBeInTheDocument();
     });
 

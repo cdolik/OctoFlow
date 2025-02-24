@@ -3,6 +3,9 @@ import { useSessionGuard } from './useSessionGuard';
 import { MemoryRouter, useNavigate } from 'react-router-dom';
 import { getAssessmentData, getAssessmentResponses } from '../utils/storage';
 
+import { renderHook } from '@testing-library/react-hooks';
+import { useSessionGuard } from './useSessionGuard';
+
 // Mock the storage utils
 jest.mock('../utils/storage');
 
@@ -67,9 +70,6 @@ describe('useSessionGuard', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true });
   });
 });
-
-import { renderHook } from '@testing-library/react-hooks';
-import { useSessionGuard } from './useSessionGuard';
 
 describe('useSessionGuard', () => {
   beforeEach(() => {

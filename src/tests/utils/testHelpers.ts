@@ -36,7 +36,7 @@ export const mockAssessmentFlow = async (stage: Stage) => {
   return createMockState(stage, responses);
 };
 
-export const simulateError = (component: string, message: string = 'Test error') => {
+export const simulateError = (component: string, message = 'Test error') => {
   const error = new Error(message);
   error.name = `${component}Error`;
   throw error;
@@ -44,7 +44,7 @@ export const simulateError = (component: string, message: string = 'Test error')
 
 export const waitForAutoSave = () => new Promise(resolve => setTimeout(resolve, 100));
 
-export const mockKeyboardEvent = (key: string, ctrlKey: boolean = false) => {
+export const mockKeyboardEvent = (key: string, ctrlKey = false) => {
   return new KeyboardEvent('keydown', {
     key,
     ctrlKey,

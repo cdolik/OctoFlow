@@ -13,7 +13,11 @@ export function AudioFeedback({ children, enabled = true }: AudioFeedbackProps):
 
   const createAudioContext = useCallback(() => {
     if (!audioContextRef.current) {
-      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) {
+        throw new Error('Web Audio API is not supported in this browser.');
+      }
+      audioContextRef.current = new AudioContextClass();
       gainNodeRef.current = audioContextRef.current.createGain();
       gainNodeRef.current.connect(audioContextRef.current.destination);
       gainNodeRef.current.gain.value = 0.3; // Set volume to 30%
@@ -26,7 +30,8 @@ export function AudioFeedback({ children, enabled = true }: AudioFeedbackProps):
 
     const ctx = createAudioContext();
     const oscillator = ctx.createOscillator();
-    const gainNode = gainNodeRef.current!;
+    const gainNode = gainNodeRef.current;
+    if (!gainNode) return;
 
     // Configure sound based on type
     switch (type) {

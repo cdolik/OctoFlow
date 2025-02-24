@@ -1,17 +1,22 @@
-import { Stage, StageValidationResult, Question } from '../types';
+import { Stage, Question, ValidationResult } from '../types';
 import { stages } from '../data/stages';
 import { getAssessmentResponses } from './storage';
-import { validateStageResponses } from './questionFilters';
+
+export interface StageValidationOptions {
+  requireComplete?: boolean;
+  validateResponses?: boolean;
+}
 
 export const validateStageProgression = (
   currentStage: Stage | null,
-  targetStage: Stage
-): StageValidationResult => {
+  targetStage: Stage,
+  options: StageValidationOptions = {}
+): ValidationResult => {
   const stageOrder = stages.map(s => s.id);
   const currentIndex = currentStage ? stageOrder.indexOf(currentStage) : -1;
-  const nextIndex = stageOrder.indexOf(targetStage);
+  const targetIndex = stageOrder.indexOf(targetStage);
 
-  if (nextIndex === -1) {
+  if (targetIndex === -1) {
     return {
       isValid: false,
       error: 'Invalid stage identifier'
@@ -25,51 +30,72 @@ export const validateStageProgression = (
   // 4. Staying in current stage
   if (
     currentIndex === -1 || 
-    nextIndex - currentIndex === 1 || 
-    nextIndex <= currentIndex
+    targetIndex - currentIndex === 1 || 
+    targetIndex <= currentIndex
   ) {
     return { isValid: true };
   }
 
   return {
     isValid: false,
-    error: 'Cannot skip stages forward',
-    details: ['Must complete stages in order']
+    error: `Cannot skip from ${currentStage} to ${targetStage}`,
+    details: [`Please complete ${stages[currentIndex + 1].id} first`]
   };
 };
 
-export const validateStageTransition = (
-  currentStage: Stage | null,
-  nextStage: Stage,
-  stageQuestions: Question[],
-  responses?: Record<string, number>
-): StageValidationResult => {
-  if (!responses) {
-    responses = getAssessmentResponses() || {};
+export const validateStageResponses = (
+  stage: Stage,
+  responses: Record<string, number>,
+  questions: Question[]
+): ValidationResult => {
+  const stageQuestions = questions.filter(q => q.stages.includes(stage));
+  const requiredQuestions = stageQuestions.filter(q => !q.optional).map(q => q.id);
+  
+  // Check for missing required questions
+  const missingRequired = requiredQuestions.filter(qId => !responses[qId]);
+  if (missingRequired.length > 0) {
+    return {
+      isValid: false,
+      error: 'Missing required questions',
+      details: missingRequired
+    };
   }
 
-  const progressValidation = validateStageProgression(currentStage, nextStage);
-  if (!progressValidation.isValid) {
-    return progressValidation;
-  }
+  // Validate response values
+  const invalidResponses = Object.entries(responses)
+    .filter(([qId, value]) => {
+      const question = questions.find(q => q.id === qId);
+      return !question || value < 1 || value > 4;
+    })
+    .map(([qId]) => qId);
 
-  // Only validate responses if we're moving forward and have a current stage
-  if (currentStage && nextStage) {
-    const responseValidation = validateStageResponses(
-      responses,
-      stageQuestions,
-      currentStage
-    );
-
-    if (!responseValidation.isValid) {
-      return {
-        isValid: false,
-        error: 'Incomplete stage responses',
-        details: responseValidation.details,
-        redirectTo: `/assessment/${currentStage}`
-      };
-    }
+  if (invalidResponses.length > 0) {
+    return {
+      isValid: false,
+      error: 'Invalid response values',
+      details: invalidResponses
+    };
   }
 
   return { isValid: true };
+};
+
+export const getStageConfig = (stage: Stage) => {
+  const config = stages.find(s => s.id === stage);
+  if (!config) {
+    throw new Error(`Invalid stage: ${stage}`);
+  }
+  return config;
+};
+
+export const getNextStage = (currentStage: Stage): Stage | null => {
+  const stageOrder = stages.map(s => s.id);
+  const currentIndex = stageOrder.indexOf(currentStage);
+  return currentIndex < stageOrder.length - 1 ? stageOrder[currentIndex + 1] : null;
+};
+
+export const getPreviousStage = (currentStage: Stage): Stage | null => {
+  const stageOrder = stages.map(s => s.id);
+  const currentIndex = stageOrder.indexOf(currentStage);
+  return currentIndex > 0 ? stageOrder[currentIndex - 1] : null;
 };

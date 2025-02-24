@@ -49,7 +49,7 @@
   "scripts": {
     "preinstall": "npx npm-force-resolutions",
     "predeploy": "npm run verify",
-    "deploy": "gh-pages -b gh-pages -d build",
+    "deploy": "npm run build && gh-pages -b gh-pages -d build",
     "verify": "npm run typecheck && npm run test && npm run build",
     "start": "react-scripts start",
     "build": "react-scripts build",

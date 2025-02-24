@@ -3,11 +3,17 @@ export type Stage = 'pre-seed' | 'seed' | 'series-a' | 'series-b';
 
 export interface StageDefinition {
   id: Stage;
+  label: string;
   title: string;
+  description: string;
   focus: string[];
   benchmarks: {
+    deploymentFreq: string;
+    securityLevel: number;
+    costEfficiency: number;
     expectedScores: Record<string, number>;
   };
+  questionFilter: (q: Question) => boolean;
 }
 
 export interface StorageState {

@@ -9,7 +9,7 @@ jest.mock('../contexts/AccessibilityContext');
 describe('useOfflineStatus', () => {
   const mockPlaySound = jest.fn();
   const mockAnnounce = jest.fn();
-  let mockOnline = true;
+  const mockOnline = true;
   let mockBroadcastChannel: any;
 
   beforeEach(() => {
