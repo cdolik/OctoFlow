@@ -71,7 +71,7 @@ registerRoute(
 );
 
 // Background sync for offline form submissions
-const bgSyncPlugin = {
+const bgSyncPlugin: WorkboxPlugin = {
   async requestWillStart({ request }: { request: Request }) {
     const promiseChain = fetch(request.clone());
     return promiseChain;
@@ -124,7 +124,7 @@ const FALLBACK_HTML = `
 </html>
 `;
 
-self.addEventListener('fetch', (event) => {
+self.addEventListener('fetch', (event: FetchEvent) => {
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request).catch(() => new Response(FALLBACK_HTML, {
@@ -135,7 +135,7 @@ self.addEventListener('fetch', (event) => {
 });
 
 // Handle background sync
-self.addEventListener('sync', (event) => {
+self.addEventListener('sync', (event: SyncEvent) => {
   if (event.tag === 'sync-forms') {
     event.waitUntil(
       (async () => {

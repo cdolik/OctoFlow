@@ -23,7 +23,7 @@ module.exports = {
     '^(?!.*\\.(js|jsx|ts|tsx|css|json)$)': '<rootDir>/config/jest/fileTransform.js'
   },
   transformIgnorePatterns: [
-    '[/\\\\]node_modules[/\\\\].+\\.(js|jsx|ts|tsx)$',
+    'node_modules/(?!(@testing-library|chart.js|msw|@mswjs|@bundled-es-modules|tough-cookie|web-streams-polyfill|@open-draft|@remix-run)/)',
     '^.+\\.module\\.(css|sass|scss)$'
   ],
   moduleNameMapper: {

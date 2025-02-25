@@ -86,19 +86,10 @@ jest.mock('chart.js', () => ({
   Radar: mockChart.Radar
 }));
 
-// Fetch API mock
-global.fetch = jest.fn(() =>
-  Promise.resolve({
-    ok: true,
-    json: () => Promise.resolve({}),
-    text: () => Promise.resolve(''),
-    blob: () => Promise.resolve(new Blob()),
-    arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
-    headers: new Headers(),
-    status: 200,
-    statusText: 'OK'
-  })
-);
+// Setup fetch mock properly
+// Instead of directly assigning a mock function, use jest-fetch-mock
+import fetchMock from 'jest-fetch-mock';
+fetchMock.enableMocks();
 
 // Console error handling - consolidated into one place
 const originalError = console.error;
@@ -224,11 +215,11 @@ beforeEach(() => {
   mockStorage.clear();
   jest.resetModules();
   document.body.innerHTML = '';
-  fetch.mockClear();
+  fetchMock.resetMocks(); // Use fetchMock instead of fetch.mockClear()
   jest.clearAllMocks();
   
-  // Start with fake timers
-  jest.useFakeTimers();
+  // Always start with fake timers with legacy mode enabled
+  jest.useFakeTimers({ legacyFakeTimers: true });
   
   // Clear storage
   sessionStorage.clear();
@@ -244,30 +235,15 @@ afterEach(() => {
   // Clean up DOM
   document.body.innerHTML = '';
   
-  // Handle timers properly
-  try {
+  // Handle timers properly - check if timers are mock before calling
+  if (jest.isMockFunction(setTimeout)) {
     jest.runOnlyPendingTimers();
-  } finally {
     jest.useRealTimers();
   }
   
   // Clear storage
   sessionStorage.clear();
   localStorage.clear();
-  
-  // Check for leaked timers
-  return new Promise(resolve => {
-    setImmediate(() => {
-      const pendingTimers = jest.getTimerCount();
-      if (pendingTimers > 0) {
-        console.warn(
-          `Test completed with ${pendingTimers} timer(s) still pending. ` +
-          'This may cause test instability. Please ensure all timers are cleared.'
-        );
-      }
-      resolve();
-    });
-  });
 });
 
 afterAll(() => {
