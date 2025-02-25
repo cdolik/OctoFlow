@@ -1,4 +1,4 @@
-import { renderHook, act } from '@testing-library/react';
+import { renderHook } from '@testing-library/react';
 import { useGlobalShortcuts } from './useGlobalShortcuts';
 
 describe('useGlobalShortcuts', () => {
@@ -17,21 +17,17 @@ describe('useGlobalShortcuts', () => {
     renderHook(() => useGlobalShortcuts({ shortcuts: mockShortcuts }));
 
     // Test Ctrl+S
-    act(() => {
-      window.dispatchEvent(new KeyboardEvent('keydown', {
-        key: 's',
-        ctrlKey: true
-      }));
-    });
+    window.dispatchEvent(new KeyboardEvent('keydown', {
+      key: 's',
+      ctrlKey: true
+    }));
     expect(mockShortcuts[0].action).toHaveBeenCalled();
 
     // Test Shift+?
-    act(() => {
-      window.dispatchEvent(new KeyboardEvent('keydown', {
-        key: '?',
-        shiftKey: true
-      }));
-    });
+    window.dispatchEvent(new KeyboardEvent('keydown', {
+      key: '?',
+      shiftKey: true
+    }));
     expect(mockShortcuts[1].action).toHaveBeenCalled();
   });
 
@@ -41,12 +37,10 @@ describe('useGlobalShortcuts', () => {
       disabled: true
     }));
 
-    act(() => {
-      window.dispatchEvent(new KeyboardEvent('keydown', {
-        key: 's',
-        ctrlKey: true
-      }));
-    });
+    window.dispatchEvent(new KeyboardEvent('keydown', {
+      key: 's',
+      ctrlKey: true
+    }));
     expect(mockShortcuts[0].action).not.toHaveBeenCalled();
   });
 
@@ -60,13 +54,11 @@ describe('useGlobalShortcuts', () => {
     document.body.appendChild(input);
     input.focus();
 
-    act(() => {
-      input.dispatchEvent(new KeyboardEvent('keydown', {
-        key: 's',
-        ctrlKey: true,
-        bubbles: true
-      }));
-    });
+    input.dispatchEvent(new KeyboardEvent('keydown', {
+      key: 's',
+      ctrlKey: true,
+      bubbles: true
+    }));
 
     expect(mockShortcuts[0].action).not.toHaveBeenCalled();
     document.body.removeChild(input);
@@ -79,16 +71,12 @@ describe('useGlobalShortcuts', () => {
 
     const newShortcut = { key: 'ctrl+n', action: jest.fn() };
 
-    act(() => {
-      result.current.registerShortcut(newShortcut);
-    });
+    result.current.registerShortcut(newShortcut);
 
-    act(() => {
-      window.dispatchEvent(new KeyboardEvent('keydown', {
-        key: 'n',
-        ctrlKey: true
-      }));
-    });
+    window.dispatchEvent(new KeyboardEvent('keydown', {
+      key: 'n',
+      ctrlKey: true
+    }));
 
     expect(newShortcut.action).toHaveBeenCalled();
   });
@@ -98,16 +86,12 @@ describe('useGlobalShortcuts', () => {
       shortcuts: mockShortcuts
     }));
 
-    act(() => {
-      result.current.unregisterShortcut('ctrl+s');
-    });
+    result.current.unregisterShortcut('ctrl+s');
 
-    act(() => {
-      window.dispatchEvent(new KeyboardEvent('keydown', {
-        key: 's',
-        ctrlKey: true
-      }));
-    });
+    window.dispatchEvent(new KeyboardEvent('keydown', {
+      key: 's',
+      ctrlKey: true
+    }));
 
     expect(mockShortcuts[0].action).not.toHaveBeenCalled();
   });

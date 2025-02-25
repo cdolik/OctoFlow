@@ -1,4 +1,4 @@
-import { renderHook, act } from '@testing-library/react';
+import { renderHook } from '@testing-library/react';
 import { HashRouter } from 'react-router-dom';
 import { useAssessmentSession } from './useAssessmentSession';
 import { trackSessionRecovery } from '../utils/analytics';
@@ -44,9 +44,7 @@ describe('useAssessmentSession', () => {
       { wrapper }
     );
 
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 0));
-    });
+    await new Promise(resolve => setTimeout(resolve, 0));
 
     expect(mockOnRecoveryComplete).toHaveBeenCalledWith(
       'pre-seed',
@@ -64,9 +62,7 @@ describe('useAssessmentSession', () => {
       { wrapper }
     );
 
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 0));
-    });
+    await new Promise(resolve => setTimeout(resolve, 0));
 
     expect(mockOnRecoveryComplete).not.toHaveBeenCalled();
   });
@@ -80,10 +76,8 @@ describe('useAssessmentSession', () => {
       { wrapper }
     );
 
-    await act(async () => {
-      const success = await result.current.restoreSession();
-      expect(success).toBe(true);
-    });
+    const success = await result.current.restoreSession();
+    expect(success).toBe(true);
 
     expect(mockOnRecoveryComplete).toHaveBeenCalled();
   });
@@ -94,9 +88,7 @@ describe('useAssessmentSession', () => {
       { wrapper }
     );
 
-    act(() => {
-      result.current.clearSession();
-    });
+    result.current.clearSession();
 
     expect(sessionStorage.clear).toHaveBeenCalled();
     expect(result.current.recoveredStage).toBe('pre-seed'); // Initial state from mock
@@ -119,10 +111,8 @@ describe('useAssessmentSession', () => {
       { wrapper }
     );
 
-    await act(async () => {
-      const success = await result.current.restoreSession();
-      expect(success).toBe(false);
-    });
+    const success = await result.current.restoreSession();
+    expect(success).toBe(false);
 
     expect(mockOnRecoveryComplete).not.toHaveBeenCalled();
   });
