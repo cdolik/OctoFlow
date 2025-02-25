@@ -1,4 +1,4 @@
-import { renderHook, act } from '@testing-library/react';
+import { renderHook } from '@testing-library/react';
 import { useErrorManagement } from './useErrorManagement';
 import { useStorage } from './useStorage';
 import { useStorageErrorHandler } from './useStorageErrorHandler';
@@ -49,10 +49,8 @@ describe('useErrorManagement', () => {
     const mockRecover = jest.fn().mockResolvedValue(true);
     const validationError = new ValidationFailedError('field', 'constraint', 'test error');
 
-    await act(async () => {
-      const recovered = await result.current.handleError(validationError, mockRecover);
-      expect(recovered).toBe(true);
-    });
+    const recovered = await result.current.handleError(validationError, mockRecover);
+    expect(recovered).toBe(true);
 
     expect(result.current.isRecovering).toBe(false);
     expect(mockRecover).toHaveBeenCalled();
@@ -67,10 +65,8 @@ describe('useErrorManagement', () => {
     const { result } = renderHook(() => useErrorManagement());
     const storageError = new StorageFailedError('write');
 
-    await act(async () => {
-      const recovered = await result.current.handleError(storageError);
-      expect(recovered).toBe(false);
-    });
+    const recovered = await result.current.handleError(storageError);
+    expect(recovered).toBe(false);
 
     expect(result.current.error).toBe(storageError);
     expect(result.current.isRecovering).toBe(false);
@@ -88,11 +84,9 @@ describe('useErrorManagement', () => {
     );
     const error = new ValidationFailedError('field', 'constraint', 'test error');
 
-    await act(async () => {
-      const recoveryPromise = result.current.handleError(error, mockRecover);
-      expect(result.current.isRecovering).toBe(true);
-      await recoveryPromise;
-    });
+    const recoveryPromise = result.current.handleError(error, mockRecover);
+    expect(result.current.isRecovering).toBe(true);
+    await recoveryPromise;
 
     expect(result.current.isRecovering).toBe(false);
   });
@@ -102,10 +96,8 @@ describe('useErrorManagement', () => {
     const mockRecover = jest.fn().mockRejectedValue(new Error('Recovery failed'));
     const error = new ValidationFailedError('field', 'constraint', 'test error');
 
-    await act(async () => {
-      const recovered = await result.current.handleError(error, mockRecover);
-      expect(recovered).toBe(false);
-    });
+    const recovered = await result.current.handleError(error, mockRecover);
+    expect(recovered).toBe(false);
 
     expect(result.current.error).toBe(error);
     expect(result.current.isRecovering).toBe(false);
@@ -120,15 +112,11 @@ describe('useErrorManagement', () => {
     const { result } = renderHook(() => useErrorManagement());
     const error = new ValidationFailedError('field', 'constraint', 'test error');
 
-    await act(async () => {
-      await result.current.handleError(error);
-    });
+    await result.current.handleError(error);
 
     expect(result.current.error).toBe(error);
 
-    act(() => {
-      result.current.clearError();
-    });
+    result.current.clearError();
 
     expect(result.current.error).toBeNull();
     expect(result.current.isRecovering).toBe(false);
@@ -140,9 +128,7 @@ describe('useErrorManagement', () => {
     const criticalError = new StorageFailedError('write');
     criticalError.severity = 'critical';
 
-    await act(async () => {
-      await result.current.handleError(criticalError);
-    });
+    await result.current.handleError(criticalError);
 
     expect(result.current.hasCriticalError).toBe(true);
   });
