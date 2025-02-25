@@ -16,7 +16,6 @@ describe('PerformanceMonitor', () => {
     const endMeasure = performance.startMeasure('test-operation');
     jest.advanceTimersByTime(100);
     endMeasure();
-
     const metrics = performance.getMetrics();
     expect(metrics).toHaveLength(1);
     expect(metrics[0].name).toBe('test-operation');
@@ -28,18 +27,15 @@ describe('PerformanceMonitor', () => {
       const endMeasure = performance.startMeasure(`operation-${i}`);
       endMeasure();
     }
-
     const metrics = performance.getMetrics();
     expect(metrics).toHaveLength(1000);
     expect(metrics[metrics.length - 1].name).toBe('operation-1099');
   });
 
   it('tracks component render times', () => {
-    const TestComponent: React.FC = () => <div>Test</div>;
+    const TestComponent: React.FC = () => { return <div>Test</div>; };
     const WrappedComponent = withPerformanceTracking(TestComponent, 'TestComponent');
-
-    render(<WrappedComponent />);
-
+    render(React.createElement(WrappedComponent));
     const componentMetrics = performance.getComponentMetrics();
     expect(componentMetrics).toHaveLength(1);
     expect(componentMetrics[0].componentName).toBe('TestComponent');
@@ -47,14 +43,12 @@ describe('PerformanceMonitor', () => {
   });
 
   it('calculates average render times correctly', () => {
-    const TestComponent: React.FC = () => <div>Test</div>;
+    const TestComponent: React.FC = () => { return <div>Test</div>; };
     const WrappedComponent = withPerformanceTracking(TestComponent, 'TestComponent');
-
     // Simulate multiple renders
     for (let i = 0; i < 3; i++) {
-      render(<WrappedComponent />);
+      render(React.createElement(WrappedComponent));
     }
-
     const metrics = performance.getComponentMetrics();
     expect(metrics[0].renderCount).toBe(3);
     expect(metrics[0].averageRenderTime).toBeGreaterThan(0);
@@ -131,7 +125,7 @@ describe('Performance Utilities', () => {
   });
 
   it('measures component render time', () => {
-    const TestComponent: React.FC = () => <div>Test</div>;
+    const TestComponent: React.FC = () => { return <div>Test</div>; };
     const WrappedComponent = getComponentMetrics(TestComponent);
 
     render(<WrappedComponent />);
@@ -141,7 +135,7 @@ describe('Performance Utilities', () => {
   });
 
   it('handles multiple renders', () => {
-    const TestComponent: React.FC = () => <div>Test</div>;
+    const TestComponent: React.FC = () => { return <div>Test</div>; };
     const WrappedComponent = getComponentMetrics(TestComponent);
 
     for (let i = 0; i < 3; i++) {

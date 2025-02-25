@@ -6,6 +6,23 @@ const STORAGE_KEY = 'octoflow';
 const BACKUP_KEY = 'octoflow_backup';
 const CURRENT_VERSION = '1.1';
 
+export const getAssessmentState = (): AssessmentState | null => {
+  try {
+    const stored = sessionStorage.getItem(STORAGE_KEY);
+    if (!stored) {
+      const backup = sessionStorage.getItem(BACKUP_KEY);
+      return backup ? JSON.parse(backup) : null;
+    }
+    const state = JSON.parse(stored);
+    if (!validateState(state)) {
+      throw new Error('Invalid state format');
+    }
+    return state;
+  } catch {
+    return null;
+  }
+};
+
 export const getAssessmentResponses = (): Record<string, number> | null => {
   try {
     const state = getAssessmentState();
@@ -17,27 +34,8 @@ export const getAssessmentResponses = (): Record<string, number> | null => {
 
 export const getAssessmentMetadata = (): AssessmentState['metadata'] | null => {
   try {
-    const state = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || '{}');
-    return state.metadata || null;
-  } catch {
-    return null;
-  }
-};
-
-export const getAssessmentState = (): AssessmentState | null => {
-  try {
-    const stored = sessionStorage.getItem(STORAGE_KEY);
-    if (!stored) {
-      const backup = sessionStorage.getItem(BACKUP_KEY);
-      return backup ? JSON.parse(backup) : null;
-    }
-
-    const state = JSON.parse(stored);
-    if (!validateState(state)) {
-      throw new Error('Invalid state format');
-    }
-
-    return state;
+    const state = getAssessmentState();
+    return state?.metadata || null;
   } catch {
     return null;
   }
@@ -102,7 +100,7 @@ export const validateState = (state: unknown): state is AssessmentState => {
   );
 };
 
-export const clearAssessmentData = (): void => {
+export const clearAssessmentState = (): void => {
   try {
     sessionStorage.removeItem(STORAGE_KEY);
     sessionStorage.removeItem(BACKUP_KEY);
