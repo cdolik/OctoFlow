@@ -1,18 +1,36 @@
-export type ErrorSeverity = 'low' | 'medium' | 'high' | 'critical';
+import type { BaseError } from './base';
+
+export type ErrorSeverity = 'low' | 'medium' | 'high';
+
+export interface ErrorContext {
+  component: string;
+  action: string;
+  message: string;
+  timestamp: string;
+  metadata?: Record<string, unknown>;
+}
 
 export interface AssessmentError extends Error {
   severity: ErrorSeverity;
   recoverable: boolean;
-  context?: Record<string, unknown>;
+  context?: ErrorContext;
 }
 
-export interface ValidationError extends AssessmentError {
+export interface ValidationError extends Error {
   field: string;
-  constraint: string;
+  value: unknown;
+  constraints: Record<string, string>;
 }
 
-export interface StorageError extends AssessmentError {
-  operation: 'read' | 'write' | 'delete';
+export interface NetworkError extends Error {
+  status?: number;
+  retryAfter?: number;
+  endpoint?: string;
+}
+
+export interface StorageError extends Error {
+  storageType: 'local' | 'session' | 'indexedDB';
+  operation: 'read' | 'write' | 'delete' | 'clear';
   key?: string;
 }
 
@@ -28,4 +46,18 @@ export interface StateError extends AssessmentError {
   stateKey: string;
 }
 
+export interface ErrorHandlingOptions {
+  maxRetries?: number;
+  retryDelay?: number;
+  recoveryFn?: () => Promise<boolean>;
+}
+
+export interface HandledError<T = unknown> {
+  handled: boolean;
+  recovered: boolean;
+  error: Error | null;
+  data?: T;
+}
+
 export type ErrorHandler = (error: AssessmentError) => void;
+export type ErrorCallback = (error: AssessmentError, context?: ErrorContext) => void;

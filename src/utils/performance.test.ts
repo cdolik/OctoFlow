@@ -35,7 +35,7 @@ describe('PerformanceMonitor', () => {
   });
 
   it('tracks component render times', () => {
-    const TestComponent = () => <div>Test</div>;
+    const TestComponent: React.FC = () => <div>Test</div>;
     const WrappedComponent = withPerformanceTracking(TestComponent, 'TestComponent');
 
     render(<WrappedComponent />);
@@ -47,7 +47,7 @@ describe('PerformanceMonitor', () => {
   });
 
   it('calculates average render times correctly', () => {
-    const TestComponent = () => <div>Test</div>;
+    const TestComponent: React.FC = () => <div>Test</div>;
     const WrappedComponent = withPerformanceTracking(TestComponent, 'TestComponent');
 
     // Simulate multiple renders
@@ -119,5 +119,36 @@ describe('PerformanceObserver Integration', () => {
     performance.clearMetrics(); // This will reinitialize the monitor
 
     expect(observerSpy).toHaveBeenCalled();
+  });
+});
+
+import { getComponentMetrics } from './performance';
+
+describe('Performance Utilities', () => {
+  beforeEach(() => {
+    performance.clearMarks();
+    performance.clearMeasures();
+  });
+
+  it('measures component render time', () => {
+    const TestComponent: React.FC = () => <div>Test</div>;
+    const WrappedComponent = getComponentMetrics(TestComponent);
+
+    render(<WrappedComponent />);
+
+    const componentMetrics = performance.getEntriesByType('measure');
+    expect(componentMetrics.length).toBeGreaterThan(0);
+  });
+
+  it('handles multiple renders', () => {
+    const TestComponent: React.FC = () => <div>Test</div>;
+    const WrappedComponent = getComponentMetrics(TestComponent);
+
+    for (let i = 0; i < 3; i++) {
+      render(<WrappedComponent />);
+    }
+
+    const componentMetrics = performance.getEntriesByType('measure');
+    expect(componentMetrics.length).toBe(3);
   });
 });

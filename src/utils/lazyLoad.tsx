@@ -7,7 +7,7 @@ interface LazyComponentProps {
   onError?: (error: Error) => void;
 }
 
-export function lazyLoad<T extends React.ComponentType<any>>(
+export function lazyLoad<T extends React.ComponentType<{}>>(
   importFactory: () => Promise<{ default: T }>,
   options: LazyComponentProps = {}
 ): React.ComponentType<React.ComponentProps<T>> {

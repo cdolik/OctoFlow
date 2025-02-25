@@ -1,102 +1,87 @@
-import React, { useEffect, useCallback, useState } from 'react';
-import { useStorage } from '../hooks/useStorage';
-import { useError } from '../contexts/ErrorContext';
-import { LiveRegion } from './LiveRegion';
+import React, { useEffect, useRef, useState } from 'react';
+import type { SaveIndicatorProps } from '../types/props';
 import { SaveIndicator } from './SaveIndicator';
+import { useStorageErrorHandler } from '../hooks/useStorageErrorHandler';
 
 interface AutoSaveProps {
-  children: React.ReactNode;
+  onSave: () => Promise<boolean>;
   interval?: number;
-  maxRetries?: number;
-  retryDelay?: number;
+  validateBeforeSave?: () => boolean;
+  children?: React.ReactNode;
 }
 
-export function AutoSave({
-  children,
-  interval = 30000, // 30 seconds
-  maxRetries = 3,
-  retryDelay = 5000
-}: AutoSaveProps): JSX.Element {
-  const { state, saveState } = useStorage();
-  const { handleError } = useError();
+export const AutoSave: React.FC<AutoSaveProps> = ({
+  onSave,
+  interval = 30000,
+  validateBeforeSave,
+  children
+}) => {
+  const [saveState, setSaveState] = useState<SaveIndicatorProps['state']>('idle');
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
-  const [retryCount, setRetryCount] = useState(0);
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const timeoutRef = useRef<NodeJS.Timeout>();
+  const { handleError } = useStorageErrorHandler();
 
-  const performSave = useCallback(async () => {
-    if (!state || saveStatus === 'saving') return;
+  const performSave = async () => {
+    if (validateBeforeSave && !validateBeforeSave()) {
+      return;
+    }
 
-    setSaveStatus('saving');
     try {
-      const success = await saveState(state);
+      setSaveState('saving');
+      const success = await onSave();
+      
       if (success) {
-        setSaveStatus('saved');
+        setSaveState('saved');
         setLastSaved(new Date());
-        setRetryCount(0);
       } else {
-        throw new Error('Save failed');
+        setSaveState('error');
       }
     } catch (error) {
-      setSaveStatus('error');
-      if (retryCount < maxRetries) {
-        setTimeout(() => {
-          setRetryCount(prev => prev + 1);
-          performSave();
-        }, retryDelay * (retryCount + 1)); // Exponential backoff
-      } else {
-        handleError(error as Error);
+      setSaveState('error');
+      if (error instanceof Error) {
+        handleError(error, {
+          component: 'AutoSave',
+          action: 'save',
+          message: 'Failed to auto-save',
+          timestamp: new Date().toISOString()
+        });
       }
     }
-  }, [state, saveState, handleError, maxRetries, retryDelay, retryCount, saveStatus]);
+  };
 
-  // Regular auto-save interval
   useEffect(() => {
-    const timer = setInterval(performSave, interval);
-    return () => clearInterval(timer);
-  }, [performSave, interval]);
-
-  // Save on window blur (user switching tabs/apps)
-  useEffect(() => {
-    const handleBlur = () => {
-      performSave();
+    const scheduleNextSave = () => {
+      timeoutRef.current = setTimeout(async () => {
+        await performSave();
+        scheduleNextSave();
+      }, interval);
     };
 
-    window.addEventListener('blur', handleBlur);
-    return () => window.removeEventListener('blur', handleBlur);
-  }, [performSave]);
+    scheduleNextSave();
 
-  // Save before unload
-  useEffect(() => {
-    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-      if (saveStatus === 'saving') {
-        event.preventDefault();
-        event.returnValue = '';
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
       }
+    };
+  }, [interval]);
+
+  // Handle beforeunload to save before closing
+  useEffect(() => {
+    const handleBeforeUnload = async (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      await performSave();
+      return undefined;
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [saveStatus]);
-
-  const statusMessage = {
-    idle: '',
-    saving: 'Saving changes...',
-    saved: `Changes saved ${lastSaved ? new Date(lastSaved).toLocaleTimeString() : ''}`,
-    error: `Save failed. Retrying... (Attempt ${retryCount + 1}/${maxRetries})`
-  }[saveStatus];
+  }, []);
 
   return (
     <>
-      <SaveIndicator 
-        status={saveStatus}
-        lastSaved={lastSaved}
-        retryCount={retryCount}
-        maxRetries={maxRetries}
-      />
-      <LiveRegion>
-        {statusMessage}
-      </LiveRegion>
       {children}
+      <SaveIndicator state={saveState} lastSaved={lastSaved} />
     </>
   );
-}
+};

@@ -1,122 +1,51 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { validateStorageState } from '../utils/storageValidation';
+import React from 'react';
+import { ErrorFallback } from './ErrorFallback';
+import type { ErrorBoundaryProps } from '../types/props';
 import { trackError } from '../utils/analytics';
-import ErrorFallback from './ErrorFallback';
-
-interface Props {
-  children: ReactNode;
-  onRecovery?: () => Promise<void>;
-  onReset?: () => void;
-  fallbackComponent?: React.ComponentType<{ 
-    error: Error; 
-    resetError: () => void;
-    recoverError?: () => Promise<void>;
-  }>;
-}
+import type { ErrorContext } from '../types/errors';
 
 interface State {
   error: Error | null;
-  errorInfo: ErrorInfo | null;
-  isRecovering: boolean;
-  recoveryAttempts: number;
+  componentStack?: string;
 }
 
-export class ErrorBoundary extends Component<Props, State> {
-  constructor(props: Props) {
-    super(props);
-    this.state = {
-      error: null,
-      errorInfo: null,
-      isRecovering: false,
-      recoveryAttempts: 0
-    };
-  }
+export class ErrorBoundary extends React.Component<ErrorBoundaryProps, State> {
+  state: State = {
+    error: null
+  };
 
-  static getDerivedStateFromError(error: Error): Partial<State> {
+  static getDerivedStateFromError(error: Error): State {
     return { error };
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    this.setState({ errorInfo });
-    trackError(error, {
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
+    const context: ErrorContext = {
       component: 'ErrorBoundary',
-      info: errorInfo,
-      recoveryAttempts: this.state.recoveryAttempts
-    });
+      action: 'catch_error',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    };
+
+    trackError(error, context);
+    this.props.onError?.(error, errorInfo);
   }
 
-  private isStorageError = (error: Error): boolean => {
-    return error.message.includes('storage') || 
-           error.message.includes('localStorage') || 
-           error.message.includes('sessionStorage');
+  handleRetry = (): void => {
+    this.setState({ error: null });
+    this.props.onRecover?.();
   };
 
-  private handleRecovery = async (): Promise<void> => {
-    this.setState({ isRecovering: true });
-
-    try {
-      // Attempt to validate current storage state
-      const currentState = sessionStorage.getItem('octoflow');
-      if (currentState) {
-        const parsedState = JSON.parse(currentState);
-        const validation = validateStorageState(parsedState);
-
-        if (!validation.isValid) {
-          throw new Error(`Invalid storage state: ${validation.errors.join(', ')}`);
-        }
-      }
-
-      // If validation passes or no state exists, try recovery
-      await this.props.onRecovery?.();
-      
-      this.setState({
-        error: null,
-        errorInfo: null,
-        isRecovering: false,
-        recoveryAttempts: 0
-      });
-    } catch (recoveryError) {
-      this.setState(prevState => ({
-        error: recoveryError instanceof Error ? recoveryError : new Error('Recovery failed'),
-        isRecovering: false,
-        recoveryAttempts: prevState.recoveryAttempts + 1
-      }));
-
-      trackError(recoveryError instanceof Error ? recoveryError : new Error('Recovery failed'), {
-        context: 'error_recovery',
-        attempts: this.state.recoveryAttempts + 1
-      });
-    }
-  };
-
-  private handleReset = (): void => {
-    this.props.onReset?.();
-    this.setState({
-      error: null,
-      errorInfo: null,
-      isRecovering: false,
-      recoveryAttempts: 0
-    });
-  };
-
-  render(): ReactNode {
-    const { error, isRecovering, recoveryAttempts } = this.state;
-    const { children, fallbackComponent: FallbackComponent = ErrorFallback } = this.props;
-
-    if (error) {
-      const canAttemptRecovery = this.isStorageError(error) && recoveryAttempts < 3;
-
-      return (
-        <FallbackComponent
-          error={error}
-          resetError={this.handleReset}
-          recoverError={canAttemptRecovery ? this.handleRecovery : undefined}
-          isRecovering={isRecovering}
+  render(): React.ReactNode {
+    if (this.state.error) {
+      return this.props.fallback || (
+        <ErrorFallback 
+          error={this.state.error}
+          onRetry={this.handleRetry}
         />
       );
     }
 
-    return children;
+    return this.props.children;
   }
 }
 

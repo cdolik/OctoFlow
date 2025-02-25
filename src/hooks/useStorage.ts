@@ -1,29 +1,46 @@
 import { useState, useEffect, useCallback } from 'react';
 import { IndexedDBAdapter } from '../utils/storage/IndexedDBAdapter';
-import { StorageState, Stage } from '../types';
+import type { AssessmentState } from '../types';
+import type { ErrorContext } from '../types/errors';
+import { trackError } from '../utils/analytics';
+import { withErrorHandling, createErrorContext } from '../utils/errorHandling';
 
 interface UseStorageResult {
-  state: StorageState | null;
-  saveState: (state: StorageState) => Promise<boolean>;
+  state: AssessmentState | null;
+  saveState: (state: AssessmentState) => Promise<boolean>;
   clearState: () => Promise<void>;
   isSessionActive: boolean;
   timeUntilExpiration: number;
+  error: Error | null;
 }
 
 const SESSION_TIMEOUT = 24 * 60 * 60 * 1000; // 24 hours
 const storageAdapter = new IndexedDBAdapter();
 
+const createStorageError = (action: string, message: string): ErrorContext => 
+  createErrorContext('useStorage', action, message);
+
 export function useStorage(): UseStorageResult {
-  const [state, setState] = useState<StorageState | null>(null);
+  const [state, setState] = useState<AssessmentState | null>(null);
   const [lastActivity, setLastActivity] = useState<number>(Date.now());
+  const [error, setError] = useState<Error | null>(null);
 
   // Initialize storage
   useEffect(() => {
     const initStorage = async () => {
-      await storageAdapter.initialize();
-      const savedState = await storageAdapter.getState('current');
-      if (savedState) {
-        setState(savedState);
+      const result = await withErrorHandling(async () => {
+        await storageAdapter.initialize();
+        return storageAdapter.getState();
+      });
+
+      if (result.error) {
+        setError(result.error);
+        trackError(result.error, createStorageError(
+          'initialize',
+          'Storage initialization failed'
+        ));
+      } else if (result.data) {
+        setState(result.data as AssessmentState);
       }
     };
 
@@ -32,71 +49,61 @@ export function useStorage(): UseStorageResult {
 
   // Track user activity
   useEffect(() => {
-    const updateActivity = () => {
-      setLastActivity(Date.now());
-    };
-
+    const updateActivity = () => setLastActivity(Date.now());
     const events = ['mousedown', 'keydown', 'touchstart', 'scroll'];
-    events.forEach(event => {
-      window.addEventListener(event, updateActivity);
-    });
-
-    return () => {
-      events.forEach(event => {
-        window.removeEventListener(event, updateActivity);
-      });
-    };
+    events.forEach(event => window.addEventListener(event, updateActivity));
+    return () => events.forEach(event => window.removeEventListener(event, updateActivity));
   }, []);
 
   // Save state
-  const saveState = useCallback(async (newState: StorageState): Promise<boolean> => {
-    try {
-      // Add metadata
-      const stateWithMeta = {
+  const saveState = useCallback(async (newState: AssessmentState): Promise<boolean> => {
+    const result = await withErrorHandling(async () => {
+      const currentTime = new Date().toISOString();
+      const stateWithMeta: AssessmentState = {
         ...newState,
         metadata: {
           ...newState.metadata,
-          lastSaved: new Date().toISOString(),
-          lastModified: Date.now()
+          lastSaved: currentTime,
+          timeSpent: newState.metadata.timeSpent || 0,
+          attemptCount: (newState.metadata.attemptCount || 0) + 1
+        },
+        progress: {
+          questionIndex: newState.progress.questionIndex,
+          totalQuestions: newState.progress.totalQuestions,
+          isComplete: newState.progress.isComplete
         }
       };
 
-      // Save to IndexedDB
-      await storageAdapter.saveState({
-        ...stateWithMeta,
-        id: 'current'
-      });
-
-      // Update local state
+      await storageAdapter.saveState(stateWithMeta);
       setState(stateWithMeta);
-
-      // Create backup for completed stages
-      if (newState.currentStage) {
-        const stage = newState.currentStage as Stage;
-        const isStageComplete = newState.stages?.[stage]?.isComplete;
-        
-        if (isStageComplete) {
-          await storageAdapter.saveState({
-            ...stateWithMeta,
-            id: `backup_${stage}`
-          });
-        }
-      }
-
       return true;
-    } catch (error) {
-      console.error('Failed to save state:', error);
+    });
+
+    if (result.error) {
+      setError(result.error);
+      trackError(result.error, createStorageError(
+        'saveState',
+        'Failed to save state'
+      ));
       return false;
     }
+
+    return true;
   }, []);
 
   // Clear state
   const clearState = useCallback(async () => {
-    try {
+    const result = await withErrorHandling(async () => {
       await storageAdapter.clearAll();
       setState(null);
-    } catch (error) {
-      console.error('Failed to clear state:', error);
+    });
+
+    if (result.error) {
+      setError(result.error);
+      trackError(result.error, createStorageError(
+        'clearState',
+        'Failed to clear state'
+      ));
     }
   }, []);
 
@@ -117,6 +124,7 @@ export function useStorage(): UseStorageResult {
     saveState,
     clearState,
     isSessionActive,
-    timeUntilExpiration
+    timeUntilExpiration,
+    error
   };
 }

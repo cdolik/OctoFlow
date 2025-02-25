@@ -1,4 +1,5 @@
 import { Stage } from '../types';
+import { trackError } from './analytics';
 
 interface ErrorReport {
   error: Error;
@@ -7,6 +8,7 @@ interface ErrorReport {
   timestamp: string;
   userPreferences?: Record<string, unknown>;
   recoveryAttempts: number;
+  resolved?: boolean;
 }
 
 interface ErrorMetrics {
@@ -20,11 +22,12 @@ class ErrorReportingService {
   private static instance: ErrorReportingService;
   private errors: ErrorReport[] = [];
   private readonly MAX_STORED_ERRORS = 50;
+  private readonly STORAGE_KEY = 'errorReports';
 
   private constructor() {
-    // Initialize error storage
     this.loadStoredErrors();
     window.addEventListener('unload', () => this.persistErrors());
+    window.addEventListener('unhandledrejection', this.handleUnhandledRejection.bind(this));
   }
 
   static getInstance(): ErrorReportingService {
@@ -51,16 +54,28 @@ class ErrorReportingService {
 
     this.errors.unshift(errorReport);
 
-    // Keep only recent errors
     if (this.errors.length > this.MAX_STORED_ERRORS) {
       this.errors = this.errors.slice(0, this.MAX_STORED_ERRORS);
     }
 
-    // Persist immediately for critical errors
     if (this.isCriticalError(error)) {
       await this.persistErrors();
       this.notifyDevTeam(errorReport);
     }
+
+    trackError(error, {
+      stage,
+      componentStack,
+      isCritical: this.isCriticalError(error)
+    });
+  }
+
+  getError(timestamp: string): ErrorReport | undefined {
+    return this.errors.find(report => report.timestamp === timestamp);
+  }
+
+  getErrorsForStage(stage: Stage): ErrorReport[] {
+    return this.errors.filter(report => report.stage === stage);
   }
 
   async updateRecoveryAttempts(error: Error): Promise<void> {
@@ -80,8 +95,7 @@ class ErrorReportingService {
       report => this.isCriticalError(report.error)
     ).length;
     const recoveredErrors = this.errors.filter(
-      report => report.recoveryAttempts > 0 && 
-                report.error.name !== 'RecoveryFailedError'
+      report => report.recoveryAttempts > 0 && report.resolved
     ).length;
 
     return {
@@ -90,10 +104,6 @@ class ErrorReportingService {
       criticalErrors,
       recoveryRate: totalErrors ? (recoveredErrors / totalErrors) * 100 : 0
     };
-  }
-
-  getRecentErrors(limit = 10): ErrorReport[] {
-    return this.errors.slice(0, limit);
   }
 
   async clearErrors(): Promise<void> {
@@ -111,11 +121,24 @@ class ErrorReportingService {
     );
   }
 
+  private handleUnhandledRejection(event: PromiseRejectionEvent): void {
+    this.reportError(
+      event.reason instanceof Error ? event.reason : new Error(String(event.reason))
+    );
+  }
+
   private async persistErrors(): Promise<void> {
     try {
       localStorage.setItem(
-        'errorReports',
-        JSON.stringify(this.errors)
+        this.STORAGE_KEY,
+        JSON.stringify(this.errors.map(report => ({
+          ...report,
+          error: {
+            name: report.error.name,
+            message: report.error.message,
+            stack: report.error.stack
+          }
+        })))
       );
     } catch (error) {
       console.error('Failed to persist error reports:', error);
@@ -124,9 +147,13 @@ class ErrorReportingService {
 
   private loadStoredErrors(): void {
     try {
-      const storedErrors = localStorage.getItem('errorReports');
+      const storedErrors = localStorage.getItem(this.STORAGE_KEY);
       if (storedErrors) {
-        this.errors = JSON.parse(storedErrors);
+        const parsed = JSON.parse(storedErrors);
+        this.errors = parsed.map((report: Omit<ErrorReport, 'error'> & { error: { name: string; message: string; stack?: string } }) => ({
+          ...report,
+          error: Object.assign(new Error(report.error.message), report.error)
+        }));
       }
     } catch (error) {
       console.error('Failed to load stored error reports:', error);
@@ -134,7 +161,6 @@ class ErrorReportingService {
   }
 
   private notifyDevTeam(errorReport: ErrorReport): void {
-    // In production, this would send to your error tracking service
     if (process.env.NODE_ENV === 'production') {
       console.error(
         'Critical Error:',

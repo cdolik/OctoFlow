@@ -1,12 +1,13 @@
-import { Stage, AssessmentState } from '../types';
+import type { Stage, AssessmentState } from '../types';
+import type { ErrorContext } from '../types/errors';
+
+const ANALYTICS_QUEUE_KEY = 'octoflow_analytics_queue';
 
 interface AnalyticsEvent {
   name: string;
   properties: Record<string, unknown>;
   timestamp: string;
 }
-
-const ANALYTICS_QUEUE_KEY = 'octoflow_analytics_queue';
 
 class AnalyticsManager {
   private static instance: AnalyticsManager;
@@ -51,7 +52,7 @@ class AnalyticsManager {
     }
 
     this.isProcessing = true;
-    const batch = this.queue.slice(0, 10); // Process 10 events at a time
+    const batch = this.queue.slice(0, 10);
 
     try {
       await this.sendEvents(batch);
@@ -59,7 +60,7 @@ class AnalyticsManager {
       this.saveQueue();
       
       if (this.queue.length > 0) {
-        setTimeout(() => this.processQueue(), 1000); // Process next batch after 1s
+        setTimeout(() => this.processQueue(), 1000);
       }
     } catch (error) {
       console.error('Failed to process analytics queue:', error);
@@ -69,19 +70,10 @@ class AnalyticsManager {
   }
 
   private async sendEvents(events: AnalyticsEvent[]): Promise<void> {
-    // Implementation would depend on your analytics provider
-    // This is a placeholder that logs to console in development
     if (process.env.NODE_ENV === 'development') {
-      console.log('Analytics events:', events);
+      console.log('[Analytics]', events);
       return;
     }
-
-    // In production, send to your analytics service
-    // await fetch('/api/analytics', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify(events)
-    // });
   }
 
   track(name: string, properties: Record<string, unknown>): void {
@@ -96,48 +88,36 @@ class AnalyticsManager {
   }
 }
 
-// Analytics tracking functions
+const analyticsManager = AnalyticsManager.getInstance();
+
 export function trackAssessmentComplete(stage: Stage, state: AssessmentState): void {
-  const analytics = AnalyticsManager.getInstance();
-  analytics.track('assessment_complete', {
+  analyticsManager.track('assessment_complete', {
     stage,
     timeSpent: state.metadata.timeSpent,
     questionCount: state.progress.totalQuestions,
-    completedCount: Object.keys(state.responses).length,
-    averageScore: calculateAverageScore(state)
+    completedCount: Object.keys(state.responses).length
   });
 }
 
 export function trackAssessmentStart(stage: Stage): void {
-  const analytics = AnalyticsManager.getInstance();
-  analytics.track('assessment_start', {
+  analyticsManager.track('assessment_start', {
     stage,
     timestamp: new Date().toISOString()
   });
 }
 
 export function trackStageTransition(from: Stage, to: Stage): void {
-  const analytics = AnalyticsManager.getInstance();
-  analytics.track('stage_transition', {
+  analyticsManager.track('stage_transition', {
     from,
     to,
     timestamp: new Date().toISOString()
   });
 }
 
-export function trackError(error: Error, context?: Record<string, unknown>): void {
-  const analytics = AnalyticsManager.getInstance();
-  analytics.track('error', {
+export function trackError(error: Error, context?: ErrorContext): void {
+  analyticsManager.track('error', {
     message: error.message,
     stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
     context
   });
-}
-
-// Helper functions
-function calculateAverageScore(state: AssessmentState): number {
-  const scores = Object.values(state.responses);
-  if (scores.length === 0) return 0;
-  
-  return scores.reduce((sum, score) => sum + score, 0) / scores.length;
 }

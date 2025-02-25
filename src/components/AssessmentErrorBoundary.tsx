@@ -1,79 +1,86 @@
-import React, { Component, ErrorInfo } from 'react';
-import { errorReporter } from '../utils/errorReporting';
-import { ErrorContext, AssessmentError } from '../types/errors';
+import React from 'react';
+import { ErrorReporter } from '../utils/errorReporting';
+import { trackError } from '../utils/analytics';
+import type { AssessmentError, ErrorContext } from '../types/errors';
+import type { ErrorBoundaryProps } from '../types/props';
+import { Stage } from '../types';
 
-interface Props {
-  children: React.ReactNode;
-  onRecover?: () => void;
-  fallback?: React.ReactNode;
+interface Props extends ErrorBoundaryProps {
+  stage?: Stage;
 }
 
 interface State {
-  hasError: boolean;
   error: Error | null;
-  errorInfo: ErrorInfo | null;
+  isRecovering: boolean;
 }
 
-export class AssessmentErrorBoundary extends Component<Props, State> {
+export class AssessmentErrorBoundary extends React.Component<Props, State> {
+  private errorReporter: ErrorReporter;
+
   constructor(props: Props) {
     super(props);
     this.state = {
-      hasError: false,
       error: null,
-      errorInfo: null
+      isRecovering: false
     };
+    this.errorReporter = ErrorReporter.getInstance();
   }
 
   static getDerivedStateFromError(error: Error): State {
-    return {
-      hasError: true,
-      error,
-      errorInfo: null
-    };
+    return { error, isRecovering: false };
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
     const context: ErrorContext = {
       component: 'AssessmentErrorBoundary',
-      metadata: {
-        componentStack: errorInfo.componentStack
-      }
+      action: 'catch_error',
+      message: error.message,
+      timestamp: new Date().toISOString()
     };
 
-    errorReporter.report(error, context);
+    this.errorReporter.reportError(error, errorInfo.componentStack, this.props.stage);
+    trackError(error, context);
   }
 
-  private handleRetry = (): void => {
-    this.setState({ hasError: false, error: null, errorInfo: null });
-    this.props.onRecover?.();
+  handleRecovery = async (): Promise<void> => {
+    this.setState({ isRecovering: true });
+    
+    try {
+      await this.props.onRecover?.();
+      this.setState({ error: null, isRecovering: false });
+    } catch (error) {
+      this.setState({ isRecovering: false });
+      if (error instanceof Error) {
+        trackError(error, {
+          component: 'AssessmentErrorBoundary',
+          action: 'recovery_failed',
+          message: 'Recovery attempt failed',
+          timestamp: new Date().toISOString()
+        });
+      }
+    }
   };
 
-  private isRecoverable(): boolean {
-    const { error } = this.state;
-    if (!error) return true;
-
-    return !(error as AssessmentError)?.recoverable === false;
-  }
-
   render(): React.ReactNode {
-    const { hasError, error } = this.state;
-    const { children, fallback } = this.props;
+    if (this.state.error) {
+      return this.props.fallback || (
+        <div role="alert">
+          <h2>Something went wrong with the assessment</h2>
+          <p>We encountered an issue while processing your assessment.</p>
+          {!this.state.isRecovering && (
+            <button 
+              onClick={this.handleRecovery}
+              disabled={this.state.isRecovering}
+            >
+              Try to recover
+            </button>
+          )}
+          {this.state.isRecovering && <p>Attempting to recover...</p>}
+        </div>
+      );
+    }
 
-    if (!hasError) return children;
-
-    if (fallback) return fallback;
-
-    return (
-      <div role="alert" className="error-boundary">
-        <h2>Something went wrong</h2>
-        <p>{error?.message}</p>
-        {this.isRecoverable() && (
-          <button onClick={this.handleRetry} className="retry-button">
-            Try Again
-          </button>
-        )}
-      </div>
-    );
+    return this.props.children;
   }
 }
 

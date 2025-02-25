@@ -153,6 +153,12 @@ export interface StageScores {
   recommendations: string[];
 }
 
+export interface StorageProgress {
+  questionIndex: number;
+  totalQuestions: number;
+  isComplete: boolean;
+}
+
 export interface StorageState {
   version: string;
   currentStage: Stage | null;
@@ -163,13 +169,24 @@ export interface StorageState {
     stageStartTime?: number;
     timeSpent: number;
     attemptCount: number;
+    lastInteraction?: number;
+    categoryTimes?: Record<string, number>;
   };
+  progress: StorageProgress;
 }
 
 export interface AssessmentState extends StorageState {
-  progress: {
-    questionIndex: number;
-    totalQuestions: number;
-    isComplete: boolean;
-  };
+  scores?: Record<string, number>;
+  preferences?: UserPreferences;
+}
+
+export interface UserPreferences {
+  theme: 'light' | 'dark' | 'system';
+  fontSize: 'small' | 'medium' | 'large';
+  soundEnabled: boolean;
+  highContrast: boolean;
+  motionReduced: boolean;
+  keyboardMode: 'basic' | 'advanced';
+  autoSave: boolean;
+  autoSaveInterval: number;
 }

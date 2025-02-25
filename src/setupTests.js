@@ -1,32 +1,80 @@
+import './setupPolyfills';
+import { TextEncoder, TextDecoder } from 'util';
 import '@testing-library/jest-dom';
+
+// Add TransformStream polyfill for MSW - using a synchronous approach for Jest
+if (typeof TransformStream === 'undefined') {
+  // Simple mock implementation of TransformStream for tests
+  global.TransformStream = class TransformStream {
+    constructor() {
+      this.readable = {};
+      this.writable = {};
+    }
+  };
+}
+
 import { server } from './mocks/server';
 
+// Polyfills
+global.TextEncoder = TextEncoder;
+global.TextDecoder = TextDecoder;
+
+if (typeof setImmediate === 'undefined') {
+  global.setImmediate = (fn, ...args) => setTimeout(fn, 0, ...args);
+}
+
+// Server mocks
 beforeAll(() => server.listen());
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
-// Mock sessionStorage
+// Storage mock setup
+const mockStorage = new Map();
+
 Object.defineProperty(window, 'sessionStorage', {
   value: {
-    getItem: jest.fn(() => null),
-    setItem: jest.fn(() => null),
-    removeItem: jest.fn(() => null),
-    clear: jest.fn(() => null)
+    getItem: jest.fn((key) => mockStorage.get(key)),
+    setItem: jest.fn((key, value) => mockStorage.set(key, value)),
+    removeItem: jest.fn((key) => mockStorage.delete(key)),
+    clear: jest.fn(() => mockStorage.clear()),
+    length: mockStorage.size,
+    key: jest.fn((index) => Array.from(mockStorage.keys())[index])
   },
   writable: true
 });
 
-// Chart.js mock
+// Chart.js mock with proper radar chart support
 const mockChart = {
   register: jest.fn(),
   Chart: jest.fn(() => ({
     destroy: jest.fn(),
     update: jest.fn(),
     data: {
-      datasets: [],
+      datasets: [{
+        data: [],
+        backgroundColor: 'rgba(0,0,0,0.1)',
+        borderColor: '#000',
+        pointBackgroundColor: '#000'
+      }],
       labels: []
     },
-    options: {}
+    options: {
+      plugins: {
+        legend: { display: false }
+      },
+      scales: {
+        r: {
+          min: 0,
+          max: 4,
+          ticks: { stepSize: 1 }
+        }
+      }
+    },
+    type: 'radar',
+    getDatasetMeta: jest.fn(() => ({
+      data: [],
+      type: 'radar'
+    }))
   })),
   Radar: jest.fn()
 };
@@ -38,21 +86,7 @@ jest.mock('chart.js', () => ({
   Radar: mockChart.Radar
 }));
 
-// Mock sessionStorage
-const mockStorage = new Map();
-
-Object.defineProperty(window, 'sessionStorage', {
-  value: {
-    getItem: jest.fn((key) => mockStorage.get(key)),
-    setItem: jest.fn((key, value) => mockStorage.set(key, value)),
-    removeItem: jest.fn((key) => mockStorage.delete(key)),
-    clear: jest.fn(() => mockStorage.clear()),
-    length: mockStorage.size,
-    key: jest.fn((index) => Array.from(mockStorage.keys())[index])
-  }
-});
-
-// Mock fetch API
+// Fetch API mock
 global.fetch = jest.fn(() =>
   Promise.resolve({
     ok: true,
@@ -66,12 +100,7 @@ global.fetch = jest.fn(() =>
   })
 );
 
-// Polyfill for setImmediate if needed
-if (typeof setImmediate === 'undefined') {
-  global.setImmediate = (fn, ...args) => setTimeout(fn, 0, ...args);
-}
-
-// Better console error handling
+// Console error handling - consolidated into one place
 const originalError = console.error;
 const originalWarn = console.warn;
 
@@ -84,11 +113,13 @@ beforeAll(() => {
        args[0].includes('Warning: Cannot update a component') ||
        args[0]?.includes?.('React will try to recreate this component tree') ||
        args[0]?.includes?.('ErrorBoundary') ||
-       /Error occurred in the error boundary/i.test(args[0] || '')
-    )) {
+       /Error occurred in the error boundary/i.test(args[0] || '') ||
+       args[0].includes('componentWillReceiveProps') ||
+       args[0].includes('componentWillMount'))
+    ) {
       return;
     }
-    originalError.call(console, ...args);
+    originalError.apply(console, args);
   };
 
   console.warn = (...args) => {
@@ -99,17 +130,11 @@ beforeAll(() => {
     ) {
       return;
     }
-    originalWarn.call(console, ...args);
+    originalWarn.apply(console, args);
   };
 });
 
-afterAll(() => {
-  console.error = originalError;
-  console.warn = originalWarn;
-  fetch.mockClear();
-});
-
-// Mock window.matchMedia with better device simulation
+// Browser API mocks
 const createMatchMedia = (matches) => (query) => ({
   matches,
   media: query,
@@ -121,10 +146,9 @@ const createMatchMedia = (matches) => (query) => ({
   dispatchEvent: jest.fn(),
 });
 
-// Default to desktop view
 window.matchMedia = createMatchMedia(true);
 
-// Mock ResizeObserver
+// Mock observers
 class ResizeObserverMock {
   constructor(callback) {
     this.callback = callback;
@@ -158,9 +182,6 @@ class ResizeObserverMock {
   }
 }
 
-global.ResizeObserver = ResizeObserverMock;
-
-// Mock IntersectionObserver
 class IntersectionObserverMock {
   constructor(callback) {
     this.callback = callback;
@@ -194,28 +215,47 @@ class IntersectionObserverMock {
   }
 }
 
+global.ResizeObserver = ResizeObserverMock;
 global.IntersectionObserver = IntersectionObserverMock;
 
-// Test cleanup
+// Test lifecycle hooks
 beforeEach(() => {
+  // Clear all mocks and state
   mockStorage.clear();
   jest.resetModules();
   document.body.innerHTML = '';
   fetch.mockClear();
-  jest.useFakeTimers();
   jest.clearAllMocks();
-  global.fetch.mockClear();
+  
+  // Start with fake timers
+  jest.useFakeTimers();
+  
+  // Clear storage
+  sessionStorage.clear();
+  localStorage.clear();
+  
+  // Reset Chart.js mock
+  mockChart.Chart.mockClear();
+  mockChart.register.mockClear();
+  mockChart.Radar.mockClear();
 });
 
 afterEach(() => {
+  // Clean up DOM
   document.body.innerHTML = '';
-  jest.clearAllMocks();
   
-  // Clear all timers
-  jest.runOnlyPendingTimers();
-  jest.useRealTimers();
+  // Handle timers properly
+  try {
+    jest.runOnlyPendingTimers();
+  } finally {
+    jest.useRealTimers();
+  }
   
-  // Verify no timers are leaked
+  // Clear storage
+  sessionStorage.clear();
+  localStorage.clear();
+  
+  // Check for leaked timers
   return new Promise(resolve => {
     setImmediate(() => {
       const pendingTimers = jest.getTimerCount();
@@ -230,17 +270,24 @@ afterEach(() => {
   });
 });
 
+afterAll(() => {
+  console.error = originalError;
+  console.warn = originalWarn;
+  jest.restoreAllMocks();
+});
+
 // Custom matchers
 expect.extend({
   toBeValidScore(received) {
-    const pass = typeof received === 'number' && received >= 0 && received <= 4;
+    const pass = typeof received === 'number' && received >= 1 && received <= 4;
     return {
-      message: () => `expected ${received} to be a valid score between 0 and 4`,
-      pass
+      pass,
+      message: () =>
+        `expected ${received} to be a valid score between 1 and 4`
     };
   },
   toBeValidStage(received) {
-    const validStages = ['pre-seed', 'seed', 'series-a'];
+    const validStages = ['pre-seed', 'seed', 'series-a', 'series-b'];
     const pass = validStages.includes(received);
     return {
       message: () => `expected ${received} to be one of: ${validStages.join(', ')}`,
@@ -287,26 +334,3 @@ expect.extend({
     };
   }
 });
-
-// Enhanced error boundary testing
-const originalConsoleError = console.error;
-beforeAll(() => {
-  console.error = (...args) => {
-    if (
-      args[0]?.includes?.('React will try to recreate this component tree') ||
-      args[0]?.includes?.('ErrorBoundary') ||
-      /Error occurred in the error boundary/i.test(args[0] || '')
-    ) {
-      return; // Suppress expected error boundary messages
-    }
-    originalConsoleError.apply(console, args);
-  };
-});
-
-afterAll(() => {
-  console.error = originalConsoleError;
-});
-
-if (typeof setImmediate === 'undefined') {
-  global.setImmediate = (fn, ...args) => setTimeout(fn, 0, ...args);
-}

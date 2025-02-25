@@ -1,86 +1,59 @@
-import { 
+import type { 
+  ErrorSeverity,
   AssessmentError,
-  ValidationError,
-  StorageError,
   NavigationError,
   StateError,
-  ErrorSeverity
+  ErrorHandlingOptions,
+  ErrorContext
 } from '../types/errors';
-import { trackErrorWithRecovery, trackError } from './analytics';
-import { StorageState } from '../types';
+import type { BaseError, HandledError } from '../types/base';
+import { trackError } from './analytics';
+import type { StorageState } from '../types';
 
-export interface ErrorHandlingOptions {
-  maxRetries?: number;
-  retryDelay?: number;
-  recoveryFn?: () => Promise<boolean>;
-}
+export class BaseAssessmentError extends Error implements BaseError {
+  public severity: ErrorSeverity;
+  public recoverable: boolean;
+  public name: string;
 
-export interface ErrorResult {
-  handled: boolean;
-  recovered?: boolean;
-  error: Error;
-}
-
-class BaseAssessmentError extends Error implements AssessmentError {
-  severity: ErrorSeverity;
-  recoverable: boolean;
-  context?: Record<string, unknown>;
-
-  constructor(
-    message: string,
-    severity: ErrorSeverity = 'medium',
-    recoverable = true,
-    context?: Record<string, unknown>
-  ) {
+  constructor(message: string, severity: ErrorSeverity = 'medium', recoverable = true) {
     super(message);
-    this.name = 'AssessmentError';
+    this.name = 'BaseAssessmentError';
     this.severity = severity;
     this.recoverable = recoverable;
-    this.context = context;
   }
 }
 
-export class ValidationFailedError extends BaseAssessmentError implements ValidationError {
-  field: string;
-  constraint: string;
-
-  constructor(field: string, constraint: string, message: string) {
-    super(message, 'medium', true, { field, constraint });
-    this.name = 'ValidationFailedError';
-    this.field = field;
-    this.constraint = constraint;
-  }
-}
-
-export class StorageFailedError extends BaseAssessmentError implements StorageError {
-  operation: 'read' | 'write' | 'delete';
-  key?: string;
-
-  constructor(operation: 'read' | 'write' | 'delete', key?: string) {
-    super(
-      `Storage operation ${operation} failed${key ? ` for key: ${key}` : ''}`,
-      'high',
-      operation === 'read',
-      { operation, key }
-    );
+export class StorageFailedError extends BaseAssessmentError {
+  public operation: 'init' | 'read' | 'write' | 'delete';
+  
+  constructor(operation: 'init' | 'read' | 'write' | 'delete', message?: string) {
+    super(message ?? `Storage operation "${operation}" failed`, 'high', true);
     this.name = 'StorageFailedError';
     this.operation = operation;
-    this.key = key;
+  }
+}
+
+export class ValidationFailedError extends BaseAssessmentError {
+  constructor(message: string) {
+    super(message, 'medium', true);
+    this.name = 'ValidationFailedError';
+  }
+}
+
+export class SessionExpiredError extends BaseAssessmentError {
+  constructor() {
+    super('Session has expired', 'medium', true);
+    this.name = 'SessionExpiredError';
   }
 }
 
 export class NavigationFailedError extends BaseAssessmentError implements NavigationError {
-  from: string;
-  to: string;
-  reason: string;
+  public from: string;
+  public to: string;
+  public reason: string;
 
-  constructor(from: string, to: string, reason: string) {
-    super(
-      `Navigation from ${from} to ${to} failed: ${reason}`,
-      'medium',
-      true,
-      { from, to, reason }
-    );
+  constructor(message: string, from: string, to: string, reason: string) {
+    super(message, 'medium', true);
     this.name = 'NavigationFailedError';
     this.from = from;
     this.to = to;
@@ -89,35 +62,36 @@ export class NavigationFailedError extends BaseAssessmentError implements Naviga
 }
 
 export class StateTransitionError extends BaseAssessmentError implements StateError {
-  expectedState: string;
-  actualState: string;
-  stateKey: string;
+  public expectedState: string;
+  public actualState: string;
+  public stateKey: string;
 
-  constructor(stateKey: string, expectedState: string, actualState: string) {
-    super(
-      `Invalid state transition for ${stateKey}: expected ${expectedState}, got ${actualState}`,
-      'high',
-      true,
-      { stateKey, expectedState, actualState }
-    );
+  constructor(
+    message: string,
+    stateKey: string,
+    expectedState: string,
+    actualState: string
+  ) {
+    super(message, 'high', true);
     this.name = 'StateTransitionError';
+    this.stateKey = stateKey;
     this.expectedState = expectedState;
     this.actualState = actualState;
-    this.stateKey = stateKey;
   }
 }
 
-export const handleError = async (
+export async function handleError(
   error: Error,
+  context: ErrorContext,
   options: ErrorHandlingOptions = {}
-): Promise<ErrorResult> => {
+): Promise<HandledError> {
   const {
     maxRetries = 3,
     retryDelay = 1000,
     recoveryFn
   } = options;
 
-  trackError(error);
+  trackError(error, context);
 
   if (!recoveryFn) {
     return {
@@ -139,7 +113,16 @@ export const handleError = async (
         };
       }
     } catch (retryError) {
-      trackError(retryError as Error);
+      const retryContext = {
+        ...context,
+        message: `Recovery attempt ${retries + 1} failed`,
+        timestamp: new Date().toISOString(),
+        metadata: {
+          ...context.metadata,
+          attemptNumber: retries + 1
+        }
+      };
+      trackError(retryError as Error, retryContext);
     }
 
     retries++;
@@ -153,11 +136,11 @@ export const handleError = async (
     recovered: false,
     error
   };
-};
+}
 
-export const isAssessmentError = (error: unknown): error is AssessmentError => {
+export function isAssessmentError(error: unknown): error is AssessmentError {
   return error instanceof BaseAssessmentError;
-};
+}
 
 export function validateStorageState(state: unknown): state is StorageState {
   if (!state || typeof state !== 'object') {
@@ -173,4 +156,40 @@ export function validateStorageState(state: unknown): state is StorageState {
     typeof typedState.metadata.timeSpent === 'number' &&
     typeof typedState.metadata.attemptCount === 'number'
   );
+}
+
+export async function withErrorHandling<T>(
+  operation: () => Promise<T>
+): Promise<HandledError<T>> {
+  try {
+    const data = await operation();
+    return { handled: true, recovered: true, error: null, data };
+  } catch (error) {
+    const err = error instanceof Error ? error : new Error(String(error));
+    return { handled: true, recovered: false, error: err };
+  }
+}
+
+export function isRecoverableError(error: Error): boolean {
+  if ('recoverable' in error) {
+    return (error as BaseError).recoverable;
+  }
+  return !error.message.includes('critical') && 
+         error.name !== 'SecurityError' &&
+         error.name !== 'QuotaExceededError';
+}
+
+export function createErrorContext(
+  component: string,
+  action: string,
+  message: string,
+  metadata?: Record<string, unknown>
+): ErrorContext {
+  return {
+    component,
+    action,
+    message,
+    timestamp: new Date().toISOString(),
+    metadata
+  };
 }

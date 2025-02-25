@@ -1,10 +1,11 @@
 module.exports = {
   presets: [
-    '@babel/preset-env',
-    '@babel/preset-react',
-    '@babel/preset-typescript'
+    ['@babel/preset-env', { targets: { node: 'current' } }],
+    '@babel/preset-typescript',
+    ['@babel/preset-react', { runtime: 'automatic' }]
   ],
   plugins: [
-    'react-refresh/babel'
+    '@babel/plugin-transform-runtime',
+    '@babel/plugin-proposal-class-properties'
   ]
-}
+};

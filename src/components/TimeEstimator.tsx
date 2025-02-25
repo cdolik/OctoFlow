@@ -1,73 +1,63 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { trackQuestionAnswer } from '../utils/analytics';
+import React, { useState, useEffect } from 'react';
 
-interface TimeEstimatorProps {
-  questionsRemaining: number;
-  questionId: string;
+interface TimeEstimation {
+  shortEstimate: number;
+  longEstimate: number;
+  averageTime: number;
 }
 
-const calculateEstimatedTime = (questionsRemaining: number, averages: number[]): number => {
-  if (averages.length === 0) return questionsRemaining * 30; // Default 30s per question
-  const recentAverage = averages.reduce((a, b) => a + b, 0) / averages.length;
-  return Math.ceil(questionsRemaining * recentAverage);
-};
+interface TimeEstimatorProps {
+  questionCount: number;
+  averageTimePerQuestion?: number;
+  variancePercent?: number;
+  onEstimationComplete?: (estimation: TimeEstimation) => void;
+}
 
-export const TimeEstimator: React.FC<TimeEstimatorProps> = ({ questionsRemaining, questionId }) => {
-  const [secondsRemaining, setSeconds] = useState<number>(questionsRemaining * 30);
-  const [questionStart, setQuestionStart] = useState<number>(Date.now());
-  const [timeAverages, setTimeAverages] = useState<number[]>([]);
+export const TimeEstimator: React.FC<TimeEstimatorProps> = ({
+  questionCount,
+  averageTimePerQuestion = 120, // 2 minutes default
+  variancePercent = 20,
+  onEstimationComplete
+}) => {
+  const [estimation, setEstimation] = useState<TimeEstimation>({
+    shortEstimate: 0,
+    longEstimate: 0,
+    averageTime: 0
+  });
 
-  const updateTimeAverage = useCallback((questionTime: number) => {
-    setTimeAverages(prev => {
-      const newAverages = [...prev, questionTime];
-      // Keep only last 5 question times for average
-      return newAverages.slice(-5);
-    });
-  }, []);
-
-  // Reset timer when question changes
   useEffect(() => {
-    const prevQuestionTime = (Date.now() - questionStart) / 1000;
-    if (prevQuestionTime > 5) { // Only count if spent more than 5s on question
-      updateTimeAverage(prevQuestionTime);
-      trackQuestionAnswer(questionId, null, prevQuestionTime);
+    const variance = (averageTimePerQuestion * variancePercent) / 100;
+    const totalAverageTime = questionCount * averageTimePerQuestion;
+    
+    const newEstimation = {
+      shortEstimate: Math.max(0, totalAverageTime - (questionCount * variance)),
+      longEstimate: totalAverageTime + (questionCount * variance),
+      averageTime: totalAverageTime
+    };
+
+    setEstimation(newEstimation);
+    onEstimationComplete?.(newEstimation);
+  }, [questionCount, averageTimePerQuestion, variancePercent]);
+
+  const formatTime = (seconds: number): string => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+
+    if (hours > 0) {
+      return `${hours} hour${hours !== 1 ? 's' : ''} ${minutes} minute${minutes !== 1 ? 's' : ''}`;
     }
-    setQuestionStart(Date.now());
-    setSeconds(calculateEstimatedTime(questionsRemaining, timeAverages));
-  }, [questionId, questionsRemaining, questionStart, timeAverages, updateTimeAverage]);
+    return `${minutes} minute${minutes !== 1 ? 's' : ''}`;
+  };
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setSeconds(prev => {
-        const newTime = Math.max(0, prev - 1);
-        // Update estimate if actual time exceeds estimate significantly
-        if (newTime === 0 && questionsRemaining > 0) {
-          return calculateEstimatedTime(questionsRemaining, timeAverages);
-        }
-        return newTime;
-      });
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [questionsRemaining, timeAverages]);
-
-  if (questionsRemaining === 0) return null;
-
-  const minutes = Math.floor(secondsRemaining / 60);
-  const seconds = secondsRemaining % 60;
-  
   return (
-    <div 
-      className="time-estimate" 
-      role="timer" 
-      aria-label="Estimated time remaining"
-    >
-      <span className="time-icon">⏱️</span>
-      <span className="time-text">
-        {minutes > 0 ? `${minutes}m ` : ''}{seconds}s remaining
-      </span>
-      <span className="time-source">
-        {timeAverages.length > 0 ? 'Based on your pace' : 'Based on average completion time'}
-      </span>
+    <div className="time-estimator">
+      <p>Estimated time to complete:</p>
+      <p className="estimate-range">
+        {formatTime(estimation.shortEstimate)} - {formatTime(estimation.longEstimate)}
+      </p>
+      <p className="average-time">
+        Average completion time: {formatTime(estimation.averageTime)}
+      </p>
     </div>
   );
 };

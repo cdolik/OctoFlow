@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { useKeyboardShortcuts } from '../contexts/KeyboardShortcutsContext';
 import './styles.css';
+import type { LiveRegionProps } from '../types/props';
 
 interface Message {
   text: string;
@@ -8,32 +9,27 @@ interface Message {
   id: string;
 }
 
-interface LiveRegionProps {
-  politeness?: 'polite' | 'assertive';
-  clearAfter?: number;
-  filter?: (message: Message) => boolean;
-}
-
 const LiveRegion: React.FC<LiveRegionProps> = ({
-  politeness = 'polite',
-  clearAfter = 5000,
-  filter = () => true
+  children,
+  'aria-live': ariaLive = 'polite',
+  'aria-atomic': ariaAtomic = true
 }) => {
   const [messages, setMessages] = React.useState<Message[]>([]);
   const { activeShortcut } = useKeyboardShortcuts();
   const timeoutRef = useRef<NodeJS.Timeout>();
+  const regionRef = useRef<HTMLDivElement>(null);
 
   const addMessage = React.useCallback((message: Message) => {
-    if (!filter(message)) return;
-
     setMessages(prev => [...prev, message]);
 
-    if (clearAfter > 0) {
-      timeoutRef.current = setTimeout(() => {
-        setMessages(prev => prev.filter(m => m.id !== message.id));
-      }, clearAfter);
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
     }
-  }, [clearAfter, filter]);
+
+    timeoutRef.current = setTimeout(() => {
+      setMessages(prev => prev.filter(m => m.id !== message.id));
+    }, 5000);
+  }, []);
 
   useEffect(() => {
     const handleCustomMessage = (event: CustomEvent<Message>) => {
@@ -60,11 +56,31 @@ const LiveRegion: React.FC<LiveRegionProps> = ({
     }
   }, [activeShortcut, addMessage]);
 
+  useEffect(() => {
+    // Force screen readers to announce content changes
+    if (regionRef.current) {
+      const originalContent = regionRef.current.textContent;
+      regionRef.current.textContent = '';
+      setTimeout(() => {
+        if (regionRef.current) {
+          regionRef.current.textContent = originalContent;
+        }
+      }, 100);
+    }
+  }, [children]);
+
   return (
-    <>
+    <div
+      ref={regionRef}
+      className="live-region"
+      role="status"
+      aria-live={ariaLive}
+      aria-atomic={ariaAtomic}
+    >
+      {children}
       {/* Polite announcements */}
       <div
-        aria-live={politeness}
+        aria-live="polite"
         aria-atomic="true"
         className="live-region"
       >
@@ -91,7 +107,7 @@ const LiveRegion: React.FC<LiveRegionProps> = ({
             </div>
           ))}
       </div>
-    </>
+    </div>
   );
 };
 

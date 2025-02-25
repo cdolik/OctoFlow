@@ -1,4 +1,5 @@
 import '@testing-library/jest-dom';
+import { cleanup } from '@testing-library/react';
 import { server } from './mocks/server';
 
 declare global {
@@ -38,8 +39,12 @@ interface MockChart {
   Radar: jest.Mock;
 }
 
-beforeAll(() => server.listen());
-afterEach(() => server.resetHandlers());
+// Enable API mocking
+beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
+afterEach(() => {
+  cleanup();
+  server.resetHandlers();
+});
 afterAll(() => server.close());
 
 // Mock sessionStorage
@@ -130,106 +135,58 @@ beforeAll(() => {
 });
 
 // Mock window.matchMedia
-const createMatchMedia = (matches: boolean) => (query: string): MediaQueryList => ({
-  matches,
-  media: query,
-  onchange: null,
-  addListener: jest.fn(),
-  removeListener: jest.fn(),
-  addEventListener: jest.fn(),
-  removeEventListener: jest.fn(),
-  dispatchEvent: jest.fn(),
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: jest.fn().mockImplementation(query => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: jest.fn(),
+    removeListener: jest.fn(),
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
+    dispatchEvent: jest.fn(),
+  })),
 });
 
-window.matchMedia = createMatchMedia(true);
-
 // Mock ResizeObserver
-class ResizeObserverMock implements ResizeObserver {
-  private callback: ResizeObserverCallback;
-  private observables: Set<Element>;
-
+global.ResizeObserver = class ResizeObserver {
   constructor(callback: ResizeObserverCallback) {
     this.callback = callback;
-    this.observables = new Set();
   }
-
-  observe(element: Element): void {
-    this.observables.add(element);
-  }
-
-  unobserve(element: Element): void {
-    this.observables.delete(element);
-  }
-
-  disconnect(): void {
-    this.observables.clear();
-  }
-
-  mockResize(element: Element, rect: DOMRectReadOnly): void {
-    if (this.observables.has(element)) {
-      this.callback([
-        {
-          target: element,
-          contentRect: rect,
-          borderBoxSize: [{ inlineSize: rect.width, blockSize: rect.height }],
-          contentBoxSize: [{ inlineSize: rect.width, blockSize: rect.height }],
-          devicePixelContentBoxSize: [{ inlineSize: rect.width, blockSize: rect.height }]
-        }
-      ], this);
-    }
-  }
-}
-
-global.ResizeObserver = ResizeObserverMock as unknown as typeof ResizeObserver;
+  private callback: ResizeObserverCallback;
+  disconnect() { }
+  observe() { }
+  unobserve() { }
+};
 
 // Mock IntersectionObserver
-class IntersectionObserverMock implements IntersectionObserver {
-  readonly root: Element | null = null;
-  readonly rootMargin: string = '0px';
-  readonly thresholds: ReadonlyArray<number> = [0];
-  
-  private callback: IntersectionObserverCallback;
-  private observables: Set<Element>;
-
+global.IntersectionObserver = class IntersectionObserver {
   constructor(callback: IntersectionObserverCallback) {
     this.callback = callback;
-    this.observables = new Set();
   }
+  private callback: IntersectionObserverCallback;
+  disconnect() { }
+  observe() { }
+  unobserve() { }
+  takeRecords() { return []; }
+};
 
-  observe(element: Element): void {
-    this.observables.add(element);
-  }
-
-  unobserve(element: Element): void {
-    this.observables.delete(element);
-  }
-
-  disconnect(): void {
-    this.observables.clear();
-  }
-
-  takeRecords(): IntersectionObserverEntry[] {
-    return [];
-  }
-
-  mockIntersection(element: Element, isIntersecting: boolean): void {
-    if (this.observables.has(element)) {
-      this.callback([
-        {
-          target: element,
-          isIntersecting,
-          boundingClientRect: element.getBoundingClientRect(),
-          intersectionRatio: isIntersecting ? 1 : 0,
-          intersectionRect: element.getBoundingClientRect(),
-          rootBounds: null,
-          time: Date.now()
-        }
-      ], this);
-    }
-  }
-}
-
-global.IntersectionObserver = IntersectionObserverMock as unknown as typeof IntersectionObserver;
+// Mock window.performance
+const originalPerformance = window.performance;
+beforeAll(() => {
+  Object.defineProperty(window, 'performance', {
+    writable: true,
+    value: {
+      ...originalPerformance,
+      mark: jest.fn(),
+      measure: jest.fn(),
+      getEntriesByType: jest.fn().mockReturnValue([]),
+      clearMarks: jest.fn(),
+      clearMeasures: jest.fn(),
+    },
+  });
+});
 
 // Custom matchers
 expect.extend({
