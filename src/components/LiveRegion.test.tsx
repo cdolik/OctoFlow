@@ -2,6 +2,8 @@ import React from 'react';
 import { render, screen, act } from '@testing-library/react';
 import LiveRegion, { announce } from './LiveRegion';
 import { useKeyboardShortcuts } from '../contexts/KeyboardShortcutsContext';
+import { axe } from 'jest-axe';
+import { testAccessibility } from '../tests/a11y-test-utils';
 
 jest.mock('../contexts/KeyboardShortcutsContext');
 jest.useFakeTimers();
@@ -10,13 +12,11 @@ describe('LiveRegion', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (useKeyboardShortcuts as jest.Mock).mockReturnValue({ activeShortcut: null });
+    jest.useFakeTimers();
   });
 
   afterEach(() => {
     jest.clearAllTimers();
-  });
-
-  it('renders with correct ARIA attributes', () => {
     render(<LiveRegion />);
 
     const politeRegion = screen.getByRole('status').parentElement;
