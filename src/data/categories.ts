@@ -1,7 +1,7 @@
-import { Category } from '../types';
+import { Category, Stage } from '../types';
 import { questions } from './questions';
 
-const categories: Category[] = [
+export const categories: Category[] = [
   {
     id: 'github-ecosystem',
     title: 'GitHub Enterprise Adoption & Collaboration',
@@ -52,3 +52,9 @@ const categories: Category[] = [
     questions: questions.filter(q => q.category === 'optimization')
   }
 ];
+
+export const getStageQuestions = (stage: Stage) => {
+  return questions.filter(question => question.stages.includes(stage));
+};
+
+export default categories;

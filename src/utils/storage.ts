@@ -1,6 +1,4 @@
-import { Stage, StorageState, AssessmentState } from '../types';
-import { validateStageResponses } from './questionFilters';
-import { questions } from '../data/questions';
+import { AssessmentState } from '../types';
 
 const STORAGE_KEY = 'octoflow';
 const BACKUP_KEY = 'octoflow_backup';
@@ -87,6 +85,21 @@ export const saveState = async (state: AssessmentState): Promise<boolean> => {
   }
 };
 
+export const backupState = async (): Promise<boolean> => {
+  try {
+    const current = sessionStorage.getItem(STORAGE_KEY);
+    if (!current) return false;
+
+    const state = JSON.parse(current);
+    if (!validateState(state)) return false;
+
+    sessionStorage.setItem(BACKUP_KEY, current);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 export const validateState = (state: unknown): state is AssessmentState => {
   if (!state || typeof state !== 'object') {
     return false;
@@ -109,5 +122,20 @@ export const clearAssessmentState = (): void => {
     sessionStorage.removeItem(BACKUP_KEY);
   } catch {
     // Ignore errors during cleanup
+  }
+};
+
+export const restoreFromBackup = async (): Promise<boolean> => {
+  try {
+    const backup = sessionStorage.getItem(BACKUP_KEY);
+    if (!backup) return false;
+
+    const state = JSON.parse(backup);
+    if (!validateState(state)) return false;
+
+    sessionStorage.setItem(STORAGE_KEY, backup);
+    return true;
+  } catch {
+    return false;
   }
 };
