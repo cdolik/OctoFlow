@@ -76,7 +76,3 @@ describe('App', () => {
     });
   });
 });
-
-function getAssessmentState() {
-  throw new Error('Function not implemented.');
-}

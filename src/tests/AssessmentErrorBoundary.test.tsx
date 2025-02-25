@@ -2,7 +2,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import AssessmentErrorBoundary from '../components/AssessmentErrorBoundary';
 import { ErrorReporter } from '../utils/errorReporting';
 import { trackCTAClick, trackError } from '../utils/analytics';
-import { clearAssessmentData } from '../utils/storage';
+import { clearAssessmentState, getAssessmentState } from '../utils/storage';
 
 // Mock dependencies
 jest.mock('../utils/analytics', () => ({
@@ -11,14 +11,12 @@ jest.mock('../utils/analytics', () => ({
 }));
 
 jest.mock('../utils/storage', () => ({
-  clearAssessmentData: jest.fn()
+  clearAssessmentState: jest.fn(),
+  getAssessmentState: jest.fn(),
+  getAssessmentResponses: jest.fn()
 }));
 
-jest.mock('../utils/assessmentState', () => ({
-  getAssessmentState: jest.fn()
-}));
-
-const { getAssessmentState } = jest.requireMock('../utils/assessmentState');
+const { getAssessmentState, getAssessmentResponses } = jest.requireMock('../utils/storage');
 
 jest.mock('../utils/errorReporting', () => ({
   ErrorReporter: {
@@ -90,7 +88,7 @@ describe('AssessmentErrorBoundary', () => {
     );
 
     fireEvent.click(screen.getByText('Restart Assessment'));
-    expect(clearAssessmentData).toHaveBeenCalled();
+    expect(clearAssessmentState).toHaveBeenCalled();
     expect(trackCTAClick).toHaveBeenCalledWith('assessment_reset');
     
     consoleError.mockRestore();

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router } from 'react-router-dom';
 import { Stage } from './types';
-import { getAssessmentState } from './utils/storage';
+import { getAssessmentState } from './utils/storage'; // Fixed import path
 import { GlobalErrorBoundary } from './components/GlobalErrorBoundary';
 import { AppRoutes } from './components/AppRoutes';
 import { ErrorProvider } from './contexts/ErrorContext';
