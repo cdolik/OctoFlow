@@ -18,6 +18,12 @@ interface ErrorMetrics {
   recoveryRate: number;
 }
 
+interface ErrorContext {
+  componentStack?: string;
+  isCritical?: boolean;
+  stage?: Stage;
+}
+
 class ErrorReportingService {
   private static instance: ErrorReportingService;
   private errors: ErrorReport[] = [];
@@ -175,4 +181,6 @@ class ErrorReportingService {
 }
 
 export const errorReportingService = ErrorReportingService.getInstance();
-export default errorReportingService;
+export { ErrorReportingService as ErrorReporter };
+export const errorReporter = ErrorReportingService.getInstance();
+export default errorReporter;

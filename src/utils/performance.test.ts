@@ -1,4 +1,4 @@
-import { performance, withPerformanceTracking } from './performance';
+import { performance, withPerformanceTracking, getComponentMetrics } from './performance';
 import React from 'react';
 import { render } from '@testing-library/react';
 
@@ -33,7 +33,9 @@ describe('PerformanceMonitor', () => {
   });
 
   it('tracks component render times', () => {
-    const TestComponent: React.FC = () => { return <div>Test</div>; };
+    const TestComponent: React.FC = () => { 
+      return React.createElement('div', null, 'Test'); 
+    };
     const WrappedComponent = withPerformanceTracking(TestComponent, 'TestComponent');
     render(React.createElement(WrappedComponent));
     const componentMetrics = performance.getComponentMetrics();
@@ -43,7 +45,9 @@ describe('PerformanceMonitor', () => {
   });
 
   it('calculates average render times correctly', () => {
-    const TestComponent: React.FC = () => { return <div>Test</div>; };
+    const TestComponent: React.FC = () => { 
+      return React.createElement('div', null, 'Test'); 
+    };
     const WrappedComponent = withPerformanceTracking(TestComponent, 'TestComponent');
     // Simulate multiple renders
     for (let i = 0; i < 3; i++) {
@@ -116,8 +120,6 @@ describe('PerformanceObserver Integration', () => {
   });
 });
 
-import { getComponentMetrics } from './performance';
-
 describe('Performance Utilities', () => {
   beforeEach(() => {
     performance.clearMarks();
@@ -125,21 +127,25 @@ describe('Performance Utilities', () => {
   });
 
   it('measures component render time', () => {
-    const TestComponent: React.FC = () => { return <div>Test</div>; };
+    const TestComponent: React.FC = () => {
+      return React.createElement('div', null, 'Test');
+    };
     const WrappedComponent = getComponentMetrics(TestComponent);
 
-    render(<WrappedComponent />);
+    render(React.createElement(WrappedComponent));
 
     const componentMetrics = performance.getEntriesByType('measure');
     expect(componentMetrics.length).toBeGreaterThan(0);
   });
 
   it('handles multiple renders', () => {
-    const TestComponent: React.FC = () => { return <div>Test</div>; };
+    const TestComponent: React.FC = () => {
+      return React.createElement('div', null, 'Test');
+    };
     const WrappedComponent = getComponentMetrics(TestComponent);
 
     for (let i = 0; i < 3; i++) {
-      render(<WrappedComponent />);
+      render(React.createElement(WrappedComponent));
     }
 
     const componentMetrics = performance.getEntriesByType('measure');

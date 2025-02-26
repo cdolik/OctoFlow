@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write  # Ensure GitHub Pages deploy has write access
   pages: write
   id-token: write
 
@@ -48,7 +48,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
 
   build-and-deploy:
-    needs: validate
+    needs: validate  # Remove this if you want deploy to run even if tests fail
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -65,8 +65,7 @@ jobs:
       - name: Build
         run: npm run build
         env:
-          CI: true
-          PUBLIC_URL: /OctoFlow
+          PUBLIC_URL: https://cdolik.github.io/OctoFlow/  # Adjust based on domain settings
       - name: Setup Pages
         uses: actions/configure-pages@v3
       - name: Upload artifact

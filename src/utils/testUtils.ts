@@ -1,7 +1,7 @@
 import { Chart } from 'chart.js';
 import { render } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
-import type { Stage, StageInfo } from 'octoflow';
+import type { Stage as OctoFlowStage, StageInfo } from 'octoflow';
 import type { ReactElement, ComponentType } from 'react';
 import React from 'react';
 import { stages } from '../data/stages';
@@ -79,7 +79,7 @@ export const renderWithRouter = (
 };
 
 // Mock data for stages
-export const mockStages: Stage[] = ['pre-seed', 'seed', 'series-a'];
+export const mockStages: OctoFlowStage[] = ['pre-seed', 'seed', 'series-a'];
 
 export const mockStageInfo: StageInfo = {
   id: 'pre-seed',
@@ -93,7 +93,8 @@ export const mockResponses = {
 };
 
 interface MockState {
-  stage: Stage;
+  stage: OctoFlowStage;
+  currentStage?: string;
   responses: Record<string, number>;
   flowState?: string;
   metadata?: {
@@ -107,18 +108,20 @@ interface MockState {
 export const createMockState = ({
   stage = 'pre-seed',
   responses = {},
-  flowState = FLOW_STATES.ASSESSMENT,
-  metadata = {}
+  metadata = {
+    lastSaved: '',
+    timeSpent: 0,
+    attemptCount: 0
+  }
 }: Partial<MockState> = {}): StorageState => {
   return {
     version: '1.1',
     currentStage: stage,
     responses,
     metadata: {
-      lastSaved: new Date().toISOString(),
-      timeSpent: 0,
+      ...metadata,
       attemptCount: 1,
-      ...metadata
+      lastSaved: new Date().toISOString()
     }
   };
 };

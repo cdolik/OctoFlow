@@ -13,7 +13,7 @@ interface State {
   isRecovering: boolean;
 }
 
-class GlobalErrorBoundary extends Component<Props, State> {
+export class GlobalErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
     this.state = {
@@ -122,5 +122,3 @@ class GlobalErrorBoundary extends Component<Props, State> {
     return this.props.children;
   }
 }
-
-export default GlobalErrorBoundary;

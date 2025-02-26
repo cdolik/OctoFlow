@@ -9,7 +9,7 @@ interface Message {
   id: string;
 }
 
-const LiveRegion: React.FC<LiveRegionProps> = ({
+export const LiveRegion: React.FC<LiveRegionProps> = ({
   children,
   'aria-live': ariaLive = 'polite',
   'aria-atomic': ariaAtomic = true
