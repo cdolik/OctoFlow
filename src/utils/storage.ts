@@ -124,6 +124,8 @@ export const clearAssessmentState = (): void => {
     // Ignore errors during cleanup
   }
 };
+<<<<<<< HEAD
+=======
 
 export const restoreFromBackup = async (): Promise<boolean> => {
   try {
@@ -139,3 +141,4 @@ export const restoreFromBackup = async (): Promise<boolean> => {
     return false;
   }
 };
+>>>>>>> origin/main

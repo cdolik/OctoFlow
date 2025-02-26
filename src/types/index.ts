@@ -1,4 +1,3 @@
-// Core Types
 export type Stage = 'pre-seed' | 'seed' | 'series-a' | 'series-b';
 
 export interface StageDefinition {
