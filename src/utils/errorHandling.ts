@@ -193,3 +193,100 @@ export function createErrorContext(
     metadata
   };
 }
+
+import { ErrorContext, AssessmentError, StorageError, ErrorSeverity } from '../types/errors';
+import { Stage } from '../types';
+
+export interface ErrorHandlerResult<T> {
+  data: T | null;
+  error: Error | null;
+}
+
+export function createErrorContext(
+  component: string,
+  action: string,
+  details?: string,
+  stage?: Stage
+): ErrorContext {
+  return {
+    component,
+    action,
+    stage,
+    timestamp: new Date().toISOString()
+  };
+}
+
+export async function withErrorHandling<T>(
+  fn: () => Promise<T>
+): Promise<ErrorHandlerResult<T>> {
+  try {
+    const result = await fn();
+    return { data: result, error: null };
+  } catch (err) {
+    const error = err instanceof Error ? err : new Error(String(err));
+    return { data: null, error };
+  }
+}
+
+export function isStorageQuotaExceededError(error: unknown): boolean {
+  if (error instanceof DOMException) {
+    // Firefox
+    if (error.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+      return true;
+    }
+    // Chrome / Safari
+    if (error.name === 'QuotaExceededError') {
+      return true;
+    }
+    // Other browsers
+    if (error.name === 'QUOTA_EXCEEDED_ERR') {
+      return true;
+    }
+  }
+
+  if (error instanceof Error) {
+    const message = error.message.toLowerCase();
+    return message.includes('quota') && message.includes('exceed');
+  }
+
+  return false;
+}
+
+export function handleStorageError(error: unknown, context: ErrorContext): StorageError {
+  if (isStorageQuotaExceededError(error)) {
+    return new StorageError('Storage quota exceeded. Try clearing browser data.', {
+      context,
+      recoverable: true,
+      severity: 'warning'
+    });
+  }
+
+  if (error instanceof Error) {
+    return new StorageError(`Storage operation failed: ${error.message}`, {
+      context,
+      recoverable: true,
+      severity: 'warning'
+    });
+  }
+
+  return new StorageError('Unknown storage error occurred', {
+    context,
+    recoverable: true,
+    severity: 'warning'
+  });
+}
+
+export function getErrorSeverityClass(severity: ErrorSeverity): string {
+  switch (severity) {
+    case 'critical':
+      return 'error-critical';
+    case 'error':
+      return 'error-standard';
+    case 'warning':
+      return 'error-warning';
+    case 'info':
+      return 'error-info';
+    default:
+      return 'error-standard';
+  }
+}

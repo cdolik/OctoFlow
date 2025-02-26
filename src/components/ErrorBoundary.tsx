@@ -1,47 +1,45 @@
 import React from 'react';
-import { ErrorFallback } from './ErrorFallback';
-import type { ErrorBoundaryProps } from '../types/props';
+import { ErrorContext } from '../types/errors';
 import { trackError } from '../utils/analytics';
-import type { ErrorContext } from '../types/errors';
 
-interface State {
-  error: Error | null;
-  componentStack?: string;
+interface ErrorBoundaryProps {
+  children: React.ReactNode;
+  fallback?: React.ReactNode;
+  onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
 }
 
-export class ErrorBoundary extends React.Component<ErrorBoundaryProps, State> {
-  state: State = {
-    error: null
-  };
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
 
-  static getDerivedStateFromError(error: Error): State {
-    return { error };
+class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
     const context: ErrorContext = {
       component: 'ErrorBoundary',
-      action: 'catch_error',
-      message: error.message,
+      action: 'componentDidCatch',
       timestamp: new Date().toISOString()
     };
-
     trackError(error, context);
     this.props.onError?.(error, errorInfo);
   }
 
-  handleRetry = (): void => {
-    this.setState({ error: null });
-    this.props.onRecover?.();
-  };
-
   render(): React.ReactNode {
-    if (this.state.error) {
+    if (this.state.hasError) {
       return this.props.fallback || (
-        <ErrorFallback 
-          error={this.state.error}
-          onRetry={this.handleRetry}
-        />
+        <div role="alert" className="error-boundary">
+          <h2>Something went wrong.</h2>
+          <p>{this.state.error?.message}</p>
+        </div>
       );
     }
 

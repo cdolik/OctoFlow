@@ -3,18 +3,13 @@ import { LiveRegion } from './LiveRegion';
 import './styles.css';
 
 interface LoadingSpinnerProps {
-  message?: string;
   size?: 'small' | 'medium' | 'large';
-  inline?: boolean;
-  ariaLabel?: string;
+  message?: string;
+  showProgress?: boolean;
+  progress?: number;
 }
 
-export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
-  message = 'Loading...',
-  size = 'medium',
-  inline = false,
-  ariaLabel
-}) => {
+const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({ size = 'medium', message, showProgress = false, progress = 0 }) => {
   const getSpinnerSize = () => {
     switch (size) {
       case 'small':
@@ -44,6 +39,11 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
         <LiveRegion aria-live="polite">
           <span className="loading-message">{message}</span>
         </LiveRegion>
+      )}
+      {showProgress && (
+        <div className="progress-bar" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}>
+          <div className="progress-bar__fill" style={{ width: `${progress}%` }} />
+        </div>
       )}
     </div>
   );

@@ -11,6 +11,10 @@ jest.mock('../hooks/useErrorManagement');
 jest.mock('../hooks/useKeyboardNavigation');
 jest.mock('./AudioFeedback');
 
+const TestComponent: React.FC = () => {
+  throw new Error('Test error');
+};
+
 describe('ErrorFallback', () => {
   const mockError = new Error('Test error');
   const mockReset = jest.fn();
@@ -455,5 +459,39 @@ describe('ErrorFallback', () => {
     );
 
     expect(screen.getByText('Critical error: Accessibility test error')).toBeInTheDocument();
+  });
+
+  it('renders fallback UI on error', () => {
+    render(
+      <ErrorFallback>
+        <TestComponent />
+      </ErrorFallback>
+    );
+
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.getByText('Something went wrong.')).toBeInTheDocument();
+  });
+
+  it('calls onRecover when recovery button is clicked', () => {
+    const onRecover = jest.fn();
+    render(
+      <ErrorFallback onRecover={onRecover}>
+        <TestComponent />
+      </ErrorFallback>
+    );
+
+    fireEvent.click(screen.getByText('Try Again'));
+    expect(onRecover).toHaveBeenCalled();
+  });
+
+  it('renders custom fallback when provided', () => {
+    const fallback = <div>Custom Error UI</div>;
+    render(
+      <ErrorFallback fallback={fallback}>
+        <TestComponent />
+      </ErrorFallback>
+    );
+
+    expect(screen.getByText('Custom Error UI')).toBeInTheDocument();
   });
 });

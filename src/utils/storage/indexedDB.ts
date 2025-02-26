@@ -1,128 +1,202 @@
-import { Stage, AssessmentState } from '../../types';
+import { AssessmentState } from '../../types';
+import { StorageAdapter, ensureCompleteState } from './adapter';
 
-const DB_NAME = 'octoflow';
-const DB_VERSION = 1;
-const STORE_NAME = 'assessment';
-
-interface DBSchema {
-  assessment: {
-    key: string;
-    value: AssessmentState;
-  };
-}
-
-class IndexedDBStorage {
+export class IndexedDBAdapter implements StorageAdapter {
+  private dbName = 'octoflow_storage';
+  private storeName = 'assessment';
+  private version = 1;
   private db: IDBDatabase | null = null;
 
-  async init(): Promise<void> {
+  async initialize(): Promise<void> {
     return new Promise((resolve, reject) => {
-      const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => {
-        this.db = request.result;
-        resolve();
-      };
+      const request = indexedDB.open(this.dbName, this.version);
 
       request.onupgradeneeded = (event) => {
         const db = (event.target as IDBOpenDBRequest).result;
-        if (!db.objectStoreNames.contains(STORE_NAME)) {
-          db.createObjectStore(STORE_NAME);
+        if (!db.objectStoreNames.contains(this.storeName)) {
+          db.createObjectStore(this.storeName, { keyPath: 'id' });
         }
       };
-    });
-  }
 
-  async saveState(state: AssessmentState): Promise<void> {
-    if (!this.db) await this.init();
+      request.onsuccess = (event) => {
+        this.db = (event.target as IDBOpenDBRequest).result;
+        resolve();
+      };
 
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([STORE_NAME], 'readwrite');
-      const store = transaction.objectStore(STORE_NAME);
-      const request = store.put(state, 'currentState');
-
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => resolve();
+      request.onerror = (event) => {
+        reject(new Error(`Failed to open database: ${(event.target as IDBOpenDBRequest).error}`));
+      };
     });
   }
 
   async getState(): Promise<AssessmentState | null> {
-    if (!this.db) await this.init();
+    if (!this.db) {
+      await this.initialize();
+    }
 
     return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([STORE_NAME], 'readonly');
-      const store = transaction.objectStore(STORE_NAME);
-      const request = store.get('currentState');
+      if (!this.db) {
+        reject(new Error('Database not initialized'));
+        return;
+      }
 
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => resolve(request.result || null);
+      try {
+        const transaction = this.db.transaction(this.storeName, 'readonly');
+        const store = transaction.objectStore(this.storeName);
+        const request = store.get('current');
+
+        request.onsuccess = (event) => {
+          const result = (event.target as IDBRequest).result;
+          if (result) {
+            resolve(ensureCompleteState(result.state));
+          } else {
+            resolve(null);
+          }
+        };
+
+        request.onerror = (event) => {
+          reject(new Error(`Failed to get state: ${(event.target as IDBRequest).error}`));
+        };
+      } catch (error) {
+        reject(error);
+      }
     });
   }
 
-  async saveBackup(state: AssessmentState): Promise<void> {
-    if (!this.db) await this.init();
+  async saveState(state: AssessmentState): Promise<void> {
+    if (!this.db) {
+      await this.initialize();
+    }
 
     return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([STORE_NAME], 'readwrite');
-      const store = transaction.objectStore(STORE_NAME);
-      const backup = {
-        ...state,
-        timestamp: Date.now(),
-        backupId: `backup-${Date.now()}`
-      };
-      const request = store.put(backup, backup.backupId);
+      if (!this.db) {
+        reject(new Error('Database not initialized'));
+        return;
+      }
 
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => resolve();
-    });
-  }
+      try {
+        // Create backup first
+        this.createBackup(state).catch(error => {
+          console.error('Failed to create backup:', error);
+        });
 
-  async getLatestBackup(): Promise<AssessmentState | null> {
-    if (!this.db) await this.init();
-
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([STORE_NAME], 'readonly');
-      const store = transaction.objectStore(STORE_NAME);
-      const request = store.getAll();
-
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => {
-        const backups = request.result
-          .filter(item => item.backupId)
-          .sort((a, b) => b.timestamp - a.timestamp);
+        const transaction = this.db.transaction(this.storeName, 'readwrite');
+        const store = transaction.objectStore(this.storeName);
         
-        resolve(backups[0] || null);
-      };
+        // Store with an ID to easily retrieve it
+        const request = store.put({ 
+          id: 'current',
+          state: state, 
+          timestamp: Date.now()
+        });
+
+        request.onsuccess = () => {
+          resolve();
+        };
+
+        request.onerror = (event) => {
+          reject(new Error(`Failed to save state: ${(event.target as IDBRequest).error}`));
+        };
+      } catch (error) {
+        reject(error);
+      }
     });
   }
 
-  async clearOldBackups(maxAge = 7 * 24 * 60 * 60 * 1000): Promise<void> {
-    if (!this.db) await this.init();
+  private async createBackup(state: AssessmentState): Promise<void> {
+    if (!this.db) return;
 
-    const cutoff = Date.now() - maxAge;
     return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([STORE_NAME], 'readwrite');
-      const store = transaction.objectStore(STORE_NAME);
-      const request = store.getAll();
+      try {
+        const transaction = this.db!.transaction(this.storeName, 'readwrite');
+        const store = transaction.objectStore(this.storeName);
+        
+        // Store state with backup ID and timestamp
+        const request = store.put({ 
+          id: `backup_${Date.now()}`,
+          state: state, 
+          timestamp: Date.now()
+        });
 
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => {
-        const oldBackups = request.result
-          .filter(item => item.backupId && item.timestamp < cutoff)
-          .map(item => item.backupId);
+        request.onsuccess = () => {
+          resolve();
+        };
 
-        Promise.all(oldBackups.map(id => 
-          new Promise<void>((res, rej) => {
-            const deleteRequest = store.delete(id);
-            deleteRequest.onerror = () => rej(deleteRequest.error);
-            deleteRequest.onsuccess = () => res();
-          })
-        )).then(() => resolve())
-          .catch(reject);
-      };
+        request.onerror = (event) => {
+          reject(new Error(`Failed to create backup: ${(event.target as IDBRequest).error}`));
+        };
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  async restoreBackup(): Promise<AssessmentState | null> {
+    if (!this.db) {
+      await this.initialize();
+    }
+
+    return new Promise((resolve, reject) => {
+      if (!this.db) {
+        reject(new Error('Database not initialized'));
+        return;
+      }
+
+      try {
+        const transaction = this.db.transaction(this.storeName, 'readonly');
+        const store = transaction.objectStore(this.storeName);
+        const request = store.openCursor(null, 'prev');
+
+        request.onsuccess = (event) => {
+          const cursor = (event.target as IDBRequest).result as IDBCursorWithValue;
+          
+          if (cursor) {
+            // Find the most recent backup
+            if (cursor.value.id.startsWith('backup_')) {
+              resolve(ensureCompleteState(cursor.value.state));
+              return;
+            }
+            cursor.continue();
+          } else {
+            resolve(null);
+          }
+        };
+
+        request.onerror = (event) => {
+          reject(new Error(`Failed to restore backup: ${(event.target as IDBRequest).error}`));
+        };
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  async clearState(): Promise<void> {
+    if (!this.db) {
+      await this.initialize();
+    }
+
+    return new Promise((resolve, reject) => {
+      if (!this.db) {
+        reject(new Error('Database not initialized'));
+        return;
+      }
+
+      try {
+        const transaction = this.db.transaction(this.storeName, 'readwrite');
+        const store = transaction.objectStore(this.storeName);
+        const request = store.delete('current');
+
+        request.onsuccess = () => {
+          resolve();
+        };
+
+        request.onerror = (event) => {
+          reject(new Error(`Failed to clear state: ${(event.target as IDBRequest).error}`));
+        };
+      } catch (error) {
+        reject(error);
+      }
     });
   }
 }
-
-export const storage = new IndexedDBStorage();
-export default storage;

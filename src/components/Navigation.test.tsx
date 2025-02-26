@@ -133,4 +133,16 @@ describe('Navigation', () => {
     fireEvent.click(screen.getByLabelText('Next stage'));
     expect(mockOnStageChange).toHaveBeenCalledWith('series-a');
   });
+
+  it('renders navigation links', () => {
+    render(<Navigation />);
+    expect(screen.getByText('Home')).toBeInTheDocument();
+    expect(screen.getByText('About')).toBeInTheDocument();
+  });
+
+  it('tracks CTA click events', () => {
+    render(<Navigation />);
+    fireEvent.click(screen.getByText('Home'));
+    expect(trackCTAClick).toHaveBeenCalledWith('Home');
+  });
 });

@@ -245,4 +245,38 @@ describe('EnhancedErrorBoundary', () => {
 
     consoleError.mockRestore();
   });
+
+  it('renders fallback UI on error', () => {
+    render(
+      <EnhancedErrorBoundary>
+        <ThrowError />
+      </EnhancedErrorBoundary>
+    );
+
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.getByText('Something went wrong.')).toBeInTheDocument();
+  });
+
+  it('calls onRecover when recovery button is clicked', () => {
+    const onRecover = jest.fn();
+    render(
+      <EnhancedErrorBoundary onRecover={onRecover}>
+        <ThrowError />
+      </EnhancedErrorBoundary>
+    );
+
+    fireEvent.click(screen.getByText('Try Again'));
+    expect(onRecover).toHaveBeenCalled();
+  });
+
+  it('renders custom fallback when provided', () => {
+    const fallback = <div>Custom Error UI</div>;
+    render(
+      <EnhancedErrorBoundary fallback={fallback}>
+        <ThrowError />
+      </EnhancedErrorBoundary>
+    );
+
+    expect(screen.getByText('Custom Error UI')).toBeInTheDocument();
+  });
 });

@@ -124,21 +124,3 @@ export const clearAssessmentState = (): void => {
     // Ignore errors during cleanup
   }
 };
-<<<<<<< HEAD
-=======
-
-export const restoreFromBackup = async (): Promise<boolean> => {
-  try {
-    const backup = sessionStorage.getItem(BACKUP_KEY);
-    if (!backup) return false;
-
-    const state = JSON.parse(backup);
-    if (!validateState(state)) return false;
-
-    sessionStorage.setItem(STORAGE_KEY, backup);
-    return true;
-  } catch {
-    return false;
-  }
-};
->>>>>>> origin/main

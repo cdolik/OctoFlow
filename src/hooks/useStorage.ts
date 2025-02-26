@@ -1,28 +1,22 @@
-import { useState, useEffect, useCallback } from 'react';
-import { IndexedDBAdapter } from '../utils/storage/IndexedDBAdapter';
-import type { AssessmentState } from '../types';
-import type { ErrorContext } from '../types/errors';
+import { useState, useCallback, useEffect } from 'react';
+import { AssessmentState } from '../types';
+import { storageAdapter } from '../utils/storage/adapter';
 import { trackError } from '../utils/analytics';
-import { withErrorHandling, createErrorContext } from '../utils/errorHandling';
+import { createErrorContext } from '../utils/errorHandling';
+import { withErrorHandling } from '../utils/errorHandling';
 
-interface UseStorageResult {
+export interface UseStorageResult {
   state: AssessmentState | null;
   saveState: (state: AssessmentState) => Promise<boolean>;
   clearState: () => Promise<void>;
-  isSessionActive: boolean;
-  timeUntilExpiration: number;
+  isLoading: boolean;
   error: Error | null;
 }
-
-const SESSION_TIMEOUT = 24 * 60 * 60 * 1000; // 24 hours
-const storageAdapter = new IndexedDBAdapter();
-
-const createStorageError = (action: string, message: string): ErrorContext => 
-  createErrorContext('useStorage', action, message);
 
 export function useStorage(): UseStorageResult {
   const [state, setState] = useState<AssessmentState | null>(null);
   const [lastActivity, setLastActivity] = useState<number>(Date.now());
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
   // Initialize storage
@@ -33,9 +27,12 @@ export function useStorage(): UseStorageResult {
         return storageAdapter.getState();
       });
 
+      setIsLoading(false);
+
       if (result.error) {
         setError(result.error);
-        trackError(result.error, createStorageError(
+        trackError(result.error, createErrorContext(
+          'useStorage',
           'initialize',
           'Storage initialization failed'
         ));
@@ -64,13 +61,7 @@ export function useStorage(): UseStorageResult {
         metadata: {
           ...newState.metadata,
           lastSaved: currentTime,
-          timeSpent: newState.metadata.timeSpent || 0,
-          attemptCount: (newState.metadata.attemptCount || 0) + 1
-        },
-        progress: {
-          questionIndex: newState.progress.questionIndex,
-          totalQuestions: newState.progress.totalQuestions,
-          isComplete: newState.progress.isComplete
+          lastInteraction: Date.now()
         }
       };
 
@@ -81,50 +72,38 @@ export function useStorage(): UseStorageResult {
 
     if (result.error) {
       setError(result.error);
-      trackError(result.error, createStorageError(
+      trackError(result.error, createErrorContext(
+        'useStorage',
         'saveState',
         'Failed to save state'
       ));
       return false;
     }
 
-    return true;
+    return result.data || false;
   }, []);
 
-  // Clear state
-  const clearState = useCallback(async () => {
-    const result = await withErrorHandling(async () => {
-      await storageAdapter.clearAll();
+  const clearState = useCallback(async (): Promise<void> => {
+    try {
+      await storageAdapter.clearState();
       setState(null);
-    });
-
-    if (result.error) {
-      setError(result.error);
-      trackError(result.error, createStorageError(
+      setError(null);
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error('Failed to clear state');
+      setError(error);
+      trackError(error, createErrorContext(
+        'useStorage', 
         'clearState',
         'Failed to clear state'
       ));
     }
   }, []);
 
-  // Calculate session status
-  const timeSinceLastActivity = Date.now() - lastActivity;
-  const timeUntilExpiration = Math.max(0, SESSION_TIMEOUT - timeSinceLastActivity);
-  const isSessionActive = timeUntilExpiration > 0;
-
-  // Auto-save on session expiration
-  useEffect(() => {
-    if (!isSessionActive && state) {
-      saveState(state);
-    }
-  }, [isSessionActive, state, saveState]);
-
   return {
     state,
     saveState,
     clearState,
-    isSessionActive,
-    timeUntilExpiration,
+    isLoading,
     error
   };
 }

@@ -2,7 +2,8 @@ import { useState, useCallback } from 'react';
 import { AssessmentState } from '../types';
 import { useStorage } from './useStorage';
 import { useError } from '../contexts/ErrorContext';
-import { trackAssessmentComplete } from '../utils/analytics';
+import { trackAssessmentComplete, trackError } from '../utils/analytics';
+import { createErrorContext } from '../utils/errorHandling';
 
 export interface UseAssessmentSessionProps {
   initialData?: AssessmentState;
@@ -29,6 +30,7 @@ export function useAssessmentSession(props?: UseAssessmentSessionProps) {
     if (!state) return false;
 
     try {
+      setSaveStatus({ status: 'saving' });
       const newState: AssessmentState = {
         ...state,
         responses: {
@@ -38,7 +40,8 @@ export function useAssessmentSession(props?: UseAssessmentSessionProps) {
         metadata: {
           ...state.metadata,
           lastSaved: new Date().toISOString(),
-          timeSpent: state.metadata.timeSpent + timeSpent
+          timeSpent: state.metadata.timeSpent + timeSpent,
+          lastInteraction: Date.now()
         }
       };
 
@@ -52,6 +55,7 @@ export function useAssessmentSession(props?: UseAssessmentSessionProps) {
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to save response');
       setSaveStatus({ status: 'error', error });
+      trackError(error, createErrorContext('useAssessmentSession', 'saveResponse', 'Failed to save response'));
       handleError(error);
       return false;
     }
@@ -66,21 +70,24 @@ export function useAssessmentSession(props?: UseAssessmentSessionProps) {
         ...state,
         progress: {
           ...state.progress,
-          isComplete: true
+          isComplete: true,
+          lastUpdated: new Date().toISOString()
         },
         metadata: {
           ...state.metadata,
-          lastSaved: new Date().toISOString()
+          lastSaved: new Date().toISOString(),
+          lastInteraction: Date.now()
         }
       };
 
       const success = await saveState(newState);
       if (success) {
-        trackAssessmentComplete(state.responses, state.currentStage!);
+        trackAssessmentComplete(state.currentStage!, newState);
       }
       return success;
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to complete session');
+      trackError(error, createErrorContext('useAssessmentSession', 'completeSession', 'Failed to complete session'));
       handleError(error);
       return false;
     }

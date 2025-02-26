@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { ErrorBoundary } from 'react-error-boundary';
-import AssessmentErrorBoundary from './AssessmentErrorBoundary';
+import { AssessmentErrorBoundary } from './AssessmentErrorBoundary';
 import { useStorageErrorHandler } from '../hooks/useStorageErrorHandler';
 import { trackError } from '../utils/analytics';
 import { errorReporter } from '../utils/errorReporting';
@@ -18,6 +18,12 @@ jest.mock('../utils/errorReporting', () => ({
 const ThrowError = ({ message }: { message: string }) => {
   throw new Error(message);
 };
+
+const TestComponent: React.FC = () => {
+  throw new Error('Test error');
+};
+
+const onRecover = jest.fn();
 
 describe('AssessmentErrorBoundary', () => {
   const mockStorageHandler = {
@@ -230,5 +236,27 @@ describe('AssessmentErrorBoundary', () => {
     );
 
     expect(screen.queryByText('Try Again')).not.toBeInTheDocument();
+  });
+
+  it('renders fallback UI on error', () => {
+    render(
+      <AssessmentErrorBoundary onRecover={onRecover}>
+        <TestComponent />
+      </AssessmentErrorBoundary>
+    );
+
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.getByText('Assessment Error')).toBeInTheDocument();
+  });
+
+  it('calls onRecover when recovery button is clicked', () => {
+    render(
+      <AssessmentErrorBoundary onRecover={onRecover}>
+        <TestComponent />
+      </AssessmentErrorBoundary>
+    );
+
+    fireEvent.click(screen.getByText('Try to Recover'));
+    expect(onRecover).toHaveBeenCalled();
   });
 });

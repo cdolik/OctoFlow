@@ -14,11 +14,7 @@ interface AssessmentProps {
   onComplete?: () => void;
 }
 
-function AssessmentBase({ 
-  stage, 
-  onStepChange,
-  onComplete 
-}: AssessmentProps): JSX.Element {
+const AssessmentBase: React.FC<AssessmentProps> = ({ stage, onStepChange, onComplete }) => {
   const {
     state,
     saveResponse,
@@ -161,7 +157,7 @@ function AssessmentBase({
       )}
     </div>
   );
-}
+};
 
 // Memoize the component with custom comparison
 const propsAreEqual = (prevProps: AssessmentProps, nextProps: AssessmentProps) => {

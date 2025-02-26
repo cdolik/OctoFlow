@@ -1,47 +1,87 @@
-export type ErrorSeverity = 'low' | 'medium' | 'high';
+import { Stage } from '../types';
 
-export interface AssessmentError extends Error {
-  severity: ErrorSeverity;
-  recoverable: boolean;
-  context?: Record<string, unknown>;
-}
-
-export interface ValidationError extends AssessmentError {
-  field: string;
-  constraint: string;
-}
-
-export interface StorageError extends AssessmentError {
-  operation: 'read' | 'write' | 'delete';
-  key?: string;
-}
-
-export interface NavigationError extends AssessmentError {
-  from: string;
-  to: string;
-  reason: string;
-}
-
-export interface StateError extends AssessmentError {
-  expectedState: string;
-  actualState: string;
-  stateKey: string;
-}
-
-export interface ErrorHandlingOptions {
-  maxRetries?: number;
-  retryDelay?: number;
-  recoveryFn?: () => Promise<boolean>;
-}
-
-export interface ErrorResult {
-  handled: boolean;
-  recovered?: boolean;
-  error: Error;
-}
+export type ErrorSeverity = 'critical' | 'error' | 'warning' | 'info';
 
 export interface ErrorContext {
-  component?: string;
-  action?: string;
-  metadata?: Record<string, unknown>;
+  component: string;
+  action: string;
+  stage?: Stage;
+  timestamp: string;
+}
+
+export class AssessmentError extends Error {
+  context?: ErrorContext;
+  recoverable: boolean = false;
+  severity: ErrorSeverity = 'error';
+  
+  constructor(message: string, options?: {
+    context?: ErrorContext;
+    recoverable?: boolean;
+    severity?: ErrorSeverity;
+  }) {
+    super(message);
+    this.name = 'AssessmentError';
+    
+    if (options) {
+      this.context = options.context;
+      this.recoverable = options.recoverable ?? false;
+      this.severity = options.severity ?? 'error';
+    }
+  }
+}
+
+export class StorageError extends AssessmentError {
+  constructor(message: string, options?: {
+    context?: ErrorContext;
+    recoverable?: boolean;
+    severity?: ErrorSeverity;
+  }) {
+    super(message, {
+      recoverable: true,
+      severity: 'warning',
+      ...options
+    });
+    this.name = 'StorageError';
+  }
+}
+
+export class NetworkError extends AssessmentError {
+  constructor(message: string, options?: {
+    context?: ErrorContext;
+    recoverable?: boolean;
+    severity?: ErrorSeverity;
+  }) {
+    super(message, {
+      recoverable: true,
+      severity: 'warning',
+      ...options
+    });
+    this.name = 'NetworkError';
+  }
+}
+
+export class ValidationFailedError extends AssessmentError {
+  constructor(message: string, options?: {
+    context?: ErrorContext;
+    recoverable?: boolean;
+    severity?: ErrorSeverity;
+  }) {
+    super(message, {
+      recoverable: true,
+      severity: 'warning',
+      ...options
+    });
+    this.name = 'ValidationFailedError';
+  }
+}
+
+export function isRecoverableError(error: unknown): boolean {
+  return error instanceof AssessmentError && error.recoverable;
+}
+
+export function getErrorSeverity(error: unknown): ErrorSeverity {
+  if (error instanceof AssessmentError) {
+    return error.severity;
+  }
+  return 'error';
 }

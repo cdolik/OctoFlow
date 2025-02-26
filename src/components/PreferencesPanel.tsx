@@ -4,40 +4,34 @@ import type { UserPreferences, ThemeMode, FontSize, KeyboardMode } from '../type
 
 interface PreferencesPanelProps {
   preferences: UserPreferences;
-  onPreferencesChange: (preferences: Partial<UserPreferences>) => void;
+  onPreferencesChange: (preferences: UserPreferences) => void;
   onClose?: () => void;
 }
 
-export const PreferencesPanel: React.FC<PreferencesPanelProps> = ({
-  preferences,
-  onPreferencesChange,
-  onClose
-}) => {
+const PreferencesPanel: React.FC<PreferencesPanelProps> = ({ preferences, onPreferencesChange, onClose }) => {
   const [localPreferences, setLocalPreferences] = useState<UserPreferences>(preferences);
 
   useEffect(() => {
     setLocalPreferences(preferences);
   }, [preferences]);
 
-  const handleThemeChange = (theme: ThemeMode) => {
-    setLocalPreferences(prev => ({ ...prev, theme }));
-    onPreferencesChange({ theme });
+  const handleThemeChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    onPreferencesChange({ ...preferences, theme: event.target.value as UserPreferences['theme'] });
   };
 
-  const handleFontSizeChange = (fontSize: FontSize) => {
-    setLocalPreferences(prev => ({ ...prev, fontSize }));
-    onPreferencesChange({ fontSize });
+  const handleFontSizeChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    onPreferencesChange({ ...preferences, fontSize: event.target.value as UserPreferences['fontSize'] });
   };
 
   const handleToggle = (key: keyof UserPreferences) => {
     const newValue = !localPreferences[key];
     setLocalPreferences(prev => ({ ...prev, [key]: newValue }));
-    onPreferencesChange({ [key]: newValue });
+    onPreferencesChange({ ...preferences, [key]: newValue });
   };
 
   const handleKeyboardModeChange = (keyboardMode: KeyboardMode) => {
     setLocalPreferences(prev => ({ ...prev, keyboardMode }));
-    onPreferencesChange({ keyboardMode });
+    onPreferencesChange({ ...preferences, keyboardMode });
   };
 
   return (
@@ -49,32 +43,24 @@ export const PreferencesPanel: React.FC<PreferencesPanelProps> = ({
       <section>
         <h3>Theme</h3>
         <div className="theme-options">
-          {(['light', 'dark', 'system'] as ThemeMode[]).map(theme => (
-            <button
-              key={theme}
-              onClick={() => handleThemeChange(theme)}
-              className={localPreferences.theme === theme ? 'active' : ''}
-              aria-pressed={localPreferences.theme === theme}
-            >
-              {theme.charAt(0).toUpperCase() + theme.slice(1)}
-            </button>
-          ))}
+          <label htmlFor="theme-select">Theme:</label>
+          <select id="theme-select" value={preferences.theme} onChange={handleThemeChange}>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+            <option value="system">System</option>
+          </select>
         </div>
       </section>
 
       <section>
         <h3>Font Size</h3>
         <div className="font-size-options">
-          {(['small', 'medium', 'large'] as FontSize[]).map(size => (
-            <button
-              key={size}
-              onClick={() => handleFontSizeChange(size)}
-              className={localPreferences.fontSize === size ? 'active' : ''}
-              aria-pressed={localPreferences.fontSize === size}
-            >
-              {size.charAt(0).toUpperCase() + size.slice(1)}
-            </button>
-          ))}
+          <label htmlFor="font-size-select">Font Size:</label>
+          <select id="font-size-select" value={preferences.fontSize} onChange={handleFontSizeChange}>
+            <option value="small">Small</option>
+            <option value="medium">Medium</option>
+            <option value="large">Large</option>
+          </select>
         </div>
       </section>
 
@@ -164,3 +150,5 @@ export const PreferencesPanel: React.FC<PreferencesPanelProps> = ({
     </div>
   );
 };
+
+export default PreferencesPanel;
