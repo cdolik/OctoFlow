@@ -5,6 +5,8 @@ import { useAssessmentSession } from '../hooks/useAssessmentSession';
 import { AssessmentErrorBoundary } from './AssessmentErrorBoundary';
 import { LoadingSpinner } from './LoadingSpinner';
 import { AccessibleShortcutHelper } from './AccessibleShortcutHelper';
+import { calculateStageScores } from '../utils/scoring';
+import { stages } from '../data/stages';
 import './styles.css';
 
 interface AssessmentProps {
@@ -28,16 +30,38 @@ const AssessmentBase: React.FC<AssessmentProps> = ({ stage, onStepChange, onComp
 
   const handleNext = useCallback(async () => {
     if (!state) return;
+    
+    // Check if we're at the last question
     const nextIndex = state.progress.questionIndex + 1;
-    if (nextIndex < state.progress.totalQuestions) {
-      onStepChange?.(nextIndex);
-    } else {
-      const completed = await completeSession();
-      if (completed) {
-        onComplete?.();
+    if (nextIndex >= state.progress.totalQuestions) {
+      // Calculate score before showing summary
+      const stageConfig = stages.find(s => s.id === stage);
+      const scores = calculateStageScores(stage, state.responses);
+      
+      // Check if score meets threshold
+      if (stageConfig && scores.overallScore < (stageConfig.scoringCriteria?.threshold || 0)) {
+        setValidationError(`Your score is below the required threshold to proceed. You need at least ${stageConfig.scoringCriteria?.threshold} points.`);
+        return;
       }
+      
+      setShowSummary(true);
+      return;
     }
-  }, [state, completeSession, onStepChange, onComplete]);
+
+    // Regular next question flow
+    try {
+      await onStepChange({
+        ...state,
+        progress: {
+          ...state.progress,
+          questionIndex: nextIndex
+        }
+      });
+      setValidationError(null);
+    } catch (error) {
+      setValidationError(error instanceof Error ? error.message : 'Error advancing to next question');
+    }
+  }, [state, onStepChange, stage]);
 
   const handlePrevious = useCallback(() => {
     if (!state) return;

@@ -1,4 +1,5 @@
 import { Stage, Question, StageDefinition, ScoreResult } from '../types';
+import { stages } from '../data/stages';
 
 export interface CategoryScore {
   score: number;
@@ -15,7 +16,6 @@ export function calculateScores(
   const categoryScores: Record<string, CategoryScore> = {};
   const validQuestions = questions.filter(q => q.stages.includes(stage));
 
-  // Calculate raw scores by category
   validQuestions.forEach(question => {
     const response = responses[question.id];
     if (typeof response !== 'number') return;
@@ -28,11 +28,10 @@ export function calculateScores(
 
     category.score += response * question.weight;
     category.questions += 1;
-    category.maxScore += 4 * question.weight; // 4 is max score
+    category.maxScore += 4 * question.weight;
     categoryScores[question.category] = category;
   });
 
-  // Calculate normalized scores (0-100)
   const normalizedScores: Record<string, number> = {};
   let totalWeight = 0;
   let weightedScore = 0;
@@ -71,4 +70,44 @@ export function validateScore(
 ): boolean {
   const benchmark = stageConfig.benchmarks.expectedScores[category];
   return score >= (benchmark || 0);
+}
+
+export function calculateStageScores(
+  stage: Stage,
+  responses: Record<string, number>
+): { overallScore: number; categoryScores: Record<string, number> } {
+  const stageConfig = stages.find(s => s.id === stage);
+  if (!stageConfig) {
+    throw new Error(`Invalid stage: ${stage}`);
+  }
+
+  const questions = getStageQuestions(stage);
+  const scores = calculateScores(responses, questions, stage, stageConfig);
+
+  return {
+    overallScore: scores.overallScore,
+    categoryScores: scores.categoryScores
+  };
+}
+
+export function calculateMetrics(
+  responses: Record<string, number>,
+  questions: Question[]
+): { averageResponseTime: number; completionRate: number } {
+  const totalResponses = Object.keys(responses).length;
+  const totalQuestions = questions.length;
+  const totalTime = Object.values(responses).reduce((acc, response) => acc + response, 0);
+
+  return {
+    averageResponseTime: totalTime / totalResponses,
+    completionRate: (totalResponses / totalQuestions) * 100
+  };
+}
+
+export function getStageQuestions(stage: Stage): Question[] {
+  const stageConfig = stages.find(s => s.id === stage);
+  if (!stageConfig) {
+    throw new Error(`Invalid stage: ${stage}`);
+  }
+  return stageConfig.questions;
 }

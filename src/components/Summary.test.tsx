@@ -160,4 +160,26 @@ describe('Summary', () => {
 
     expect(screen.getByRole('button', { name: /View Results/i })).toBeDisabled();
   });
+
+  it('displays accumulated metrics', () => {
+    render(
+      <MemoryRouter>
+        <Summary {...defaultProps} />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText(/Average Response Time:/i)).toBeInTheDocument();
+    expect(screen.getByText(/Completion Rate:/i)).toBeInTheDocument();
+    expect(screen.getByText(/Overall Score:/i)).toBeInTheDocument();
+  });
+
+  it('displays tailored recommendations based on metrics', () => {
+    render(
+      <MemoryRouter>
+        <Summary {...defaultProps} />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText(/Tailored Recommendations:/i)).toBeInTheDocument();
+  });
 });

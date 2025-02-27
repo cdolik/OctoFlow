@@ -1,5 +1,7 @@
 import { Stage, StorageState } from '../types';
 import { getAssessmentResponses, getAssessmentMetadata } from './storage';
+import { calculateStageScores } from './scoring';
+import { stages as stageDefinitions } from '../data/stages';
 
 export interface ValidationResult {
   isValid: boolean;
@@ -98,3 +100,41 @@ export const validateStageCompletion = (stage: Stage, responses: Record<string, 
 
   return { isValid: true };
 };
+
+export function validateStageRequirements(
+  stage: Stage,
+  questions: Question[],
+  responses: Record<string, number>
+): ValidationResult {
+  const stageQuestions = questions.filter(q => q.stages.includes(stage));
+  const requiredResponses = new Set(stageQuestions.map(q => q.id));
+  const providedResponses = new Set(Object.keys(responses));
+
+  const missingResponses = Array.from(requiredResponses)
+    .filter(id => !providedResponses.has(id));
+
+  if (missingResponses.length > 0) {
+    return {
+      isValid: false,
+      error: 'Missing responses',
+      details: missingResponses.map(id => 
+        `Question ${id} requires a response`
+      )
+    };
+  }
+  
+  // Check score threshold
+  const stageConfig = stageDefinitions.find(s => s.id === stage);
+  if (stageConfig && stageConfig.scoringCriteria?.threshold) {
+    const scores = calculateStageScores(stage, responses);
+    if (scores.overallScore < stageConfig.scoringCriteria.threshold) {
+      return {
+        isValid: false,
+        error: 'Score below threshold',
+        details: [`Current score: ${scores.overallScore.toFixed(1)}, required: ${stageConfig.scoringCriteria.threshold}`]
+      };
+    }
+  }
+
+  return { isValid: true };
+}

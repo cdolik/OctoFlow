@@ -47,7 +47,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
 
   build-and-deploy:
-    needs: validate  # Remove this if you want deploy to run even if tests fail
+    needs: build-and-test
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -77,7 +77,7 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    needs: build-and-test
+    needs: build-and-deploy
     runs-on: ubuntu-latest
     steps:
       - name: Deploy to GitHub Pages
