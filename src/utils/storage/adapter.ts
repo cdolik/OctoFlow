@@ -66,3 +66,27 @@ export function ensureCompleteState(state: Partial<AssessmentState>): Assessment
     stages: state.stages
   };
 }
+
+// Auto-save functionality
+export async function autoSaveState(state: AssessmentState): Promise<void> {
+  try {
+    await storageAdapter.saveState(state);
+  } catch (error) {
+    console.error('Auto-save failed:', error);
+  }
+}
+
+// Fallback mechanism between sessionStorage and IndexedDB
+export async function getStateWithFallback(): Promise<AssessmentState | null> {
+  try {
+    const state = await storageAdapter.getState();
+    if (state) {
+      return state;
+    }
+    const backupState = await storageAdapter.restoreBackup?.();
+    return backupState || createEmptyState();
+  } catch (error) {
+    console.error('Failed to get state with fallback:', error);
+    return createEmptyState();
+  }
+}

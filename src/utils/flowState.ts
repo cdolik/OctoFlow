@@ -82,3 +82,19 @@ export const getPreviousStage = (currentStage: Stage): Stage | null => {
   const currentIndex = stages.indexOf(currentStage);
   return currentIndex > 0 ? stages[currentIndex - 1] : null;
 };
+
+export const validateStageCompletion = (stage: Stage, responses: Record<string, number>): ValidationResult => {
+  const stageQuestions = getStageQuestions(stage);
+  const totalScore = stageQuestions.reduce((acc, question) => acc + (responses[question.id] || 0), 0);
+  const stageConfig = getStageConfig(stage);
+
+  if (totalScore < stageConfig.scoringCriteria.threshold) {
+    return {
+      isValid: false,
+      error: 'Score below required threshold',
+      details: [`Minimum required score: ${stageConfig.scoringCriteria.threshold}`, `Your score: ${totalScore}`]
+    };
+  }
+
+  return { isValid: true };
+};

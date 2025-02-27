@@ -121,3 +121,18 @@ export function trackError(error: Error, context?: ErrorContext): void {
     context
   });
 }
+
+export function trackRecommendationClick(recId: string, category: string): void {
+  analyticsManager.track('recommendation_click', {
+    recId,
+    category,
+    timestamp: new Date().toISOString()
+  });
+}
+
+export function trackCTAClick(ctaId: string): void {
+  analyticsManager.track('cta_click', {
+    ctaId,
+    timestamp: new Date().toISOString()
+  });
+}

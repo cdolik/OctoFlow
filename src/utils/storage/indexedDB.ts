@@ -199,4 +199,12 @@ export class IndexedDBAdapter implements StorageAdapter {
       }
     });
   }
+
+  async autoSaveState(state: AssessmentState): Promise<void> {
+    try {
+      await this.saveState(state);
+    } catch (error) {
+      console.error('Auto-save failed:', error);
+    }
+  }
 }

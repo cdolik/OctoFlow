@@ -99,6 +99,17 @@ export function useStorage(): UseStorageResult {
     }
   }, []);
 
+  // Auto-save functionality
+  useEffect(() => {
+    const autoSaveInterval = setInterval(() => {
+      if (state) {
+        saveState(state);
+      }
+    }, 30000); // Auto-save every 30 seconds
+
+    return () => clearInterval(autoSaveInterval);
+  }, [state, saveState]);
+
   return {
     state,
     saveState,

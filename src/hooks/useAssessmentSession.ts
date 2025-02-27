@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { AssessmentState } from '../types';
 import { useStorage } from './useStorage';
 import { useError } from '../contexts/ErrorContext';
@@ -92,6 +92,16 @@ export function useAssessmentSession(props?: UseAssessmentSessionProps) {
       return false;
     }
   }, [state, saveState, handleError]);
+
+  useEffect(() => {
+    const autoSaveInterval = setInterval(() => {
+      if (state && saveStatus.status === 'idle') {
+        saveState(state);
+      }
+    }, 5000);
+
+    return () => clearInterval(autoSaveInterval);
+  }, [state, saveState, saveStatus.status]);
 
   return {
     state,

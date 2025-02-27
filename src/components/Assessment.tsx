@@ -1,11 +1,10 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { Stage, KeyboardShortcut } from '../types';
 import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
 import { useAssessmentSession } from '../hooks/useAssessmentSession';
 import { AssessmentErrorBoundary } from './AssessmentErrorBoundary';
 import { LoadingSpinner } from './LoadingSpinner';
 import { AccessibleShortcutHelper } from './AccessibleShortcutHelper';
-import { withMemo } from '../utils/withMemo';
 import './styles.css';
 
 interface AssessmentProps {
@@ -23,6 +22,9 @@ const AssessmentBase: React.FC<AssessmentProps> = ({ stage, onStepChange, onComp
     completeSession,
     saveStatus
   } = useAssessmentSession();
+
+  const [showSummary, setShowSummary] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   const handleNext = useCallback(async () => {
     if (!state) return;
@@ -44,6 +46,16 @@ const AssessmentBase: React.FC<AssessmentProps> = ({ stage, onStepChange, onComp
       onStepChange?.(prevIndex);
     }
   }, [state, onStepChange]);
+
+  const handleSummary = useCallback(() => {
+    if (!state) return;
+    const totalScore = state.responses.reduce((acc, response) => acc + response.score, 0);
+    if (totalScore < 40) {
+      setValidationError('Your score is below the required threshold to proceed.');
+    } else {
+      setShowSummary(true);
+    }
+  }, [state]);
 
   const shortcuts: KeyboardShortcut[] = useMemo(() => [
     {
@@ -146,7 +158,25 @@ const AssessmentBase: React.FC<AssessmentProps> = ({ stage, onStepChange, onComp
             ? 'Complete' 
             : 'Next'}
         </button>
+        <button
+          onClick={handleSummary}
+          className="nav-button summary"
+        >
+          Summary
+        </button>
       </div>
+
+      {validationError && (
+        <div className="error-message" role="alert">
+          {validationError}
+        </div>
+      )}
+
+      {showSummary && (
+        <div className="summary-screen">
+          {/* Summary screen content would be rendered here */}
+        </div>
+      )}
 
       {isEnabled && (
         <AccessibleShortcutHelper

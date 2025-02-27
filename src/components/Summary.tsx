@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Stage, Question, Category } from '../types';
 import { useStageValidation } from '../hooks/useStageValidation';
@@ -18,6 +18,8 @@ const Summary: React.FC<SummaryProps> = ({ stage, responses, onStepChange }) => 
   const navigate = useNavigate();
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [averageResponseTime, setAverageResponseTime] = useState<number>(0);
+  const [completionRate, setCompletionRate] = useState<number>(0);
 
   const { isValidating, error, canProgress } = useStageValidation({
     currentStage: stage,
@@ -26,6 +28,18 @@ const Summary: React.FC<SummaryProps> = ({ stage, responses, onStepChange }) => 
   });
 
   const stageQuestions = getStageQuestions(stage);
+
+  useEffect(() => {
+    const calculateMetrics = () => {
+      const totalResponses = Object.keys(responses).length;
+      const totalQuestions = stageQuestions.length;
+      const totalTime = Object.values(responses).reduce((acc, response) => acc + response, 0);
+      setAverageResponseTime(totalTime / totalResponses);
+      setCompletionRate((totalResponses / totalQuestions) * 100);
+    };
+
+    calculateMetrics();
+  }, [responses, stageQuestions]);
 
   const handleResponseEdit = useCallback(async (questionId: string, value: number) => {
     const newResponses = {
@@ -113,6 +127,11 @@ const Summary: React.FC<SummaryProps> = ({ stage, responses, onStepChange }) => 
 
         <div className="questions-summary">
           {stageQuestions.map(renderQuestion)}
+        </div>
+
+        <div className="summary-metrics">
+          <p>Average Response Time: {averageResponseTime.toFixed(2)} seconds</p>
+          <p>Completion Rate: {completionRate.toFixed(2)}%</p>
         </div>
 
         <div className="summary-actions">

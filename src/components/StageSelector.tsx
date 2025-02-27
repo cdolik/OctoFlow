@@ -17,6 +17,18 @@ const StageSelector: React.FC<StageSelectorProps> = ({ onSelect, initialStage })
     stage.focus.some(f => f.toLowerCase().includes(filter.toLowerCase()))
   );
 
+  const handleStageSelect = (stageId: Stage) => {
+    // Add logic to handle unsaved changes before navigating
+    const hasUnsavedChanges = false; // Replace with actual logic to check for unsaved changes
+    if (hasUnsavedChanges) {
+      const confirmNavigation = window.confirm('You have unsaved changes. Do you want to proceed?');
+      if (!confirmNavigation) {
+        return;
+      }
+    }
+    onSelect(stageId);
+  };
+
   return (
     <div className="stage-selector">
       <div className="search-container">
@@ -36,7 +48,7 @@ const StageSelector: React.FC<StageSelectorProps> = ({ onSelect, initialStage })
           filteredStages.map((stage) => (
             <button
               key={stage.id}
-              onClick={() => onSelect(stage.id)}
+              onClick={() => handleStageSelect(stage.id)}
               className={`stage-card ${initialStage === stage.id ? 'current' : ''}`}
               tabIndex={0}
             >

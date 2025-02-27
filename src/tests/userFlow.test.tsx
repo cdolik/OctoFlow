@@ -187,6 +187,54 @@ describe('OctoFlow User Journey', () => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
   });
+
+  test('Verify accumulated metrics and tailored recommendations', async () => {
+    render(<App />);
+    
+    // Start assessment
+    fireEvent.click(screen.getByText(/Start Free Checkup/i));
+    fireEvent.click(screen.getByText(/Pre-Seed/i));
+
+    // Answer questions
+    const stageQuestions = Object.values(categories as Record<string, Category>).flatMap(category => 
+      (category.questions as Question[]).filter(q => q.stages.includes('pre-seed'))
+    );
+
+    for (let currentIdx = 0; currentIdx < stageQuestions.length; currentIdx++) {
+      const question = stageQuestions[currentIdx];
+      await waitFor(() => {
+        expect(screen.getByText(question.text)).toBeInTheDocument();
+      });
+
+      // Select answer and verify storage
+      const options = screen.getAllByRole('button', { name: /option/i });
+      fireEvent.click(options[2]); // Select third option (value 3)
+      
+      const responses = getAssessmentResponses();
+      expect(responses[question.id]).toBe(3);
+
+      // Move to next question
+      const nextButton = screen.getByText(
+        currentIdx === stageQuestions.length - 1 ? /Complete/i : /Next/i
+      );
+      fireEvent.click(nextButton);
+    }
+
+    // Verify summary screen
+    const summaryButton = screen.getByText(/Summary/i);
+    fireEvent.click(summaryButton);
+    await waitFor(() => {
+      expect(screen.getByText(/Review Your Responses/i)).toBeInTheDocument();
+    });
+
+    // Verify accumulated metrics
+    expect(screen.getByText(/Average Response Time/i)).toBeInTheDocument();
+    expect(screen.getByText(/Completion Rate/i)).toBeInTheDocument();
+
+    // Verify tailored recommendations
+    const recommendations = screen.getAllByText(/implementation steps/i);
+    expect(recommendations.length).toBeGreaterThan(0);
+  });
 });
 
 describe('Stage-specific validation', () => {

@@ -16,7 +16,37 @@ export const stages: StageDefinition[] = [
         'automation': 1.5
       }
     },
-    questionFilter: (q: Question) => ['branch-strategy', 'pr-review', 'ci-practices'].includes(q.id)
+    questionFilter: (q: Question) => ['branch-strategy', 'pr-review', 'ci-practices'].includes(q.id),
+    questions: [
+      {
+        id: 'q1',
+        text: 'Do you have a defined branch strategy?',
+        scoreRange: [1, 10]
+      },
+      {
+        id: 'q2',
+        text: 'How often do you perform code reviews?',
+        scoreRange: [1, 10]
+      },
+      {
+        id: 'q3',
+        text: 'Do you use CI/CD pipelines?',
+        scoreRange: [1, 10]
+      },
+      {
+        id: 'q4',
+        text: 'How do you manage dependencies?',
+        scoreRange: [1, 10]
+      },
+      {
+        id: 'q5',
+        text: 'Do you have automated tests?',
+        scoreRange: [1, 10]
+      }
+    ],
+    scoringCriteria: {
+      threshold: 40
+    }
   },
   {
     id: 'seed',
@@ -33,7 +63,37 @@ export const stages: StageDefinition[] = [
         'automation': 2.5
       }
     },
-    questionFilter: (q: Question) => true
+    questionFilter: (q: Question) => true,
+    questions: [
+      {
+        id: 'q1',
+        text: 'Do you have a defined branch strategy?',
+        scoreRange: [1, 10]
+      },
+      {
+        id: 'q2',
+        text: 'How often do you perform code reviews?',
+        scoreRange: [1, 10]
+      },
+      {
+        id: 'q3',
+        text: 'Do you use CI/CD pipelines?',
+        scoreRange: [1, 10]
+      },
+      {
+        id: 'q4',
+        text: 'How do you manage dependencies?',
+        scoreRange: [1, 10]
+      },
+      {
+        id: 'q5',
+        text: 'Do you have automated tests?',
+        scoreRange: [1, 10]
+      }
+    ],
+    scoringCriteria: {
+      threshold: 50
+    }
   },
   {
     id: 'series-a',
@@ -50,7 +110,37 @@ export const stages: StageDefinition[] = [
         'automation': 3.5
       }
     },
-    questionFilter: (q: Question) => true
+    questionFilter: (q: Question) => true,
+    questions: [
+      {
+        id: 'q1',
+        text: 'Do you have a defined branch strategy?',
+        scoreRange: [1, 10]
+      },
+      {
+        id: 'q2',
+        text: 'How often do you perform code reviews?',
+        scoreRange: [1, 10]
+      },
+      {
+        id: 'q3',
+        text: 'Do you use CI/CD pipelines?',
+        scoreRange: [1, 10]
+      },
+      {
+        id: 'q4',
+        text: 'How do you manage dependencies?',
+        scoreRange: [1, 10]
+      },
+      {
+        id: 'q5',
+        text: 'Do you have automated tests?',
+        scoreRange: [1, 10]
+      }
+    ],
+    scoringCriteria: {
+      threshold: 60
+    }
   },
   {
     id: 'series-b',
@@ -67,7 +157,37 @@ export const stages: StageDefinition[] = [
         'automation': 4.0
       }
     },
-    questionFilter: (q: Question) => true
+    questionFilter: (q: Question) => true,
+    questions: [
+      {
+        id: 'q1',
+        text: 'Do you have a defined branch strategy?',
+        scoreRange: [1, 10]
+      },
+      {
+        id: 'q2',
+        text: 'How often do you perform code reviews?',
+        scoreRange: [1, 10]
+      },
+      {
+        id: 'q3',
+        text: 'Do you use CI/CD pipelines?',
+        scoreRange: [1, 10]
+      },
+      {
+        id: 'q4',
+        text: 'How do you manage dependencies?',
+        scoreRange: [1, 10]
+      },
+      {
+        id: 'q5',
+        text: 'Do you have automated tests?',
+        scoreRange: [1, 10]
+      }
+    ],
+    scoringCriteria: {
+      threshold: 70
+    }
   }
 ];
 

@@ -3,6 +3,8 @@ import { validateStorageState } from '../flowValidator';
 import { IndexedDBAdapter } from './IndexedDBAdapter';
 import { trackError } from '../analytics';
 import { createErrorContext } from '../errorHandling';
+import { SessionStorageAdapter } from './sessionStorage';
+import { SessionManager } from './SessionManager';
 
 const STORAGE_KEY = 'octoflow';
 const BACKUP_KEY = 'octoflow_backup';
@@ -17,11 +19,13 @@ const createProgressDefaults = (): StorageProgress => ({
 
 export class StorageManager {
   private static instance: StorageManager;
-  private adapter: IndexedDBAdapter;
+  private adapter: IndexedDBAdapter | SessionStorageAdapter;
   private backupInterval: NodeJS.Timeout | null = null;
+  private sessionManager: SessionManager;
 
   private constructor() {
-    this.adapter = new IndexedDBAdapter();
+    this.adapter = this.initializeAdapter();
+    this.sessionManager = SessionManager.getInstance();
     this.setupBackupInterval();
   }
 
@@ -30,6 +34,15 @@ export class StorageManager {
       StorageManager.instance = new StorageManager();
     }
     return StorageManager.instance;
+  }
+
+  private initializeAdapter(): IndexedDBAdapter | SessionStorageAdapter {
+    try {
+      return new IndexedDBAdapter();
+    } catch (error) {
+      console.warn('Falling back to SessionStorageAdapter due to IndexedDB initialization failure:', error);
+      return new SessionStorageAdapter();
+    }
   }
 
   private setupBackupInterval(): void {

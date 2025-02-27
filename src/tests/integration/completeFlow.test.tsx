@@ -120,4 +120,82 @@ describe('Complete Assessment Flow Integration', () => {
       expect(validateStageProgression(currentStage, 'series-b')).toBe(false);
     }
   });
+
+  it('verifies new pre-seed stage questions and scoring criteria', async () => {
+    render(
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+    );
+
+    // Start assessment
+    fireEvent.click(screen.getByText(/Start Free Checkup/i));
+    fireEvent.click(screen.getByText(/Pre-Seed/i));
+
+    // Verify new questions
+    const questions = [
+      'Do you have a defined branch strategy?',
+      'How often do you perform code reviews?',
+      'Do you use CI/CD pipelines?',
+      'How do you manage dependencies?',
+      'Do you have automated tests?'
+    ];
+
+    for (const question of questions) {
+      expect(await screen.findByText(question)).toBeInTheDocument();
+      const options = screen.getAllByRole('radio');
+      fireEvent.click(options[1]); // Select second option
+      fireEvent.click(screen.getByRole('button', { name: /next/i }));
+    }
+
+    // Verify scoring criteria
+    const summaryButton = screen.getByText(/Summary/i);
+    fireEvent.click(summaryButton);
+    expect(await screen.findByText(/Your score is below the required threshold to proceed./i)).toBeInTheDocument();
+  });
+
+  it('verifies inline error messages and summary screen', async () => {
+    render(
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+    );
+
+    // Start assessment
+    fireEvent.click(screen.getByText(/Start Free Checkup/i));
+    fireEvent.click(screen.getByText(/Pre-Seed/i));
+
+    // Answer questions with low scores
+    const questions = [
+      'Do you have a defined branch strategy?',
+      'How often do you perform code reviews?',
+      'Do you use CI/CD pipelines?',
+      'How do you manage dependencies?',
+      'Do you have automated tests?'
+    ];
+
+    for (const question of questions) {
+      expect(await screen.findByText(question)).toBeInTheDocument();
+      const options = screen.getAllByRole('radio');
+      fireEvent.click(options[0]); // Select first option (low score)
+      fireEvent.click(screen.getByRole('button', { name: /next/i }));
+    }
+
+    // Verify inline error message
+    const summaryButton = screen.getByText(/Summary/i);
+    fireEvent.click(summaryButton);
+    expect(await screen.findByText(/Your score is below the required threshold to proceed./i)).toBeInTheDocument();
+
+    // Answer questions with high scores
+    for (const question of questions) {
+      expect(await screen.findByText(question)).toBeInTheDocument();
+      const options = screen.getAllByRole('radio');
+      fireEvent.click(options[3]); // Select fourth option (high score)
+      fireEvent.click(screen.getByRole('button', { name: /next/i }));
+    }
+
+    // Verify summary screen
+    fireEvent.click(summaryButton);
+    expect(await screen.findByText(/Review Your Responses/i)).toBeInTheDocument();
+  });
 });
