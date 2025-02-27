@@ -1,6 +1,7 @@
 import { Stage, StageDefinition, Question } from '../types';
 
-export const STAGE_CONFIG: Record<Stage, StageDefinition> = {
+// Export the stage configuration object
+export const stageConfig = {
   'pre-seed': {
     id: 'pre-seed',
     label: 'Pre-Seed Stage',
@@ -43,7 +44,7 @@ export const STAGE_CONFIG: Record<Stage, StageDefinition> = {
         'optimization': 0.4
       }
     },
-    questionFilter: (_q: Question) => true // Using _q to indicate unused parameter
+    questionFilter: (_q: Question) => true
   },
   'series-a': {
     id: 'series-a',
@@ -89,11 +90,13 @@ export const STAGE_CONFIG: Record<Stage, StageDefinition> = {
     },
     questionFilter: (_q: Question) => true
   }
-};
+} as const;
+
+export const STAGE_CONFIG = stageConfig;
 
 // Utility functions for stage management
 export const getStageConfig = (stage: Stage): StageDefinition => {
-  const config = STAGE_CONFIG[stage];
+  const config = stageConfig[stage];
   if (!config) {
     throw new Error(`Invalid stage: ${stage}`);
   }
@@ -103,7 +106,7 @@ export const getStageConfig = (stage: Stage): StageDefinition => {
 export const validateStageSequence = (fromStage: Stage | null, toStage: Stage): boolean => {
   if (!fromStage) return true; // Initial stage selection is always valid
   
-  const stages: Stage[] = Object.keys(STAGE_CONFIG) as Stage[];
+  const stages: Stage[] = Object.keys(stageConfig) as Stage[];
   const fromIndex = stages.indexOf(fromStage);
   const toIndex = stages.indexOf(toStage);
   
@@ -111,13 +114,13 @@ export const validateStageSequence = (fromStage: Stage | null, toStage: Stage): 
 };
 
 export const getNextStage = (currentStage: Stage): Stage | null => {
-  const stages = Object.keys(STAGE_CONFIG) as Stage[];
+  const stages = Object.keys(stageConfig) as Stage[];
   const currentIndex = stages.indexOf(currentStage);
   return currentIndex < stages.length - 1 ? stages[currentIndex + 1] : null;
 };
 
 export const getPreviousStage = (currentStage: Stage): Stage | null => {
-  const stages = Object.keys(STAGE_CONFIG) as Stage[];
+  const stages = Object.keys(stageConfig) as Stage[];
   const currentIndex = stages.indexOf(currentStage);
   return currentIndex > 0 ? stages[currentIndex - 1] : null;
 };

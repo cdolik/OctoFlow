@@ -1,5 +1,5 @@
-import { Stage, Question, StageDefinition, ScoreResult } from '../types';
-import { stages } from '../data/stages';
+import { Stage, Question, StageDefinition, ScoreResult } from '../../types';
+import { stages } from '../../data/stages';
 
 export interface CategoryScore {
   score: number;
@@ -72,9 +72,6 @@ export function validateScore(
   return score >= (benchmark || 0);
 }
 
-/**
- * Calculate scores for a specific stage based on user responses
- */
 export function calculateStageScores(
   stage: Stage,
   responses: Record<string, number>

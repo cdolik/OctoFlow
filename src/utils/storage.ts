@@ -100,6 +100,21 @@ export const backupState = async (): Promise<boolean> => {
   }
 };
 
+export const restoreFromBackup = async (): Promise<boolean> => {
+  try {
+    const backup = sessionStorage.getItem(BACKUP_KEY);
+    if (!backup) return false;
+    
+    const state = JSON.parse(backup);
+    if (!validateState(state)) return false;
+    
+    sessionStorage.setItem(STORAGE_KEY, backup);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 export const validateState = (state: unknown): state is AssessmentState => {
   if (!state || typeof state !== 'object') {
     return false;

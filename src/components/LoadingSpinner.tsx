@@ -7,9 +7,18 @@ interface LoadingSpinnerProps {
   message?: string;
   showProgress?: boolean;
   progress?: number;
+  inline?: boolean;
+  ariaLabel?: string;
 }
 
-const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({ size = 'medium', message, showProgress = false, progress = 0 }) => {
+export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({ 
+  size = 'medium', 
+  message, 
+  showProgress = false, 
+  progress = 0,
+  inline = false,
+  ariaLabel
+}) => {
   const getSpinnerSize = () => {
     switch (size) {
       case 'small':

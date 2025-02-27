@@ -51,10 +51,11 @@ export const categories: Category[] = [
     weight: 0.8,
     questions: questions.filter(q => q.category === 'optimization')
   }
-];
+] as const;
 
 export const getStageQuestions = (stage: Stage) => {
   return questions.filter(question => question.stages.includes(stage));
 };
 
+// Make categories the default export
 export default categories;

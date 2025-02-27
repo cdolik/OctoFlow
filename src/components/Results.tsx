@@ -13,8 +13,9 @@ import {
   TooltipItem
 } from 'chart.js';
 import { getAssessmentResponses } from '../utils/storage';
-import { calculateWeightedScore, getScoreLevel, getRecommendations } from '../utils/scoring';
-import { categories } from '../data/categories';
+import { calculateStageScores, getScoreLevel } from '../utils/scoring';
+import { getRecommendations } from '../utils/recommendations';
+import categories from '../data/categories';
 import GitHubTooltip from './GitHubTooltip';
 import { trackRecommendationClick } from '../utils/analytics';
 import { FlowValidationProps } from './withFlowValidation';
@@ -80,13 +81,13 @@ export const Results: React.FC<ResultsProps> = ({ stage }) => {
   
   const responses = useMemo(() => getAssessmentResponses() as Record<string, number>, []);
   const scores = useMemo<ScoreResult>(() => {
-    const result = calculateWeightedScore(responses, stage.id) as WeightedScoreResult;
+    const result = calculateStageScores(stage.id, responses);
     return {
       categoryScores: { ...result.categoryScores },
-      gaps: { ...result.gaps },
-      benchmarks: result.benchmarks,
+      gaps: result.gaps || {},
+      benchmarks: result.benchmarks || {},
       overallScore: result.overallScore,
-      completionRate: result.completionRate
+      completionRate: result.completionRate || 0
     };
   }, [responses, stage]);
   const recommendations = useMemo<Recommendation[]>(() => getRecommendations(scores, stage.id), [scores, stage]);
