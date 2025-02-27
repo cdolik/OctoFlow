@@ -482,4 +482,68 @@ describe('Assessment', () => {
     render(<Assessment stage="pre-seed" />);
     expect(screen.getByText('Previous')).toBeDisabled();
   });
+
+  it('prevents progression when score is below threshold', async () => {
+    render(
+      <MemoryRouter>
+        <Assessment stage="pre-seed" />
+      </MemoryRouter>
+    );
+
+    // Answer questions with low scores
+    const questions = [
+      'Do you have a defined branch strategy?',
+      'How often do you perform code reviews?',
+      'Do you use CI/CD pipelines?',
+      'How do you manage dependencies?',
+      'Do you have automated tests?'
+    ];
+
+    for (const question of questions) {
+      expect(await screen.findByText(question)).toBeInTheDocument();
+      const options = screen.getAllByRole('radio');
+      fireEvent.click(options[0]); // Select first option (low score)
+      fireEvent.click(screen.getByRole('button', { name: /next/i }));
+    }
+
+    // Verify inline error message
+    const summaryButton = screen.getByText(/Summary/i);
+    fireEvent.click(summaryButton);
+    expect(await screen.findByText(/Your score is below the required threshold to proceed./i)).toBeInTheDocument();
+  });
+
+  it('allows progression when score meets threshold', async () => {
+    render(
+      <MemoryRouter>
+        <Assessment stage="pre-seed" />
+      </MemoryRouter>
+    );
+
+    // Answer questions with high scores
+    const questions = [
+      'Do you have a defined branch strategy?',
+      'How often do you perform code reviews?',
+      'Do you use CI/CD pipelines?',
+      'How do you manage dependencies?',
+      'Do you have automated tests?'
+    ];
+
+    for (const question of questions) {
+      expect(await screen.findByText(question)).toBeInTheDocument();
+      const options = screen.getAllByRole('radio');
+      fireEvent.click(options[3]); // Select fourth option (high score)
+      fireEvent.click(screen.getByRole('button', { name: /next/i }));
+    }
+
+    // Verify summary allows progression
+    const summaryButton = screen.getByText(/Summary/i);
+    fireEvent.click(summaryButton);
+    
+    // Should not show error
+    expect(screen.queryByText(/Your score is below the required threshold to proceed./i)).not.toBeInTheDocument();
+    
+    // Should allow navigation to results
+    const resultsButton = screen.getByText(/View Results/i);
+    expect(resultsButton).not.toBeDisabled();
+  });
 });

@@ -124,3 +124,29 @@ export const clearAssessmentState = (): void => {
     // Ignore errors during cleanup
   }
 };
+
+export const saveMetricsAndRecommendations = async (
+  metrics: { averageResponseTime: number; completionRate: number },
+  recommendations: string[]
+): Promise<boolean> => {
+  try {
+    const currentState = getAssessmentState();
+    if (!currentState) {
+      return false;
+    }
+
+    const newState: AssessmentState = {
+      ...currentState,
+      metrics,
+      recommendations,
+      metadata: {
+        ...currentState.metadata,
+        lastSaved: new Date().toISOString()
+      }
+    };
+
+    return saveState(newState);
+  } catch {
+    return false;
+  }
+};

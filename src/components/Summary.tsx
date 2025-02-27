@@ -7,6 +7,8 @@ import { saveAssessmentResponses } from '../utils/storage';
 import { trackCTAClick } from '../utils/analytics';
 import GitHubTooltip from './GitHubTooltip';
 import AssessmentErrorBoundary from './AssessmentErrorBoundary';
+import { calculateStageScores } from '../utils/scoring';
+import { stages } from '../data/stages';
 
 interface SummaryProps {
   stage: Stage;
@@ -114,10 +116,20 @@ const Summary: React.FC<SummaryProps> = ({ stage, responses, onStepChange }) => 
     );
   };
 
+  const stageConfig = stages.find(s => s.id === stage);
+  const scores = calculateStageScores(stage, responses);
+  const meetsThreshold = stageConfig && scores.overallScore >= (stageConfig.scoringCriteria?.threshold || 0);
+
   return (
     <AssessmentErrorBoundary onRecovery={() => navigate('/stage-select')}>
       <div className="summary-container">
         <h2>Review Your Responses</h2>
+        
+        {!meetsThreshold && (
+          <div className="error-message" role="alert">
+            Your score is below the required threshold to proceed. You need at least {stageConfig?.scoringCriteria?.threshold} points.
+          </div>
+        )}
         
         {validationError && (
           <div className="error-message" role="alert">
@@ -132,20 +144,23 @@ const Summary: React.FC<SummaryProps> = ({ stage, responses, onStepChange }) => 
         <div className="summary-metrics">
           <p>Average Response Time: {averageResponseTime.toFixed(2)} seconds</p>
           <p>Completion Rate: {completionRate.toFixed(2)}%</p>
+          <p>Overall Score: {scores.overallScore.toFixed(1)} / {stageConfig?.scoringCriteria?.threshold}</p>
         </div>
 
         <div className="summary-actions">
-          {error ? (
-            <p className="validation-error">{error}</p>
-          ) : (
-            <button
-              onClick={handleViewResults}
-              disabled={!canProgress || isValidating}
-              className="cta-button"
-            >
-              View Results
-            </button>
-          )}
+          <button 
+            className="secondary-button"
+            onClick={() => navigate('/assessment')}
+          >
+            Return to Assessment
+          </button>
+          <button
+            className="primary-button"
+            disabled={!meetsThreshold || !canProgress}
+            onClick={handleViewResults}
+          >
+            View Results
+          </button>
         </div>
       </div>
     </AssessmentErrorBoundary>
