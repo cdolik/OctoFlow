@@ -1,4 +1,4 @@
-export type SoundType = 'success' | 'error' | 'warning' | 'info';
+export type SoundType = 'success' | 'error' | 'warning' | 'info' | 'navigation' | 'complete';
 
 export interface KeyboardShortcut {
   key: string;

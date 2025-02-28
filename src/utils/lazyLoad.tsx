@@ -1,31 +1,16 @@
-import React, { Suspense } from 'react';
-import { LoadingSpinner } from '../components/LoadingSpinner';
+import React, { lazy, Suspense, ComponentType } from 'react';
+import LoadingSpinner from '../components/LoadingSpinner';
 
-interface LazyComponentProps {
+interface LazyLoadProps<P> {
+  importFunc: () => Promise<{ default: ComponentType<P> }>;
   fallback?: React.ReactNode;
-  retry?: boolean;
-  onError?: (error: Error) => void;
 }
 
-export function lazyLoad<T extends React.ComponentType<{}>>(
-  importFactory: () => Promise<{ default: T }>,
-  options: LazyComponentProps = {}
-): React.ComponentType<React.ComponentProps<T>> {
-  const LazyComponent = React.lazy(importFactory);
-  
-  const fallback = options.fallback ?? (
-    <LoadingSpinner 
-      message="Loading component..." 
-      size="small"
-      inline={true}
-    />
+export function lazyLoad<P>({ importFunc, fallback = <LoadingSpinner /> }: LazyLoadProps<P>): React.FC<P> {
+  const Component = lazy(importFunc);
+  return (props: P) => (
+    <Suspense fallback={fallback}>
+      <Component {...props} />
+    </Suspense>
   );
-
-  return function LazyLoadedComponent(props: React.ComponentProps<T>) {
-    return (
-      <Suspense fallback={fallback}>
-        <LazyComponent {...props} />
-      </Suspense>
-    );
-  };
 }

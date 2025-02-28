@@ -96,12 +96,27 @@ export function useErrorManagement(options: UseErrorManagementOptions = {}) {
     return errorReporter.getActiveErrors();
   }, []);
 
+  const reportError = (error: AssessmentError, context: ErrorContext) => {
+    errorReporter.report(error, context);
+  };
+
+  const resolveError = (errorId: string) => {
+    errorReporter.resolve(errorId);
+  };
+
+  const getErrors = () => {
+    return errorReporter.getActiveErrors();
+  };
+
   return {
     activeErrorCount: state.activeErrorCount,
     isHandlingError: state.isHandlingError,
     lastError: state.lastError,
     handleError,
     clearError,
-    getActiveErrors
+    getActiveErrors,
+    reportError,
+    resolveError,
+    getErrors
   };
 }

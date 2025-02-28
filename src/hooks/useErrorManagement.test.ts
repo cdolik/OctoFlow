@@ -1,15 +1,19 @@
-import { renderHook } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react-hooks';
 import { useErrorManagement } from './useErrorManagement';
-import { useStorage } from './useStorage';
-import { useStorageErrorHandler } from './useStorageErrorHandler';
-import errorReporter from '../utils/errorReporting';
-import { trackError, trackErrorWithRecovery } from '../utils/analytics';
-import { ValidationFailedError, StorageFailedError } from '../utils/errorHandling';
+import { errorReporter } from '../utils/errorReporting';
+import { trackError } from '../utils/analytics';
 
-jest.mock('./useStorage');
-jest.mock('./useStorageErrorHandler');
 jest.mock('../utils/errorReporting');
 jest.mock('../utils/analytics');
+
+const mockError = new Error('Test error');
+const mockContext = { stage: 'pre-seed' };
+
+errorReporter.report = jest.fn();
+errorReporter.resolve = jest.fn();
+errorReporter.getActiveErrors = jest.fn().mockReturnValue([]);
+
+trackError.mockImplementation(() => {});
 
 describe('useErrorManagement', () => {
   const mockState = {
@@ -31,7 +35,7 @@ describe('useErrorManagement', () => {
       isRecovering: false,
       retryCount: 0
     });
-    (errorReporter.reportError as jest.Mock).mockReturnValue('error-1');
+    (errorReporter.report as jest.Mock).mockReturnValue('error-1');
     (errorReporter.getActiveErrors as jest.Mock).mockReturnValue([]);
     (errorReporter.subscribeToErrors as jest.Mock).mockReturnValue(jest.fn());
   });
@@ -143,7 +147,7 @@ describe('useErrorManagement', () => {
       await result.current.handleError(error);
     });
 
-    expect(errorReporter.reportError).toHaveBeenCalledWith(error, {
+    expect(errorReporter.report).toHaveBeenCalledWith(error, {
       stage: 'pre-seed',
       responses: mockState.responses,
       metadata: mockState.metadata
@@ -195,7 +199,7 @@ describe('useErrorManagement', () => {
       await result.current.clearError('error-1');
     });
 
-    expect(errorReporter.markErrorResolved).toHaveBeenCalledWith('error-1');
+    expect(errorReporter.resolve).toHaveBeenCalledWith('error-1');
     const storage = (useStorage as jest.Mock).mock.results[0].value;
     expect(storage.saveState).toHaveBeenCalledWith(mockState);
   });
@@ -273,5 +277,36 @@ describe('useErrorManagement', () => {
     });
 
     expect(result.current.isHandlingError).toBe(false);
+  });
+
+  it('should handle errors and call errorReporter', async () => {
+    const { result } = renderHook(() => useErrorManagement());
+
+    await act(async () => {
+      await result.current.handleError(mockError, async () => true);
+    });
+
+    expect(errorReporter.report).toHaveBeenCalledWith(mockError, expect.any(Object));
+    expect(result.current.activeErrorCount).toBe(1);
+  });
+
+  it('should resolve errors', () => {
+    const { result } = renderHook(() => useErrorManagement());
+
+    act(() => {
+      result.current.clearError('error-1');
+    });
+
+    expect(errorReporter.resolve).toHaveBeenCalledWith('error-1');
+    expect(result.current.activeErrorCount).toBe(0);
+  });
+
+  it('should get active errors', () => {
+    const { result } = renderHook(() => useErrorManagement());
+
+    const errors = result.current.getActiveErrors();
+
+    expect(errors).toEqual([]);
+    expect(errorReporter.getActiveErrors).toHaveBeenCalled();
   });
 });

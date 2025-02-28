@@ -15,6 +15,8 @@ export interface StorageMetadata {
   attemptCount: number;
   lastInteraction?: number;
   categoryTimes?: Record<string, number>;
+  metrics?: { averageResponseTime: number; completionRate: number };
+  recommendations?: string[];
 }
 
 export interface StorageState {

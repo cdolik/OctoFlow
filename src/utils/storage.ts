@@ -152,11 +152,11 @@ export const saveMetricsAndRecommendations = async (
 
     const newState: AssessmentState = {
       ...currentState,
-      metrics,
-      recommendations,
       metadata: {
         ...currentState.metadata,
-        lastSaved: new Date().toISOString()
+        lastSaved: new Date().toISOString(),
+        metrics,
+        recommendations
       }
     };
 

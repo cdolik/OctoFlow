@@ -9,14 +9,9 @@ import GitHubTooltip from './GitHubTooltip';
 import AssessmentErrorBoundary from './AssessmentErrorBoundary';
 import { calculateStageScores } from '../utils/scoring';
 import { stages } from '../data/stages';
-import RadarChart from './RadarChart';
+import { RadarChart } from './RadarChart';
 import { generateRecommendations } from '../utils/recommendations';
-
-interface SummaryProps {
-  stage: Stage;
-  responses: Record<string, number>;
-  onStepChange: (responses: Record<string, number>) => void;
-}
+import { SummaryProps } from '../types/props';
 
 const Summary: React.FC<SummaryProps> = ({ stage, responses, onStepChange }) => {
   const navigate = useNavigate();
@@ -25,37 +20,31 @@ const Summary: React.FC<SummaryProps> = ({ stage, responses, onStepChange }) => 
   const [averageResponseTime, setAverageResponseTime] = useState<number>(0);
   const [completionRate, setCompletionRate] = useState<number>(0);
   const [tailoredRecommendations, setTailoredRecommendations] = useState<Recommendation[]>([]);
-  
-  const { isValidating, error, canProgress } = useStageValidation({
+
+  const { canProgress } = useStageValidation({
     currentStage: stage,
     responses,
     onValidationError: setValidationError
   });
-  
+
   const stageQuestions = getStageQuestions(stage);
   const stageConfig = stages.find(s => s.id === stage);
   const scores = calculateStageScores(stage, responses);
   const meetsThreshold = stageConfig && scores.overallScore >= (stageConfig.scoringCriteria?.threshold || 0);
-  
+
   useEffect(() => {
     const calculateMetrics = () => {
       const totalResponses = Object.keys(responses).length;
       const totalQuestions = stageQuestions.length;
-      const totalTime = Object.values(responses).reduce((acc: number, response: any) => {
+      const totalTime = Object.values(responses).reduce((acc: number, response: { timeSpent: number }) => {
         return acc + (response.timeSpent || 0);
       }, 0);
-      
       setAverageResponseTime(totalResponses > 0 ? totalTime / totalResponses : 0);
       setCompletionRate((totalResponses / totalQuestions) * 100);
     };
-    
     calculateMetrics();
-    
-    // Generate tailored recommendations based on scores
     const recommendations = generateRecommendations(stage, scores);
     setTailoredRecommendations(recommendations);
-    
-    // Save metrics and recommendations
     saveMetricsAndRecommendations(
       { averageResponseTime, completionRate },
       recommendations.map(r => r.id)
@@ -67,7 +56,6 @@ const Summary: React.FC<SummaryProps> = ({ stage, responses, onStepChange }) => 
       ...responses,
       [questionId]: value
     };
-    
     try {
       const saved = await saveAssessmentResponses(newResponses);
       if (saved) {
@@ -78,8 +66,7 @@ const Summary: React.FC<SummaryProps> = ({ stage, responses, onStepChange }) => 
         setValidationError('Failed to save response changes');
       }
     } catch (error) {
-      setValidationError('Error updating response');
-      console.error('Response update failed:', error);
+      setValidationError('Failed to save response changes');
     }
   }, [responses, onStepChange]);
 
@@ -98,7 +85,7 @@ const Summary: React.FC<SummaryProps> = ({ stage, responses, onStepChange }) => 
   const renderQuestion = (question: Question) => {
     const response = responses[question.id];
     const isEditing = editingQuestionId === question.id;
-    
+
     return (
       <div key={question.id} className="summary-question">
         <div className="question-header">
@@ -138,7 +125,7 @@ const Summary: React.FC<SummaryProps> = ({ stage, responses, onStepChange }) => 
     if (tailoredRecommendations.length === 0) {
       return <p>No recommendations available at this time.</p>;
     }
-    
+
     return (
       <div className="recommendations-list">
         {tailoredRecommendations.slice(0, 3).map((recommendation) => (
@@ -152,6 +139,9 @@ const Summary: React.FC<SummaryProps> = ({ stage, responses, onStepChange }) => 
               <span className="impact-tag">
                 Impact: {recommendation.impact}/10
               </span>
+              <GitHubTooltip term={recommendation.tooltipTerm}>
+                {recommendation.tooltipContent}
+              </GitHubTooltip>
             </div>
           </div>
         ))}
@@ -160,22 +150,22 @@ const Summary: React.FC<SummaryProps> = ({ stage, responses, onStepChange }) => 
   };
 
   return (
-    <AssessmentErrorBoundary onRecovery={() => navigate('/stage-select')}>
+    <AssessmentErrorBoundary stage={stage} onRecovery={() => navigate('/stage-select')}>
       <div className="summary-container">
         <h2>Review Your {stage} Assessment</h2>
-        
+
         {!meetsThreshold && (
           <div className="error-message" role="alert">
             Your score is below the required threshold to proceed. You need at least {stageConfig?.scoringCriteria?.threshold} points.
           </div>
         )}
-        
+
         {validationError && (
           <div className="error-message" role="alert">
             {validationError}
           </div>
         )}
-        
+
         <div className="summary-analytics">
           <div className="analytics-section">
             <h3>Key Metrics</h3>
@@ -194,7 +184,7 @@ const Summary: React.FC<SummaryProps> = ({ stage, responses, onStepChange }) => 
               </div>
             </div>
           </div>
-          
+
           <div className="analytics-section">
             <h3>Category Performance</h3>
             <div className="chart-container">
@@ -208,17 +198,17 @@ const Summary: React.FC<SummaryProps> = ({ stage, responses, onStepChange }) => 
             </div>
           </div>
         </div>
-        
+
         <div className="recommendations-section">
           <h3>Tailored GitHub Recommendations</h3>
           {renderRecommendations()}
         </div>
-        
+
         <div className="questions-summary">
           <h3>Assessment Responses</h3>
           {stageQuestions.map(renderQuestion)}
         </div>
-        
+
         <div className="summary-actions">
           <button 
             className="secondary-button"

@@ -4,11 +4,11 @@ import { recommendations } from '../data/recommendations';
 /**
  * Get recommendations based on a user's assessment scores
  * 
- * @param stage The current assessment stage
  * @param scores The calculated scores from the assessment
+ * @param stage The current assessment stage
  * @returns An array of recommendations prioritized by relevance
  */
-export function getRecommendations(stage: Stage, scores: ScoreResult): Recommendation[] {
+export function getRecommendations(scores: ScoreResult, stage: Stage): Recommendation[] {
   // Get all recommendations for the current stage
   const stageRecommendations = recommendations[stage] || [];
   
@@ -38,13 +38,21 @@ export function getRecommendations(stage: Stage, scores: ScoreResult): Recommend
 }
 
 /**
+ * Legacy alias for getRecommendations with reversed parameters
+ * @deprecated Use getRecommendations(scores, stage) instead
+ */
+export function generateRecommendations(stage: Stage, scores: ScoreResult): Recommendation[] {
+  return getRecommendations(scores, stage);
+}
+
+/**
  * Get a single recommendation most relevant to the user's weakest area
  * 
- * @param stage The current assessment stage
  * @param scores The calculated scores from the assessment
+ * @param stage The current assessment stage
  * @returns The most impactful recommendation for the user's weakest area
  */
-export function getTopRecommendation(stage: Stage, scores: ScoreResult): Recommendation | null {
+export function getTopRecommendation(scores: ScoreResult, stage: Stage): Recommendation | null {
   // Find the weakest category
   const categories = Object.entries(scores.categoryScores);
   if (categories.length === 0) return null;

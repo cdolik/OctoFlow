@@ -5,26 +5,19 @@ import { stageConfig } from '../data/StageConfig';
 
 Chart.register(...registerables);
 
-interface RadarChartData {
-  labels: string[];
-  datasets: Array<{
-    label: string;
-    data: number[];
-    backgroundColor: string;
-    borderColor: string;
-    borderWidth: number;
-  }>;
-}
-
 interface RadarChartProps {
-  data: RadarChartData;
-  stage: Stage;
+  categories: string[];
+  values: number[];
+  benchmarks: Record<string, number>;
+  stage?: Stage;
   height?: number;
   width?: number;
 }
 
 export const RadarChart: React.FC<RadarChartProps> = ({
-  data,
+  categories,
+  values,
+  benchmarks,
   stage,
   height = 300,
   width = 300
@@ -34,23 +27,26 @@ export const RadarChart: React.FC<RadarChartProps> = ({
 
   useEffect(() => {
     if (!chartRef.current) return;
-
     const ctx = chartRef.current.getContext('2d');
     if (!ctx) return;
-
-    const benchmarks = stageConfig[stage]?.benchmarks.expectedScores || {};
 
     const config = {
       type: 'radar' as const,
       data: {
-        ...data,
+        labels: categories,
         datasets: [
-          ...data.datasets,
           {
-            label: 'Benchmark',
-            data: data.labels.map(label => benchmarks[label] || 0),
-            backgroundColor: 'rgba(255, 99, 132, 0.2)',
-            borderColor: 'rgba(255, 99, 132, 1)',
+            label: 'Your Score',
+            data: values,
+            backgroundColor: 'rgba(45, 164, 78, 0.2)',
+            borderColor: '#2DA44E',
+            borderWidth: 2,
+          },
+          {
+            label: stage ? `${stageConfig[stage]?.label || stage} Benchmark` : 'Benchmark',
+            data: categories.map(label => benchmarks[label] || 0),
+            backgroundColor: 'rgba(36, 41, 46, 0.1)',
+            borderColor: '#24292E',
             borderWidth: 1,
             borderDash: [5, 5]
           }
@@ -112,7 +108,7 @@ export const RadarChart: React.FC<RadarChartProps> = ({
         chartInstance.current.destroy();
       }
     };
-  }, [data, stage]);
+  }, [categories, values, benchmarks, stage]);
 
   return (
     <div className="radar-chart-container">

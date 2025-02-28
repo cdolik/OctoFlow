@@ -1,13 +1,14 @@
 import React, { useEffect, useRef } from 'react';
-import { KeyboardShortcut } from '../types';
+import { KeyboardShortcut, Stage } from '../types';
 import { useErrorManagement } from '../hooks/useErrorManagement';
 import './styles.css';
 
 interface AccessibleShortcutHelperProps {
   shortcuts: KeyboardShortcut[];
-  stage?: string;
+  stage?: Stage;
   visible?: boolean;
   onClose?: () => void;
+  showAdvanced?: boolean;
 }
 
 export function AccessibleShortcutHelper({
@@ -35,7 +36,7 @@ export function AccessibleShortcutHelper({
     activeErrorCount === 0 || s.allowInErrorState
   );
 
-  if (!visible) return null;
+  if (!visible) return <></>;
 
   return (
     <div

@@ -66,3 +66,13 @@ export interface PreferencesPanelProps {
   onPreferencesChange: (preferences: Partial<UserPreferences>) => void;
   onClose?: () => void;
 }
+
+export interface SummaryProps {
+  stage: Stage;
+  onComplete: () => void;
+}
+
+export interface ResultsProps {
+  stage: Stage;
+  onComplete: () => void;
+}

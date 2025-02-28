@@ -1,6 +1,12 @@
 import { Stage } from '../types';
 import { trackError } from './analytics';
 
+export interface ErrorContext {
+  stage?: Stage;
+  component?: string;
+  isCritical?: boolean;
+}
+
 interface ErrorReport {
   error: Error;
   componentStack?: string;
@@ -18,13 +24,7 @@ interface ErrorMetrics {
   recoveryRate: number;
 }
 
-interface ErrorContext {
-  componentStack?: string;
-  isCritical?: boolean;
-  stage?: Stage;
-}
-
-class ErrorReportingService {
+export class ErrorReportingService {
   private static instance: ErrorReportingService;
   private errors: ErrorReport[] = [];
   private readonly MAX_STORED_ERRORS = 50;
@@ -74,6 +74,17 @@ class ErrorReportingService {
       componentStack,
       isCritical: this.isCriticalError(error)
     });
+  }
+
+  async attemptRecovery(): Promise<boolean> {
+    try {
+      // Attempt basic recovery steps
+      await this.persistErrors();
+      return true;
+    } catch (error) {
+      console.error('Recovery failed:', error);
+      return false;
+    }
   }
 
   getError(timestamp: string): ErrorReport | undefined {
@@ -180,7 +191,4 @@ class ErrorReportingService {
   }
 }
 
-export const errorReportingService = ErrorReportingService.getInstance();
-export { ErrorReportingService as ErrorReporter };
 export const errorReporter = ErrorReportingService.getInstance();
-export default errorReporter;

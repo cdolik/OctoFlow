@@ -3,39 +3,53 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { lazyLoad } from '../utils/lazyLoad';
 import LoadingSpinner from './LoadingSpinner';
 import ErrorBoundary from './ErrorBoundary';
+import { ErrorFallback } from './ErrorFallback';
 import { Stage } from '../types';
+import { AssessmentProps, SummaryProps, ResultsProps, PreferencesPanelProps } from '../types/props';
 
-// Lazy load route components
-const Assessment = lazyLoad(
-  () => import('./Assessment'),
-  { 
-    fallback: <LoadingSpinner message="Loading assessment..." />
-  }
-);
+interface AppRoutesProps {
+  currentStage: Stage | null;
+  onAssessmentComplete: () => void;
+  onAssessmentError: () => void;
+}
 
-const Results = lazyLoad(
-  () => import('./Results'),
-  {
-    fallback: <LoadingSpinner message="Loading results..." />
-  }
-);
+const Assessment = lazyLoad<AssessmentProps>({
+  importFunc: () => import('./Assessment'),
+  fallback: <LoadingSpinner message="Loading assessment..." />
+});
 
-const Summary = lazyLoad(
-  () => import('./Summary'),
-  {
-    fallback: <LoadingSpinner message="Loading summary..." />
-  }
-);
+const Results = lazyLoad<ResultsProps>({
+  importFunc: () => import('./Results'),
+  fallback: <LoadingSpinner message="Loading results..." />
+});
 
-const PreferencesPanel = lazyLoad(
-  () => import('./PreferencesPanel'),
-  {
-    fallback: <LoadingSpinner message="Loading preferences..." />
-  }
-);
+const Summary = lazyLoad<SummaryProps>({
+  importFunc: () => import('./Summary'),
+  fallback: <LoadingSpinner message="Loading summary..." />
+});
 
-const AppRoutes: React.FC = () => (
-  <ErrorBoundary>
+const PreferencesPanel = lazyLoad<PreferencesPanelProps>({
+  importFunc: () => import('./PreferencesPanel'),
+  fallback: <LoadingSpinner message="Loading preferences..." />
+});
+
+const preferences: PreferencesPanelProps['preferences'] = {
+  theme: 'light',
+  fontSize: 'medium',
+  highContrast: false,
+  motionReduced: false,
+  keyboardMode: 'basic',
+  autoSave: true,
+  autoSaveInterval: 10,
+  soundEnabled: true
+};
+
+const AppRoutes: React.FC<AppRoutesProps> = ({
+  currentStage,
+  onAssessmentComplete,
+  onAssessmentError
+}) => (
+  <ErrorBoundary fallback={ErrorFallback}>
     <Routes>
       <Route 
         path="/" 
@@ -44,22 +58,38 @@ const AppRoutes: React.FC = () => (
       
       <Route 
         path="/assessment/:stage" 
-        element={<Assessment />} 
+        element={
+          <Assessment 
+            stage={currentStage as Stage} 
+            onComplete={onAssessmentComplete}
+            onError={onAssessmentError}
+          />
+        } 
       />
       
       <Route 
         path="/results" 
-        element={<Results />} 
+        element={
+          <Results 
+            stage={currentStage as Stage}
+            onComplete={onAssessmentComplete}
+          />
+        } 
       />
       
       <Route 
         path="/summary" 
-        element={<Summary />} 
+        element={
+          <Summary 
+            stage={currentStage as Stage}
+            onComplete={onAssessmentComplete}
+          />
+        } 
       />
       
       <Route 
         path="/preferences" 
-        element={<PreferencesPanel />} 
+        element={<PreferencesPanel preferences={preferences} onPreferencesChange={() => {}} />} 
       />
       
       <Route 

@@ -1,49 +1,66 @@
-import React from 'react';
+import React, { Component, ErrorInfo } from 'react';
 import { ErrorContext } from '../types/errors';
-import { trackError } from '../utils/analytics';
+import { errorReporter } from '../utils/errorReporting';
 
-interface ErrorBoundaryProps {
+interface Props {
   children: React.ReactNode;
-  fallback?: React.ReactNode;
-  onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
+  fallback: React.ComponentType<{ error: Error }>;
+  onReset?: () => void;
+  onError?: (error: Error) => void;
+  context?: ErrorContext;
 }
 
-interface ErrorBoundaryState {
-  hasError: boolean;
+interface State {
   error: Error | null;
+  hasError: boolean;
 }
 
-class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  constructor(props: ErrorBoundaryProps) {
+export class ErrorBoundary extends Component<Props, State> {
+  constructor(props: Props) {
     super(props);
-    this.state = { hasError: false, error: null };
-  }
-
-  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
-    return { hasError: true, error };
-  }
-
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
-    const context: ErrorContext = {
-      component: 'ErrorBoundary',
-      action: 'componentDidCatch',
-      timestamp: new Date().toISOString()
+    this.state = {
+      error: null,
+      hasError: false
     };
-    trackError(error, context);
-    this.props.onError?.(error, errorInfo);
   }
+
+  static getDerivedStateFromError(error: Error): State {
+    return {
+      error,
+      hasError: true
+    };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
+    const { context, onError } = this.props;
+    
+    // Report error with context
+    errorReporter.reportError(error, errorInfo.componentStack, context?.stage, {
+      component: context?.component || 'unknown',
+      isCritical: context?.isCritical || false,
+    });
+
+    // Notify parent if handler provided
+    onError?.(error);
+  }
+
+  handleReset = (): void => {
+    this.setState({
+      error: null,
+      hasError: false
+    });
+    this.props.onReset?.();
+  };
 
   render(): React.ReactNode {
-    if (this.state.hasError) {
-      return this.props.fallback || (
-        <div role="alert" className="error-boundary">
-          <h2>Something went wrong.</h2>
-          <p>{this.state.error?.message}</p>
-        </div>
-      );
+    const { fallback: Fallback, children } = this.props;
+    const { error, hasError } = this.state;
+
+    if (hasError && error) {
+      return <Fallback error={error} />;
     }
 
-    return this.props.children;
+    return children;
   }
 }
 

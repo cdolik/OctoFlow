@@ -13,6 +13,10 @@ export interface StageDefinition {
     expectedScores: Record<string, number>;
   };
   questionFilter: (q: Question) => boolean;
+  scoringCriteria?: {
+    threshold: number;
+    minResponses?: number;
+  };
 }
 
 export interface StorageMetadata {
@@ -23,6 +27,11 @@ export interface StorageMetadata {
   attemptCount: number;
   lastInteraction?: number;
   categoryTimes?: Record<string, number>;
+  metrics?: { 
+    averageResponseTime: number; 
+    completionRate: number; 
+  };
+  recommendations?: string[];
 }
 
 export interface StorageProgress {
@@ -80,7 +89,8 @@ export interface Category {
   title: string;
   weight: number;
   description: string;
-  questions: Question[];
+  questions?: Question[];
+  focusAreas?: string[];
 }
 
 export interface Recommendation {
@@ -91,12 +101,21 @@ export interface Recommendation {
   impact: number;
   category: string;
   stage: Stage;
+  details?: string;
+  priority?: number;
+  steps?: string[];
+  resource?: string;
 }
+
+export type ScoreLevel = 'Low' | 'Medium' | 'High';
 
 export interface ScoreResult {
   overallScore: number;
   categoryScores: Record<string, number>;
-  level: 'Low' | 'Medium' | 'High';
+  level: ScoreLevel;
+  gaps: Record<string, number>;
+  benchmarks: Record<string, number>;
+  completionRate: number;
 }
 
 export interface GlossaryTerm {
@@ -115,4 +134,18 @@ export type AssessmentResponse = {
 export interface FlowValidationProps {
   stage: Stage;
   onValidationComplete?: () => void;
+}
+
+export type ErrorSeverity = 'high' | 'low';
+
+export type SoundType = 'success' | 'error' | 'warning' | 'info' | 'navigation' | 'complete';
+
+export interface UserPreferences {
+  theme: 'light' | 'dark' | 'system';
+  fontSize: 'small' | 'medium' | 'large';
+  highContrast: boolean;
+  motionReduced: boolean;
+  audioEnabled: boolean;
+  autoSaveInterval: number;
+  developerMode: boolean;
 }

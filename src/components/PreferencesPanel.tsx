@@ -1,12 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { LiveRegion } from './LiveRegion';
 import type { UserPreferences, ThemeMode, FontSize, KeyboardMode } from '../types/user';
-
-interface PreferencesPanelProps {
-  preferences: UserPreferences;
-  onPreferencesChange: (preferences: UserPreferences) => void;
-  onClose?: () => void;
-}
+import { PreferencesPanelProps } from '../types/props';
 
 const PreferencesPanel: React.FC<PreferencesPanelProps> = ({ preferences, onPreferencesChange, onClose }) => {
   const [localPreferences, setLocalPreferences] = useState<UserPreferences>(preferences);
