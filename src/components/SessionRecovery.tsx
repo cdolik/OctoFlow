@@ -4,17 +4,40 @@ import { StorageState } from '../types';
 import { IndexedDBAdapter } from '../utils/storage/IndexedDBAdapter';
 import { LoadingSpinner } from './LoadingSpinner';
 import './styles.css';
+import { useErrorManagement } from '../hooks/useErrorManagement';
+import { useOfflineError } from '../hooks/useOfflineError';
+import { errorAnalytics } from '../utils/errorAnalytics';
+import { AssessmentError } from '../types/errors';
+import { Stage } from '../types';
 
 interface SessionRecoveryProps {
   onRecover: (state: StorageState) => void;
   onDecline: () => void;
 }
 
+interface Props {
+  stage?: Stage;
+  onRecover?: () => void;
+  children: React.ReactNode;
+}
+
+interface SessionState {
+  timestamp: string;
+  stage?: Stage;
+  data: Record<string, unknown>;
+}
+
+const SESSION_KEY = 'assessment_session';
+const MAX_SESSION_AGE = 24 * 60 * 60 * 1000; // 24 hours
+
 export function SessionRecovery({ onRecover, onDecline }: SessionRecoveryProps): JSX.Element {
   const [savedStates, setSavedStates] = useState<StorageState[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const navigate = useNavigate();
+  const [isRecovering, setIsRecovering] = useState(false);
+  const { handleError } = useErrorManagement({ stage: undefined });
+  const { isOnline } = useOfflineError();
 
   useEffect(() => {
     const loadSavedStates = async () => {
@@ -45,6 +68,115 @@ export function SessionRecovery({ onRecover, onDecline }: SessionRecoveryProps):
     }
   };
 
+  const saveSession = (data: Record<string, unknown>): void => {
+    try {
+      const sessionState: SessionState = {
+        timestamp: new Date().toISOString(),
+        stage: undefined,
+        data
+      };
+      localStorage.setItem(SESSION_KEY, JSON.stringify(sessionState));
+    } catch (error) {
+      handleError(new AssessmentError('Failed to save session state', {
+        context: {
+          component: 'SessionRecovery',
+          action: 'saveSession',
+          stage: undefined,
+          timestamp: new Date().toISOString()
+        },
+        severity: 'high'
+      }));
+    }
+  };
+
+  const loadSession = async (): Promise<Record<string, unknown> | null> => {
+    try {
+      const storedSession = localStorage.getItem(SESSION_KEY);
+      if (!storedSession) return null;
+
+      const sessionState: SessionState = JSON.parse(storedSession);
+      const sessionAge = Date.now() - new Date(sessionState.timestamp).getTime();
+
+      if (sessionAge > MAX_SESSION_AGE) {
+        localStorage.removeItem(SESSION_KEY);
+        return null;
+      }
+
+      return sessionState.data;
+    } catch (error) {
+      await handleError(new AssessmentError('Failed to load session state', {
+        context: {
+          component: 'SessionRecovery',
+          action: 'loadSession',
+          stage: undefined,
+          timestamp: new Date().toISOString()
+        },
+        severity: 'medium'
+      }));
+      return null;
+    }
+  };
+
+  const recoverSession = async (): Promise<boolean> => {
+    if (!isOnline) return false;
+
+    setIsRecovering(true);
+    try {
+      const sessionData = await loadSession();
+      if (sessionData && onRecover) {
+        await onRecover();
+        errorAnalytics.trackError(
+          new AssessmentError('Session recovered successfully', {
+            context: {
+              component: 'SessionRecovery',
+              action: 'recoverSession',
+              stage: undefined,
+              timestamp: new Date().toISOString()
+            },
+            severity: 'low',
+            recoverable: true
+          }),
+          { component: 'SessionRecovery', action: 'recoverSession', stage: undefined },
+          true
+        );
+        return true;
+      }
+    } catch (error) {
+      await handleError(error as Error);
+    } finally {
+      setIsRecovering(false);
+    }
+    return false;
+  };
+
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      const currentState = { /* Get current app state */ };
+      saveSession(currentState);
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        const currentState = { /* Get current app state */ };
+        saveSession(currentState);
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isOnline) {
+      recoverSession();
+    }
+  }, [isOnline]);
+
   if (isLoading) {
     return <LoadingSpinner size="medium" message="Checking for saved sessions..." />;
   }
@@ -66,7 +198,7 @@ export function SessionRecovery({ onRecover, onDecline }: SessionRecoveryProps):
   }
 
   return (
-    <div className="session-recovery" role="dialog" aria-labelledby="recovery-title">
+    <div className={`session-recovery ${isRecovering ? 'recovering' : ''}`} role="dialog" aria-labelledby="recovery-title">
       <h2 id="recovery-title">Resume Previous Session?</h2>
       <div className="saved-sessions">
         {savedStates.map((state, index) => (
@@ -173,6 +305,21 @@ export function SessionRecovery({ onRecover, onDecline }: SessionRecoveryProps):
           text-align: center;
           padding: 2rem;
           color: var(--error-color);
+        }
+
+        .session-recovery.recovering::after {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(255, 255, 255, 0.7);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 1.2em;
+          color: var(--text-primary);
         }
       `}</style>
     </div>

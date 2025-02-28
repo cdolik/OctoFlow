@@ -9,6 +9,10 @@ import { sanitizeError } from '../utils/sanitization';
 import { ErrorContext } from '../types/errors';
 import LoadingSpinner from './LoadingSpinner';
 import './styles.css';
+import { ErrorFallback } from './ErrorFallback';
+import { errorAnalytics } from '../utils/errorAnalytics';
+import { errorReporter } from '../utils/errorReporting';
+import { Stage } from '../types';
 
 interface Props {
   children: React.ReactNode;
@@ -16,6 +20,10 @@ interface Props {
   fallback?: React.ReactNode;
   maxRetries?: number;
   component?: string;
+  stage?: Stage;
+  showDetails?: boolean;
+  FallbackComponent?: React.ComponentType<{ error: Error; resetError: () => void }>;
+  onError?: (error: Error, errorInfo: ErrorInfo) => void;
 }
 
 interface State {
@@ -232,3 +240,68 @@ const ErrorFallback: React.FC<{ error?: React.ReactNode }> = ({ error }) => {
     </div>
   );
 };
+
+export class EnhancedErrorBoundary extends Component<Props, State> {
+  public state: State = {
+    error: null,
+    errorInfo: null
+  };
+
+  static getDerivedStateFromError(error: Error): State {
+    return { error, errorInfo: null };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
+    this.setState({ errorInfo });
+
+    const context: ErrorContext = {
+      component: 'EnhancedErrorBoundary',
+      action: 'componentDidCatch',
+      stage: this.props.stage,
+      timestamp: new Date().toISOString()
+    };
+
+    if (error instanceof AssessmentError) {
+      errorReporter.report(error, context);
+    } else {
+      errorReporter.report(
+        new AssessmentError(error.message, {
+          context,
+          severity: 'high',
+          recoverable: false
+        }),
+        context
+      );
+    }
+
+    errorAnalytics.trackError(error, context);
+
+    if (this.props.onError) {
+      this.props.onError(error, errorInfo);
+    }
+  }
+
+  private resetError = (): void => {
+    this.setState({
+      error: null,
+      errorInfo: null
+    });
+  };
+
+  render(): React.ReactNode {
+    const { children, FallbackComponent = ErrorFallback, showDetails } = this.props;
+    const { error } = this.state;
+
+    if (error) {
+      return (
+        <FallbackComponent
+          error={error}
+          resetError={this.resetError}
+          {...(showDetails && { showDetails })}
+        />
+      );
+    }
+
+    return children;
+  }
+}

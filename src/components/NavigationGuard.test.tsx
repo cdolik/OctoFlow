@@ -8,6 +8,8 @@ import { useStorage } from '../hooks/useStorage';
 import { validateStorageState } from '../utils/storageValidation';
 import { useError } from '../contexts/ErrorContext';
 import { useAudioFeedback } from './AudioFeedback';
+import { useOfflineError } from '../hooks/useOfflineError';
+import { useErrorManagement } from '../hooks/useErrorManagement';
 
 jest.mock('react-router-dom', () => ({
   ...jest.requireActual('react-router-dom'),
@@ -19,6 +21,8 @@ jest.mock('../hooks/useStorage');
 jest.mock('../utils/storageValidation');
 jest.mock('../contexts/ErrorContext');
 jest.mock('./AudioFeedback');
+jest.mock('../hooks/useOfflineError');
+jest.mock('../hooks/useErrorManagement');
 
 describe('NavigationGuard', () => {
   const mockOnBlocked = jest.fn();
@@ -31,6 +35,7 @@ describe('NavigationGuard', () => {
   const mockPlaySound = jest.fn();
   const mockSaveState = jest.fn();
   const mockLocation = { pathname: '/current' };
+  const mockOnNavigationBlocked = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -50,6 +55,7 @@ describe('NavigationGuard', () => {
       saveState: mockSaveState,
       state: mockState
     });
+    (useErrorManagement as jest.Mock).mockReturnValue({ handleError: mockHandleError });
 
     // Mock window beforeunload event
     const events: Record<string, (e: BeforeUnloadEvent) => void> = {};
@@ -437,5 +443,148 @@ describe('NavigationGuard', () => {
 
     const confirmButton = screen.getByText('Leave');
     expect(document.activeElement).toBe(confirmButton);
+  });
+
+  it('allows navigation when online and no pending changes', () => {
+    (useOfflineError as jest.Mock).mockReturnValue({
+      isOnline: true,
+      queueLength: 0
+    });
+
+    render(
+      <MemoryRouter>
+        <NavigationGuard>
+          <div>Protected Content</div>
+        </NavigationGuard>
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText('Protected Content')).toBeInTheDocument();
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it('blocks navigation when offline and path not allowed', async () => {
+    (useOfflineError as jest.Mock).mockReturnValue({
+      isOnline: false,
+      queueLength: 0
+    });
+
+    render(
+      <MemoryRouter>
+        <NavigationGuard
+          allowedPaths={['/allowed']}
+          onNavigationBlocked={mockOnNavigationBlocked}
+        >
+          <div>Protected Content</div>
+        </NavigationGuard>
+      </MemoryRouter>
+    );
+
+    // Simulate navigation attempt
+    const unblockCallback = (mockNavigate as jest.Mock).mock.calls[0][0];
+    const result = unblockCallback({ pathname: '/blocked' });
+
+    expect(result).toBe(false);
+    expect(mockHandleError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringContaining('offline mode')
+      })
+    );
+    expect(mockOnNavigationBlocked).toHaveBeenCalled();
+  });
+
+  it('blocks navigation when there are pending changes', () => {
+    (useOfflineError as jest.Mock).mockReturnValue({
+      isOnline: true,
+      queueLength: 2
+    });
+
+    render(
+      <MemoryRouter>
+        <NavigationGuard
+          allowedPaths={['/allowed']}
+          onNavigationBlocked={mockOnNavigationBlocked}
+        >
+          <div>Protected Content</div>
+        </NavigationGuard>
+      </MemoryRouter>
+    );
+
+    const unblockCallback = (mockNavigate as jest.Mock).mock.calls[0][0];
+    const result = unblockCallback({ pathname: '/blocked' });
+
+    expect(result).toBe(false);
+    expect(mockHandleError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringContaining('pending changes')
+      })
+    );
+    expect(mockOnNavigationBlocked).toHaveBeenCalled();
+  });
+
+  it('allows navigation to allowed paths even when offline', () => {
+    (useOfflineError as jest.Mock).mockReturnValue({
+      isOnline: false,
+      queueLength: 0
+    });
+
+    render(
+      <MemoryRouter>
+        <NavigationGuard allowedPaths={['/allowed']}>
+          <div>Protected Content</div>
+        </NavigationGuard>
+      </MemoryRouter>
+    );
+
+    const unblockCallback = (mockNavigate as jest.Mock).mock.calls[0][0];
+    const result = unblockCallback({ pathname: '/allowed' });
+
+    expect(result).toBe(true);
+    expect(mockHandleError).not.toHaveBeenCalled();
+    expect(mockOnNavigationBlocked).not.toHaveBeenCalled();
+  });
+
+  it('prompts user when leaving page with pending changes', () => {
+    (useOfflineError as jest.Mock).mockReturnValue({
+      isOnline: true,
+      queueLength: 1
+    });
+
+    const { container } = render(
+      <MemoryRouter>
+        <NavigationGuard>
+          <div>Protected Content</div>
+        </NavigationGuard>
+      </MemoryRouter>
+    );
+
+    const event = new Event('beforeunload');
+    Object.defineProperty(event, 'returnValue', {
+      writable: true,
+      value: ''
+    });
+
+    fireEvent(window, event);
+
+    expect(event.returnValue).toBe('You have unsaved changes. Are you sure you want to leave?');
+  });
+
+  it('cleans up event listeners on unmount', () => {
+    const removeEventListenerSpy = jest.spyOn(window, 'removeEventListener');
+    
+    const { unmount } = render(
+      <MemoryRouter>
+        <NavigationGuard>
+          <div>Protected Content</div>
+        </NavigationGuard>
+      </MemoryRouter>
+    );
+
+    unmount();
+
+    expect(removeEventListenerSpy).toHaveBeenCalledWith(
+      'beforeunload',
+      expect.any(Function)
+    );
   });
 });

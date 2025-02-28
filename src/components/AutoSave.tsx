@@ -1,87 +1,47 @@
-import React, { useEffect, useRef, useState } from 'react';
-import type { SaveIndicatorProps } from '../types/props';
-import { SaveIndicator } from './SaveIndicator';
-import { useStorageErrorHandler } from '../hooks/useStorageErrorHandler';
+import React, { useEffect, useState } from 'react';
+import { useStorage } from '../hooks/useStorage';
 
 interface AutoSaveProps {
-  onSave: () => Promise<boolean>;
+  onSaveComplete?: () => void;
   interval?: number;
-  validateBeforeSave?: () => boolean;
-  children?: React.ReactNode;
 }
 
 export const AutoSave: React.FC<AutoSaveProps> = ({
-  onSave,
-  interval = 30000,
-  validateBeforeSave,
-  children
+  onSaveComplete,
+  interval = 30000 // Default to 30 seconds
 }) => {
-  const [saveState, setSaveState] = useState<SaveIndicatorProps['state']>('idle');
+  const { state, saveState } = useStorage();
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
-  const timeoutRef = useRef<NodeJS.Timeout>();
-  const { handleError } = useStorageErrorHandler();
-
-  const performSave = async () => {
-    if (validateBeforeSave && !validateBeforeSave()) {
-      return;
-    }
-
-    try {
-      setSaveState('saving');
-      const success = await onSave();
-      
-      if (success) {
-        setSaveState('saved');
-        setLastSaved(new Date());
-      } else {
-        setSaveState('error');
-      }
-    } catch (error) {
-      setSaveState('error');
-      if (error instanceof Error) {
-        handleError(error, {
-          component: 'AutoSave',
-          action: 'save',
-          message: 'Failed to auto-save',
-          timestamp: new Date().toISOString()
-        });
-      }
-    }
-  };
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    const scheduleNextSave = () => {
-      timeoutRef.current = setTimeout(async () => {
-        await performSave();
-        scheduleNextSave();
-      }, interval);
-    };
+    if (!state) return;
 
-    scheduleNextSave();
-
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
+    const autoSaveTimer = setInterval(async () => {
+      if (!saving && state) {
+        setSaving(true);
+        try {
+          const success = await saveState(state);
+          if (success) {
+            setLastSaved(new Date());
+            onSaveComplete?.();
+          }
+        } finally {
+          setSaving(false);
+        }
       }
-    };
-  }, [interval]);
+    }, interval);
 
-  // Handle beforeunload to save before closing
-  useEffect(() => {
-    const handleBeforeUnload = async (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-      await performSave();
-      return undefined;
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, []);
+    return () => clearInterval(autoSaveTimer);
+  }, [state, saving, interval, saveState, onSaveComplete]);
 
   return (
-    <>
-      {children}
-      <SaveIndicator state={saveState} lastSaved={lastSaved} />
-    </>
+    <div className="auto-save-status" aria-live="polite">
+      {saving ? (
+        <span>Saving...</span>
+      ) : lastSaved ? (
+        <span>Last saved: {lastSaved.toLocaleTimeString()}</span>
+      ) : null}
+    </div>
   );
 };

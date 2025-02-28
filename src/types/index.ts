@@ -25,20 +25,12 @@ export interface StorageMetadata {
   stageStartTime?: number;
   timeSpent: number;
   attemptCount: number;
-  lastInteraction?: number;
-  categoryTimes?: Record<string, number>;
-  metrics?: { 
-    averageResponseTime: number; 
-    completionRate: number; 
-  };
-  recommendations?: string[];
 }
 
 export interface StorageProgress {
   questionIndex: number;
   totalQuestions: number;
   isComplete: boolean;
-  lastUpdated?: string;
 }
 
 export interface StorageState {
@@ -53,7 +45,8 @@ export interface AssessmentState extends StorageState {
   preferences?: UserPreferences;
   stages?: Record<Stage, {
     isComplete: boolean;
-    responses: Record<string, number>;
+    responses?: Record<string, number>;
+    score?: number;
   }>;
 }
 
@@ -136,7 +129,7 @@ export interface FlowValidationProps {
   onValidationComplete?: () => void;
 }
 
-export type ErrorSeverity = 'high' | 'low';
+export type ErrorSeverity = 'low' | 'medium' | 'high' | 'critical';
 
 export type SoundType = 'success' | 'error' | 'warning' | 'info' | 'navigation' | 'complete';
 
@@ -148,4 +141,10 @@ export interface UserPreferences {
   audioEnabled: boolean;
   autoSaveInterval: number;
   developerMode: boolean;
+}
+
+export interface ErrorContext {
+  component: string;
+  action: string;
+  message: string;
 }

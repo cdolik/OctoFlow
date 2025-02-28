@@ -1,55 +1,87 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
-import { ErrorResult, AssessmentError, ErrorContext as ErrorContextType } from '../types/errors';
+import React, { createContext, useCallback, useContext, useState } from 'react';
+import { AssessmentError, ErrorContext as ErrorContextType } from '../types/errors';
 import { errorReporter } from '../utils/errorReporting';
+
+interface ErrorState {
+  error: Error | null;
+  isRecovering: boolean;
+  retryCount: number;
+}
 
 interface ErrorContextValue {
   error: Error | null;
-  handleError: (error: Error, context?: ErrorContextType) => Promise<ErrorResult>;
+  handleError: (error: Error, context?: ErrorContextType) => Promise<boolean>;
   clearError: () => void;
 }
 
-const ErrorContext = createContext<ErrorContextValue | undefined>(undefined);
+const ErrorContext = createContext<ErrorContextValue | null>(null);
 
-export function ErrorProvider({ children }: { children: React.ReactNode }) {
-  const [error, setError] = useState<Error | null>(null);
+interface ErrorProviderProps {
+  children: React.ReactNode;
+}
 
-  const handleError = useCallback(async (error: Error, context?: ErrorContextType): Promise<ErrorResult> => {
-    setError(error);
-    const errorId = errorReporter.report(error, context);
-    
-    if (error instanceof Error && 'recoverable' in error) {
-      const assessmentError = error as AssessmentError;
-      if (!assessmentError.recoverable) {
-        return { handled: true, recovered: false, error };
+export const ErrorProvider: React.FC<ErrorProviderProps> = ({ children }) => {
+  const [state, setState] = useState<ErrorState>({
+    error: null,
+    isRecovering: false,
+    retryCount: 0
+  });
+
+  const clearError = useCallback(() => {
+    setState(prev => ({
+      ...prev,
+      error: null,
+      isRecovering: false
+    }));
+  }, []);
+
+  const handleError = useCallback(async (error: Error, context?: ErrorContextType): Promise<boolean> => {
+    if (state.isRecovering) {
+      return false;
+    }
+
+    setState(prev => ({
+      ...prev,
+      error,
+      isRecovering: true,
+      retryCount: prev.retryCount + 1
+    }));
+
+    if (error instanceof AssessmentError) {
+      const success = await errorReporter.report(error, {
+        ...context,
+        timestamp: new Date().toISOString()
+      });
+
+      if (!success) {
+        setState(prev => ({
+          ...prev,
+          isRecovering: false
+        }));
+        return false;
       }
     }
 
-    try {
-      // Attempt basic recovery
-      setError(null);
-      return { handled: true, recovered: true, error };
-    } catch (recoveryError) {
-      return { handled: true, recovered: false, error: recoveryError as Error };
-    }
-  }, []);
+    return true;
+  }, [state.isRecovering]);
 
-  const clearError = useCallback(() => {
-    setError(null);
-  }, []);
+  const value = {
+    error: state.error,
+    handleError,
+    clearError
+  };
 
   return (
-    <ErrorContext.Provider value={{ error, handleError, clearError }}>
+    <ErrorContext.Provider value={value}>
       {children}
     </ErrorContext.Provider>
   );
-}
+};
 
-export function useError() {
+export const useError = (): ErrorContextValue => {
   const context = useContext(ErrorContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useError must be used within an ErrorProvider');
   }
   return context;
-}
-
-export default ErrorContext;
+};

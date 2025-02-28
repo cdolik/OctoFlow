@@ -1,11 +1,6 @@
 import { Stage } from '../types';
 import { trackError } from './analytics';
-
-export interface ErrorContext {
-  stage?: Stage;
-  component?: string;
-  isCritical?: boolean;
-}
+import { AssessmentError, ErrorContext } from '../types/errors';
 
 interface ErrorReport {
   error: Error;
@@ -22,6 +17,50 @@ interface ErrorMetrics {
   recoverableErrors: number;
   criticalErrors: number;
   recoveryRate: number;
+}
+
+class ErrorReporter {
+  private static instance: ErrorReporter;
+  private readonly maxRetries = 3;
+  private readonly retryDelay = 1000; // 1 second
+
+  private constructor() {}
+
+  static getInstance(): ErrorReporter {
+    if (!ErrorReporter.instance) {
+      ErrorReporter.instance = new ErrorReporter();
+    }
+    return ErrorReporter.instance;
+  }
+
+  async report(error: AssessmentError, context: ErrorContext): Promise<boolean> {
+    for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
+      try {
+        // For MVP, just log to console. In production, this would send to a logging service
+        console.error('Assessment Error:', {
+          name: error.name,
+          message: error.message,
+          severity: error.severity,
+          recoverable: error.recoverable,
+          context,
+          stack: error.stack
+        });
+        
+        return true;
+      } catch (e) {
+        if (attempt === this.maxRetries) {
+          console.error('Failed to report error after max retries:', e);
+          return false;
+        }
+        await this.delay(this.retryDelay * attempt);
+      }
+    }
+    return false;
+  }
+
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
 }
 
 export class ErrorReportingService {
@@ -191,4 +230,4 @@ export class ErrorReportingService {
   }
 }
 
-export const errorReporter = ErrorReportingService.getInstance();
+export const errorReporter = ErrorReporter.getInstance();

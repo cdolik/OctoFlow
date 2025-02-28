@@ -1,22 +1,25 @@
 import { AssessmentState } from '../types';
+import { trackError } from './analytics';
 
-const STORAGE_KEY = 'octoflow';
-const BACKUP_KEY = 'octoflow_backup';
-const CURRENT_VERSION = '1.1';
+const STORAGE_KEY = 'octoflow_assessment_state';
+const VERSION = '1.0.0';
 
 export const getAssessmentState = (): AssessmentState | null => {
   try {
-    const stored = sessionStorage.getItem(STORAGE_KEY);
-    if (!stored) {
-      const backup = sessionStorage.getItem(BACKUP_KEY);
-      return backup ? JSON.parse(backup) : null;
+    const savedState = localStorage.getItem(STORAGE_KEY);
+    if (!savedState) return null;
+
+    const state = JSON.parse(savedState) as AssessmentState;
+    
+    // Version check
+    if (state.version !== VERSION) {
+      localStorage.removeItem(STORAGE_KEY);
+      return null;
     }
-    const state = JSON.parse(stored);
-    if (!validateState(state)) {
-      throw new Error('Invalid state format');
-    }
+
     return state;
-  } catch {
+  } catch (error) {
+    console.error('Failed to load assessment state:', error);
     return null;
   }
 };
@@ -68,32 +71,32 @@ export const saveAssessmentResponses = async (
 
 export const saveState = async (state: AssessmentState): Promise<boolean> => {
   try {
-    // Create backup before saving
-    const currentState = getAssessmentState();
-    if (currentState) {
-      sessionStorage.setItem(BACKUP_KEY, JSON.stringify(currentState));
-    }
-
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
+    const stateToSave = {
       ...state,
-      version: CURRENT_VERSION
-    }));
-    
+      version: VERSION,
+      metadata: {
+        ...state.metadata,
+        lastSaved: new Date().toISOString()
+      }
+    };
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
     return true;
-  } catch {
+  } catch (error) {
+    console.error('Failed to save assessment state:', error);
     return false;
   }
 };
 
 export const backupState = async (): Promise<boolean> => {
   try {
-    const current = sessionStorage.getItem(STORAGE_KEY);
+    const current = localStorage.getItem(STORAGE_KEY);
     if (!current) return false;
 
     const state = JSON.parse(current);
     if (!validateState(state)) return false;
 
-    sessionStorage.setItem(BACKUP_KEY, current);
+    localStorage.setItem(BACKUP_KEY, current);
     return true;
   } catch {
     return false;
@@ -102,13 +105,13 @@ export const backupState = async (): Promise<boolean> => {
 
 export const restoreFromBackup = async (): Promise<boolean> => {
   try {
-    const backup = sessionStorage.getItem(BACKUP_KEY);
+    const backup = localStorage.getItem(BACKUP_KEY);
     if (!backup) return false;
     
     const state = JSON.parse(backup);
     if (!validateState(state)) return false;
     
-    sessionStorage.setItem(STORAGE_KEY, backup);
+    localStorage.setItem(STORAGE_KEY, backup);
     return true;
   } catch {
     return false;
@@ -133,8 +136,8 @@ export const validateState = (state: unknown): state is AssessmentState => {
 
 export const clearAssessmentState = (): void => {
   try {
-    sessionStorage.removeItem(STORAGE_KEY);
-    sessionStorage.removeItem(BACKUP_KEY);
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(BACKUP_KEY);
   } catch {
     // Ignore errors during cleanup
   }
@@ -163,5 +166,13 @@ export const saveMetricsAndRecommendations = async (
     return saveState(newState);
   } catch {
     return false;
+  }
+};
+
+export const clearState = (): void => {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch (error) {
+    console.error('Failed to clear assessment state:', error);
   }
 };

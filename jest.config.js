@@ -1,39 +1,66 @@
 /** @type {import('jest').Config} */
 module.exports = {
   roots: ['<rootDir>/src'],
-  collectCoverageFrom: [
-    'src/**/*.{js,jsx,ts,tsx}',
-    '!src/**/*.d.ts',
-    '!src/index.tsx',
-    '!src/serviceWorker.ts',
-    '!src/reportWebVitals.{js,ts}'
-  ],
-  setupFiles: ['<rootDir>/src/setupPolyfills.js'],
-  setupFilesAfterEnv: ['<rootDir>/src/setupTests.ts'],
   testMatch: [
-    '<rootDir>/src/**/__tests__/**/*.{js,jsx,ts,tsx}',
-    '<rootDir>/src/**/*.{spec,test}.{js,jsx,ts,tsx}'
+    '**/__tests__/**/*.+(ts|tsx|js)',
+    '**/?(*.)+(spec|test).+(ts|tsx|js)',
+    '**/integration/**/*.+(ts|tsx|js)',
+    '**/e2e/**/*.+(ts|tsx|js)',
+    '**/property/**/*.+(ts|tsx|js)',
+    '**/stress/**/*.+(ts|tsx|js)'
   ],
-  testEnvironment: 'jsdom',
   transform: {
-    '^.+\\.(js|jsx|ts|tsx)$': ['babel-jest', { 
-      presets: ['@babel/preset-env', '@babel/preset-react', '@babel/preset-typescript'] 
-    }],
-    '^.+\\.css$': '<rootDir>/config/jest/cssTransform.js',
-    '^(?!.*\\.(js|jsx|ts|tsx|css|json)$)': '<rootDir>/config/jest/fileTransform.js'
+    '^.+\\.(ts|tsx)$': 'ts-jest'
   },
-  transformIgnorePatterns: [
-    'node_modules/(?!(@testing-library|chart.js|msw|@mswjs|@bundled-es-modules|tough-cookie|web-streams-polyfill|@open-draft|@remix-run)/)',
-    '^.+\\.module\\.(css|sass|scss)$'
-  ],
+  setupFilesAfterEnv: ['<rootDir>/src/setupTests.ts'],
+  testEnvironment: 'jsdom',
   moduleNameMapper: {
-    '^react-native$': 'react-native-web',
-    '^.+\\.module\\.(css|sass|scss)$': 'identity-obj-proxy'
+    '\\.(css|less|scss|sass)$': 'identity-obj-proxy'
   },
-  moduleFileExtensions: ['js', 'ts', 'tsx', 'json', 'jsx', 'node'],
-  watchPlugins: [
-    'jest-watch-typeahead/filename',
-    'jest-watch-typeahead/testname'
+  testPathIgnorePatterns: ['/node_modules/', '/build/'],
+  projects: [
+    {
+      displayName: 'unit',
+      testMatch: ['**/__tests__/**/*.test.(ts|tsx|js)'],
+      setupFilesAfterEnv: ['<rootDir>/src/setupTests.ts']
+    },
+    {
+      displayName: 'integration',
+      testMatch: ['**/integration/**/*.test.(ts|tsx|js)'],
+      setupFilesAfterEnv: ['<rootDir>/src/setupTests.ts'],
+      testTimeout: 10000
+    },
+    {
+      displayName: 'property',
+      testMatch: ['**/property/**/*.test.(ts|tsx|js)'],
+      setupFilesAfterEnv: ['<rootDir>/src/setupTests.ts'],
+      testTimeout: 30000
+    },
+    {
+      displayName: 'stress',
+      testMatch: ['**/stress/**/*.test.(ts|tsx|js)'],
+      setupFilesAfterEnv: ['<rootDir>/src/setupTests.ts'],
+      testTimeout: 60000
+    },
+    {
+      displayName: 'e2e',
+      testMatch: ['**/e2e/**/*.test.(ts|tsx|js)'],
+      setupFilesAfterEnv: ['<rootDir>/src/setupTests.ts'],
+      testTimeout: 30000
+    }
   ],
-  resetMocks: true
+  collectCoverageFrom: [
+    'src/**/*.{ts,tsx}',
+    '!src/types/**',
+    '!src/**/*.d.ts',
+    '!src/mocks/**'
+  ],
+  coverageThreshold: {
+    global: {
+      branches: 80,
+      functions: 80,
+      lines: 80,
+      statements: 80
+    }
+  }
 };

@@ -1,6 +1,11 @@
 import React, { Component, ErrorInfo } from 'react';
-import { ErrorContext } from '../types/errors';
 import { errorReporter } from '../utils/errorReporting';
+
+export interface ErrorContext {
+  isCritical?: boolean;
+  component?: string;
+  stage?: Stage;
+}
 
 interface Props {
   children: React.ReactNode;

@@ -1,5 +1,9 @@
 import '@testing-library/jest-dom';
+import { fc } from 'fast-check';
 import { cleanup } from '@testing-library/react';
+import { ErrorBenchmark } from './utils/errorBenchmark';
+import { ErrorAggregator } from './utils/errorAggregator';
+import { TEST_CONFIG } from './tests/config/testConfig';
 import { server } from './mocks/server';
 
 declare global {
@@ -38,6 +42,13 @@ interface MockChart {
   Chart: jest.Mock<MockChartInstance>;
   Radar: jest.Mock;
 }
+
+// Configure fast-check
+fc.configureGlobal({
+  numRuns: TEST_CONFIG.propertyBased.numRuns,
+  interruptAfterTimeLimit: TEST_CONFIG.propertyBased.timeout,
+  skipAllAfterTimeLimit: TEST_CONFIG.propertyBased.skipAfter
+});
 
 // Enable API mocking
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
@@ -255,9 +266,21 @@ beforeEach(() => {
   (fetch as jest.Mock).mockClear();
   jest.useFakeTimers();
   jest.clearAllMocks();
+  
+  // Reset storage
+  sessionStorage.clear();
+  localStorage.clear();
+  
+  // Reset error tracking
+  ErrorBenchmark.getInstance().clearOldResults(0);
+  const aggregator = new ErrorAggregator();
+  localStorage.removeItem(ErrorAggregator['STORAGE_KEY']);
+  
+  // Clear mocks
+  jest.clearAllMocks();
 });
 
-afterEach(() => {
+afterEach(async () => {
   document.body.innerHTML = '';
   jest.clearAllMocks();
   jest.runOnlyPendingTimers();
@@ -275,4 +298,15 @@ afterEach(() => {
       resolve();
     });
   });
+  
+  cleanup();
+  
+  // Clear any remaining timeouts
+  jest.runOnlyPendingTimers();
+  jest.useRealTimers();
+});
+
+afterAll(() => {
+  // Restore console
+  jest.restoreAllMocks();
 });

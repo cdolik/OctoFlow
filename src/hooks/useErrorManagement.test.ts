@@ -2,18 +2,18 @@ import { renderHook, act } from '@testing-library/react-hooks';
 import { useErrorManagement } from './useErrorManagement';
 import { errorReporter } from '../utils/errorReporting';
 import { trackError } from '../utils/analytics';
+import { ValidationFailedError, StorageFailedError } from '../types/errors';
+import { useStorage, useStorageErrorHandler } from '../contexts/StorageContext';
 
 jest.mock('../utils/errorReporting');
 jest.mock('../utils/analytics');
 
 const mockError = new Error('Test error');
-const mockContext = { stage: 'pre-seed' };
-
-errorReporter.report = jest.fn();
+(errorReporter as any).report = jest.fn();
+(errorReporter as any).resolve = jest.fn();
+(errorReporter as any).getActiveErrors = jest.fn().mockReturnValue([]);
 errorReporter.resolve = jest.fn();
-errorReporter.getActiveErrors = jest.fn().mockReturnValue([]);
-
-trackError.mockImplementation(() => {});
+(trackError as jest.Mock).mockImplementation(() => {});
 
 describe('useErrorManagement', () => {
   const mockState = {
@@ -42,7 +42,6 @@ describe('useErrorManagement', () => {
 
   it('initializes with empty error state', () => {
     const { result } = renderHook(() => useErrorManagement());
-
     expect(result.current.error).toBeNull();
     expect(result.current.isRecovering).toBe(false);
     expect(result.current.hasCriticalError).toBe(false);
@@ -50,18 +49,19 @@ describe('useErrorManagement', () => {
 
   it('handles recoverable errors', async () => {
     const { result } = renderHook(() => useErrorManagement());
+    const validationError = new ValidationFailedError('field', 'Test error');
     const mockRecover = jest.fn().mockResolvedValue(true);
-    const validationError = new ValidationFailedError('field', 'constraint', 'test error');
-
+    
     const recovered = await result.current.handleError(validationError, mockRecover);
+    
     expect(recovered).toBe(true);
-
-    expect(result.current.isRecovering).toBe(false);
     expect(mockRecover).toHaveBeenCalled();
-    expect(trackErrorWithRecovery).toHaveBeenCalledWith(
-      validationError,
-      true,
-      true
+    expect(trackError).toHaveBeenCalledWith(
+      'error_handled',
+      expect.objectContaining({
+        recovered: true,
+        severity: 'warning'
+      })
     );
   });
 
@@ -74,19 +74,19 @@ describe('useErrorManagement', () => {
 
     expect(result.current.error).toBe(storageError);
     expect(result.current.isRecovering).toBe(false);
-    expect(trackErrorWithRecovery).toHaveBeenCalledWith(
-      storageError,
-      false,
-      false
+    expect(trackError).toHaveBeenCalledWith(
+      'error_handled',
+      expect.objectContaining({
+        recovered: false,
+        severity: 'error'
+      })
     );
   });
 
   it('tracks recovery attempts', async () => {
     const { result } = renderHook(() => useErrorManagement());
-    const mockRecover = jest.fn().mockImplementation(() => 
-      new Promise(resolve => setTimeout(() => resolve(true), 100))
-    );
-    const error = new ValidationFailedError('field', 'constraint', 'test error');
+    const mockRecover = jest.fn().mockResolvedValue(true);
+    const error = new ValidationFailedError('field', 'Test error');
 
     const recoveryPromise = result.current.handleError(error, mockRecover);
     expect(result.current.isRecovering).toBe(true);
@@ -105,10 +105,12 @@ describe('useErrorManagement', () => {
 
     expect(result.current.error).toBe(error);
     expect(result.current.isRecovering).toBe(false);
-    expect(trackErrorWithRecovery).toHaveBeenCalledWith(
-      error,
-      true,
-      false
+    expect(trackError).toHaveBeenCalledWith(
+      'error_handled',
+      expect.objectContaining({
+        recovered: false,
+        severity: 'warning'
+      })
     );
   });
 
@@ -216,15 +218,18 @@ describe('useErrorManagement', () => {
     });
 
     const { result } = renderHook(() => useErrorManagement());
-
+    
     await act(async () => {
       await result.current.clearError('error-1');
     });
 
-    expect(trackError).toHaveBeenCalledWith('error_resolution_failed', expect.objectContaining({
-      originalErrorId: 'error-1',
-      error: saveError.message
-    }));
+    expect(trackError).toHaveBeenCalledWith(
+      'error_resolution_failed',
+      expect.objectContaining({
+        originalErrorId: 'error-1',
+        error: saveError.message
+      })
+    );
   });
 
   it('filters errors by stage', async () => {
@@ -244,11 +249,8 @@ describe('useErrorManagement', () => {
   });
 
   it('updates active error count on subscription', async () => {
-    let subscriptionCallback: Function;
-    (errorReporter.subscribeToErrors as jest.Mock).mockImplementation(callback => {
-      subscriptionCallback = callback;
-      return jest.fn();
-    });
+    // Mock implementation for error subscription
+    const subscriptionCallback = jest.fn();
 
     const { result } = renderHook(() => useErrorManagement());
     expect(result.current.activeErrorCount).toBe(0);

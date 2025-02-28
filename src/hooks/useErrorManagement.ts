@@ -1,122 +1,134 @@
-import { useState, useCallback } from 'react';
-import { AssessmentError, ErrorContext } from '../types/errors';
-import { Stage } from '../types';
+import { useCallback, useEffect, useState } from 'react';
+import { ErrorContext, AssessmentError, ValidationError, StorageError } from '../types/errors';
 import { errorReporter } from '../utils/errorReporting';
-import { useError } from '../contexts/ErrorContext';
+import { errorAnalytics } from '../utils/errorAnalytics';
+import { Stage } from '../types';
 
-interface UseErrorManagementOptions {
+interface ErrorManagementOptions {
   stage?: Stage;
+  onUnrecoverableError?: (error: Error) => void;
   maxRetries?: number;
-  onError?: (error: Error) => void;
 }
 
 interface ErrorState {
-  activeErrorCount: number;
-  isHandlingError: boolean;
-  lastError: Error | null;
+  error: Error | null;
+  isRecovering: boolean;
+  retryCount: number;
+  hasCriticalError: boolean;
+  timestamp?: string;
 }
 
-export function useErrorManagement(options: UseErrorManagementOptions = {}) {
-  const { handleError: handleContextError } = useError();
+export const useErrorManagement = (options: ErrorManagementOptions = {}) => {
   const [state, setState] = useState<ErrorState>({
-    activeErrorCount: 0,
-    isHandlingError: false,
-    lastError: null
+    error: null,
+    isRecovering: false,
+    retryCount: 0,
+    hasCriticalError: false
   });
 
+  const { maxRetries = 3 } = options;
+
   const handleError = useCallback(async (
-    error: unknown,
-    recover?: () => Promise<boolean>
+    error: Error,
+    recoveryFn?: () => Promise<boolean>
   ): Promise<boolean> => {
+    if (state.isRecovering) {
+      return false;
+    }
+
+    const timestamp = new Date().toISOString();
     setState(prev => ({
       ...prev,
-      isHandlingError: true,
-      activeErrorCount: prev.activeErrorCount + 1,
-      lastError: error instanceof Error ? error : new Error(String(error))
+      error,
+      isRecovering: true,
+      retryCount: prev.retryCount + 1,
+      hasCriticalError: error instanceof AssessmentError && error.severity === 'critical',
+      timestamp
     }));
 
     const context: ErrorContext = {
+      component: 'ErrorManagement',
+      action: 'handleError',
       stage: options.stage,
-      metadata: {
-        timestamp: Date.now(),
-        retryCount: state.activeErrorCount
-      }
+      timestamp
     };
 
     try {
-      const result = await handleContextError(
-        error instanceof Error ? error : new Error(String(error)),
-        context
-      );
-
-      if (result.recovered) {
-        setState(prev => ({
-          ...prev,
-          isHandlingError: false,
-          activeErrorCount: Math.max(0, prev.activeErrorCount - 1)
-        }));
-        return true;
+      if (error instanceof AssessmentError) {
+        await errorReporter.report(error, context);
+      } else {
+        await errorReporter.report(
+          new AssessmentError(error.message, {
+            context,
+            severity: error instanceof ValidationError ? 'low' : 'high',
+            recoverable: !(error instanceof StorageError)
+          }),
+          context
+        );
       }
 
-      if (recover) {
-        const recovered = await recover();
+      errorAnalytics.trackError(error, context);
+
+      if (recoveryFn && state.retryCount < maxRetries) {
+        const recovered = await recoveryFn();
         if (recovered) {
           setState(prev => ({
             ...prev,
-            isHandlingError: false,
-            activeErrorCount: Math.max(0, prev.activeErrorCount - 1)
+            error: null,
+            isRecovering: false
           }));
+          errorAnalytics.updateRecoveryStatus(timestamp, true, state.retryCount);
           return true;
         }
       }
 
-      return false;
-    } catch (recoveryError) {
-      options.onError?.(
-        recoveryError instanceof Error ? recoveryError : new Error(String(recoveryError))
-      );
-      return false;
-    } finally {
-      setState(prev => ({ ...prev, isHandlingError: false }));
-    }
-  }, [handleContextError, options, state.activeErrorCount]);
+      if (options.onUnrecoverableError) {
+        options.onUnrecoverableError(error);
+      }
 
-  const clearError = useCallback((errorId?: string) => {
-    if (errorId) {
-      errorReporter.resolve(errorId);
+      setState(prev => ({
+        ...prev,
+        isRecovering: false
+      }));
+
+      errorAnalytics.updateRecoveryStatus(timestamp, false, state.retryCount);
+      return false;
+    } catch (e) {
+      console.error('Error handling failed:', e);
+      setState(prev => ({
+        ...prev,
+        isRecovering: false
+      }));
+      if (timestamp) {
+        errorAnalytics.updateRecoveryStatus(timestamp, false, state.retryCount);
+      }
+      return false;
     }
-    setState(prev => ({
-      ...prev,
-      activeErrorCount: Math.max(0, prev.activeErrorCount - 1),
-      lastError: null
-    }));
+  }, [state.isRecovering, state.retryCount, maxRetries, options]);
+
+  const clearError = useCallback(() => {
+    setState({
+      error: null,
+      isRecovering: false,
+      retryCount: 0,
+      hasCriticalError: false
+    });
   }, []);
 
-  const getActiveErrors = useCallback(() => {
-    return errorReporter.getActiveErrors();
-  }, []);
-
-  const reportError = (error: AssessmentError, context: ErrorContext) => {
-    errorReporter.report(error, context);
-  };
-
-  const resolveError = (errorId: string) => {
-    errorReporter.resolve(errorId);
-  };
-
-  const getErrors = () => {
-    return errorReporter.getActiveErrors();
-  };
+  useEffect(() => {
+    return () => {
+      if (state.error && state.timestamp) {
+        errorAnalytics.updateRecoveryStatus(state.timestamp, false, state.retryCount);
+      }
+    };
+  }, [state.error, state.timestamp, state.retryCount]);
 
   return {
-    activeErrorCount: state.activeErrorCount,
-    isHandlingError: state.isHandlingError,
-    lastError: state.lastError,
+    ...state,
     handleError,
     clearError,
-    getActiveErrors,
-    reportError,
-    resolveError,
-    getErrors
+    errorRate: errorAnalytics.getErrorRate(),
+    recoveryRate: errorAnalytics.getRecoveryRate(),
+    severityDistribution: errorAnalytics.getSeverityDistribution()
   };
-}
+};
