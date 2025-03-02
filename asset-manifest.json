@@ -1,13 +1,13 @@
 {
   "files": {
     "main.css": "/OctoFlow/static/css/main.b52ca247.css",
-    "main.js": "/OctoFlow/static/js/main.08354b3a.js",
+    "main.js": "/OctoFlow/static/js/main.c3453ed3.js",
     "index.html": "/OctoFlow/index.html",
     "main.b52ca247.css.map": "/OctoFlow/static/css/main.b52ca247.css.map",
-    "main.08354b3a.js.map": "/OctoFlow/static/js/main.08354b3a.js.map"
+    "main.c3453ed3.js.map": "/OctoFlow/static/js/main.c3453ed3.js.map"
   },
   "entrypoints": [
     "static/css/main.b52ca247.css",
-    "static/js/main.08354b3a.js"
+    "static/js/main.c3453ed3.js"
   ]
 }
