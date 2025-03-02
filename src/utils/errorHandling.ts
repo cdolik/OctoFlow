@@ -1,14 +1,5 @@
-import type { 
-  ErrorSeverity,
-  AssessmentError,
-  NavigationError,
-  StateError,
-  ErrorHandlingOptions,
-  ErrorContext
-} from '../types/errors';
-import type { BaseError, HandledError } from '../types/base';
-import { trackError } from './analytics';
-import type { StorageState } from '../types';
+import { ErrorSeverity, ErrorContext, BaseError, NavigationError, StateError, HandledError, ErrorHandlingOptions } from '../types/errors';
+import { trackError } from './errorReporting';
 
 export class BaseAssessmentError extends Error implements BaseError {
   public severity: ErrorSeverity;
@@ -82,60 +73,31 @@ export class StateTransitionError extends BaseAssessmentError implements StateEr
 
 export async function handleError(
   error: Error,
-  context: ErrorContext,
   options: ErrorHandlingOptions = {}
 ): Promise<HandledError> {
-  const {
-    maxRetries = 3,
-    retryDelay = 1000,
-    recoveryFn
-  } = options;
+  const { maxRetries = 3, retryDelay = 1000, recoveryFn } = options;
 
-  trackError(error, context);
-
-  if (!recoveryFn) {
-    return {
-      handled: true,
-      recovered: false,
-      error
-    };
+  if (!options.recoveryFn) {
+    return { handled: true, recovered: false, error };
   }
 
   let retries = 0;
-  while (retries < maxRetries) {
+  while (retries < options.maxRetries!) {
     try {
-      const recovered = await recoveryFn();
+      const recovered = await options.recoveryFn!();
       if (recovered) {
-        return {
-          handled: true,
-          recovered: true,
-          error
-        };
+        return { handled: true, recovered: true, error };
       }
     } catch (retryError) {
-      const retryContext = {
-        ...context,
-        message: `Recovery attempt ${retries + 1} failed`,
-        timestamp: new Date().toISOString(),
-        metadata: {
-          ...context.metadata,
-          attemptNumber: retries + 1
-        }
-      };
-      trackError(retryError as Error, retryContext);
+      trackError(retryError as Error, createErrorContext('ErrorHandling', 'RetryAttempt'));
     }
-
     retries++;
-    if (retries < maxRetries) {
-      await new Promise(resolve => setTimeout(resolve, retryDelay));
+    if (retries < options.maxRetries!) {
+      await new Promise(resolve => setTimeout(resolve, options.retryDelay));
     }
   }
 
-  return {
-    handled: true,
-    recovered: false,
-    error
-  };
+  return { handled: true, recovered: false, error };
 }
 
 export function isAssessmentError(error: unknown): error is AssessmentError {
@@ -190,42 +152,8 @@ export function createErrorContext(
     action,
     message,
     timestamp: new Date().toISOString(),
-    metadata
+    metadata: {},
   };
-}
-
-import { ErrorContext, AssessmentError, StorageError, ErrorSeverity } from '../types/errors';
-import { Stage } from '../types';
-
-export interface ErrorHandlerResult<T> {
-  data: T | null;
-  error: Error | null;
-}
-
-export function createErrorContext(
-  component: string,
-  action: string,
-  details?: string,
-  stage?: Stage
-): ErrorContext {
-  return {
-    component,
-    action,
-    stage,
-    timestamp: new Date().toISOString()
-  };
-}
-
-export async function withErrorHandling<T>(
-  fn: () => Promise<T>
-): Promise<ErrorHandlerResult<T>> {
-  try {
-    const result = await fn();
-    return { data: result, error: null };
-  } catch (err) {
-    const error = err instanceof Error ? err : new Error(String(err));
-    return { data: null, error };
-  }
 }
 
 export function isStorageQuotaExceededError(error: unknown): boolean {

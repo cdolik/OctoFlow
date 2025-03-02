@@ -1,6 +1,6 @@
 import { StageConfig, Stage, WafPillar } from '../types';
 
-export const STAGE_CONFIG: Record<string, StageConfig> = {
+export const STAGE_CONFIG = {
   'pre-seed': {
     label: 'Pre-Seed',
     description: 'Focus on establishing basic GitHub workflows and automation',
@@ -23,7 +23,7 @@ export const STAGE_CONFIG: Record<string, StageConfig> = {
   }
 };
 
-export const WAF_PILLARS: WafPillar[] = [
+export const WAF_PILLARS = [
   {
     id: 'security',
     title: 'Security & Compliance',
@@ -52,7 +52,7 @@ export const WAF_PILLARS: WafPillar[] = [
   }
 ];
 
-export const stages: Stage[] = [
+export const stages = [
   {
     id: "pre-seed",
     label: "Pre-Seed Startup",

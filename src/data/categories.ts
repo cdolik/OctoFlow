@@ -61,5 +61,5 @@ export const categories: Category[] = [
 ];
 
 export const getStageQuestions = (stage: Stage): Question[] => {
-  return questions.filter(question => question.stages.includes(stage));
+  return questions.filter(question => question.stage === stage);
 };

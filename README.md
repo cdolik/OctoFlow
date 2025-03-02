@@ -78,6 +78,61 @@ The application is automatically deployed to GitHub Pages using GitHub Actions. 
 3. Deploying to GitHub Pages
 4. Verifying deployment success
 
+### MVP Deployment Process
+
+The project includes specialized scripts for different deployment scenarios. Here's when to use each:
+
+#### `npm run verify-mvp`
+- **When to use**: Before any deployment to verify critical functionality
+- **What it does**: Runs core tests for storage and recommendations
+- **Required for**: All deployments unless explicitly approved to skip
+- **Best practice**: Run this before any PR merge
+
+#### `npm run deploy-mvp`
+- **When to use**: For normal MVP deployments
+- **What it does**: Runs critical tests, builds, and deploys
+- **Required for**: Standard deployment process
+- **Best practice**: This should be your default deployment script
+
+#### `npm run deploy-mvp-skip-tests`
+- **When to use**: EMERGENCY SITUATIONS ONLY
+- **What it does**: Bypasses all tests for immediate deployment
+- **Warning**: Use only when:
+  1. Critical hotfix needed immediately
+  2. Tests are temporarily broken but fix is verified manually
+  3. Explicit approval from tech lead obtained
+- **Follow-up required**: Create a ticket to fix skipped tests
+
+#### Test Coverage Strategy
+
+The test strategy during MVP phase is deliberately focused on critical paths:
+
+1. **Currently Skipped Tests**
+   - Performance metrics tests (utils/performance.core.test.js)
+     - _Reason_: Timing-sensitive tests need environment stability
+     - _TODO_: Re-enable post-MVP with proper test environment
+     - _Ticket_: OCTO-123 - Stabilize performance test suite
+
+2. **Test Priority Levels**
+   - P0 (Always Run):
+     - Data persistence
+     - Core recommendation engine
+     - Critical user workflows
+   - P1 (Run in verify-mvp):
+     - State management
+     - Error handling
+   - P2 (Temporarily Simplified):
+     - UI component tests
+     - Edge case scenarios
+
+3. **Post-MVP Test Plan**
+   - Re-enable all skipped tests by [DATE]
+   - Implement full E2E test suite
+   - Add performance benchmark tests
+   - Expand edge case coverage
+
+**Note**: The simplified test strategy is temporary for rapid MVP iteration. All skipped or simplified tests are tracked in our issue system and will be addressed post-MVP phase.
+
 ## Contributing
 
 Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.

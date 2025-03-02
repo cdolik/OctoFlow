@@ -1,297 +1,122 @@
-import React, { useEffect, useRef, useMemo, useCallback } from 'react';
-import { Radar } from 'react-chartjs-2';
-import {
-  Chart as ChartJS,
-  RadialLinearScale,
-  PointElement,
-  LineElement,
-  Filler,
-  Tooltip,
-  Legend,
-  ChartData,
-  ChartOptions,
-  TooltipItem
-} from 'chart.js';
-import { getAssessmentResponses } from '../utils/storage';
-import { calculateStageScores, getScoreLevel } from '../utils/scoring';
-import { getRecommendations } from '../utils/recommendations';
-import { categories } from '../data/categories';
-import GitHubTooltip from './GitHubTooltip';
-import { trackRecommendationClick } from '../utils/analytics';
-import { Stage, ScoreResult, ScoreLevel } from '../types';
-import AssessmentErrorBoundary from './AssessmentErrorBoundary';
-import { stageConfig } from '../data/StageConfig';
-import './styles.css';
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { loadState } from '../utils/storage';
+import { getRecommendationsByScores } from '../data/recommendations';
+import { Recommendation, ResultsProps } from '../types';
 
-ChartJS.register(
-  RadialLinearScale,
-  PointElement,
-  LineElement,
-  Filler,
-  Tooltip,
-  Legend
-);
+const Results: React.FC<ResultsProps> = ({ onStartOver }) => {
+  const navigate = useNavigate();
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [loading, setLoading] = useState(true);
 
-interface ResultsProps {
-  stage: Stage;
-  onComplete: () => void;
-}
-
-export const Results: React.FC<ResultsProps> = ({ stage }) => {
-  const chartRef = useRef<ChartJS<'radar'> | null>(null);
-  const chartInstanceRef = useRef<ChartJS | null>(null);
-  
-  const responses = useMemo(() => getAssessmentResponses() as Record<string, number>, []);
-  const scores = useMemo<ScoreResult>(() => {
-    const result = calculateStageScores(stage, responses);
-    const level = getScoreLevel(result.overallScore);
-    return {
-      categoryScores: { ...result.categoryScores },
-      gaps: result.gaps || {},
-      benchmarks: result.benchmarks || {},
-      overallScore: result.overallScore,
-      completionRate: result.completionRate || 0,
-      level
-    };
-  }, [responses, stage]);
-  
-  const recommendations = useMemo(() => getRecommendations(scores, stage), [scores, stage]);
-  
-  const chartData = useMemo<ChartData<'radar'>>(() => ({
-    labels: Object.values(categories).map(cat => cat.title),
-    datasets: [
-      {
-        label: 'Your Score',
-        data: Object.values(categories).map(cat => scores.categoryScores[cat.id] || 0),
-        backgroundColor: 'rgba(45, 164, 78, 0.2)',
-        borderColor: '#2DA44E',
-        borderWidth: 2,
-      },
-      {
-        label: `${stageConfig[stage]?.label || stage} Benchmark`,
-        data: Object.values(categories).map(cat => scores.benchmarks?.[cat.id] || 0),
-        backgroundColor: 'rgba(36, 41, 46, 0.1)',
-        borderColor: '#24292E',
-        borderWidth: 1,
-        borderDash: [5, 5]
-      }
-    ]
-  }), [scores, stage]);
-  
-  const chartOptions = useMemo<ChartOptions<'radar'>>(() => ({
-    responsive: true,
-    maintainAspectRatio: false,
-    scales: {
-      r: {
-        angleLines: { display: true },
-        suggestedMin: 0,
-        suggestedMax: 4,
-        ticks: { stepSize: 1 }
-      }
-    },
-    plugins: {
-      tooltip: {
-        callbacks: {
-          label: (context: TooltipItem<'radar'>) => {
-            const value = typeof context.raw === 'number' ? context.raw : 0;
-            return `${context.dataset.label}: ${value.toFixed(1)}/4.0`;
-          }
-        }
-      }
-    },
-    animation: {
-      duration: 750,
-      easing: 'easeInOutQuart'
-    }
-  }), []);
-  
-  const handleRecommendationClick = useCallback((recId: string, category: string) => {
-    trackRecommendationClick(recId, category);
-  }, []);
-  
-  const handleClick = useCallback<React.MouseEventHandler<HTMLCanvasElement>>((event) => {
-    const chart = chartRef.current;
-    if (!chart) return;
-    const elements = chart.getElementsAtEventForMode(
-      event.nativeEvent,
-      'nearest',
-      { intersect: true },
-      false
-    );
-    if (elements && elements[0]) {
-      const { index } = elements[0];
-      const categoryId = Object.values(categories)[index]?.id;
-      if (categoryId) {
-        handleRecommendationClick(`chart_${categoryId}`, categoryId);
-      }
-    }
-  }, [handleRecommendationClick]);
-  
   useEffect(() => {
-    const chartInstance = chartInstanceRef.current;
-    return () => {
-      if (chartInstance) {
-        chartInstance.destroy();
+    try {
+      const savedState = loadState();
+      
+      if (!savedState || !savedState.responses) {
+        // If no saved state, redirect to assessment
+        navigate('/assessment');
+        return;
       }
-    };
-  }, []);
+      
+      // Calculate simple scores based on responses
+      const scores: Record<string, number> = {};
+      Object.entries(savedState.responses).forEach(([id, response]) => {
+        const category = id.split('-')[0];
+        if (!scores[category]) {
+          scores[category] = 0;
+        }
+        
+        // Add 1 to the score for "Yes" answers
+        if (response && typeof response === 'object' && 'value' in response && response.value === true) {
+          scores[category] += 1;
+        }
+      });
+      
+      // Get recommendations based on scores
+      const recs = getRecommendationsByScores(scores);
+      setRecommendations(recs);
+      setLoading(false);
+    } catch (error) {
+      console.error('Failed to load results:', error);
+      setLoading(false);
+    }
+  }, [navigate]);
   
-  if (!scores || !recommendations) {
-    return <div className="error-state">Unable to calculate assessment results</div>;
+  const handleStartOver = () => {
+    if (onStartOver) {
+      onStartOver();
+    }
+    navigate('/');
+  };
+  
+  if (loading) {
+    return (
+      <div className="results-loading text-center p-6">
+        <div className="spinner mb-4">Loading...</div>
+        <p>Analyzing your responses...</p>
+      </div>
+    );
   }
   
   return (
-    <AssessmentErrorBoundary stage={stage}>
-      <div className="results">
-        <div className="score-summary">
-          <h2>Your GitHub Engineering Health Score</h2>
-          <div className="stage-indicator">
-            <span className="stage-badge">{stage.toUpperCase()}</span>
-            <span className="stage-benchmark">Benchmark: {(scores.benchmarks?.overall || 0).toFixed(1)}</span>
-          </div>
-          <div className="overall-score">
-            <span className={`score-number score-level-${scores.level?.toLowerCase()}`}>
-              {scores.overallScore.toFixed(1)}
-            </span>
-            <span className="score-label">
-              <h3>{scores.level}</h3>
-              <p>{getScoreDescription(scores.level)}</p>
-            </span>
-          </div>
-          <div className="completion-rate">
-            Assessment Completion: {(scores.completionRate * 100).toFixed(0)}%
-          </div>
+    <div className="results-container max-w-5xl mx-auto p-6">
+      <h1 className="text-3xl font-bold mb-6">Your GitHub Action Recommendations</h1>
+      
+      {recommendations.length === 0 ? (
+        <div className="no-recommendations bg-gray-100 rounded-lg p-6 text-center">
+          <p className="text-lg mb-4">No recommendations found based on your responses.</p>
+          <button 
+            onClick={handleStartOver}
+            className="bg-blue-600 text-white py-2 px-6 rounded-lg hover:bg-blue-700"
+          >
+            Take Assessment Again
+          </button>
         </div>
-        <div className="score-visualization">
-          <h3>Category Performance vs. Benchmarks</h3>
-          <div style={{ height: '400px', width: '100%' }}>
-            <Radar 
-              ref={chartRef}
-              data={chartData}
-              options={chartOptions}
-              onClick={handleClick}
-            />
-          </div>
-        </div>
-        <div className="category-scores">
-          <h3>Detailed Category Scores</h3>
-          {Object.values(categories).map(category => (
-            <div key={category.id} className="category-score">
-              <div className="category-header">
-                <h4>{category.title}</h4>
-                <GitHubTooltip term={category.id}>
-                  <p className="category-description">{category.description}</p>
-                </GitHubTooltip>
-              </div>
-              <div className="score-bar">
-                <div 
-                  className="score-fill" 
-                  style={{ 
-                    width: `${(scores.categoryScores[category.id] || 0) * 25}%`,
-                    backgroundColor: (scores.categoryScores[category.id] || 0) >= (scores.benchmarks?.[category.id] || 0) 
-                      ? '#2DA44E' 
-                      : '#FCA000'
-                  }} 
-                />
-                <div 
-                  className="benchmark-marker"
-                  style={{
-                    left: `${(scores.benchmarks?.[category.id] || 0) * 25}%`
-                  }}
-                />
-              </div>
-              <div className="score-details">
-                <span className="score-value">
-                  {scores.categoryScores[category.id]?.toFixed(1) || '0.0'} / 4.0
-                </span>
-                <span className="benchmark-value">
-                  Benchmark: {(scores.benchmarks?.[category.id] || 0).toFixed(1)}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-        <div className="recommendations">
-          <h3>Priority Recommendations</h3>
-          <div className="recommendations-grid">
-            {recommendations.map((rec, index) => (
-              <div key={index} className="action-card" onClick={() => handleRecommendationClick(rec.id, rec.category)}>
-                <div className="recommendation-header">
-                  <h4>{rec.title}</h4>
-                  <div className="recommendation-meta">
-                    <span className={`priority-tag ${getPriorityClass(rec.impact)}`}>
-                      {getPriorityText(rec.impact)}
-                    </span>
-                    <span className="impact">Impact: {rec.impact}</span>
-                    <span className="effort">Effort: {rec.effort}</span>
-                  </div>
+      ) : (
+        <>
+          <div className="recommendations-list divide-y">
+            {recommendations.map((rec) => (
+              <div key={rec.id} className="recommendation-item py-4">
+                <div className={`priority-badge inline-block px-2 py-1 rounded mr-2 text-xs text-white ${
+                  rec.priority === 'high' ? 'bg-red-600' : 
+                  rec.priority === 'medium' ? 'bg-orange-500' : 'bg-green-600'
+                }`}>
+                  {rec.priority.toUpperCase()}
                 </div>
-                <p className="recommendation-details">{rec.details || rec.description}</p>
-                {rec.steps && (
-                  <div className="implementation-steps">
-                    <h5>Implementation Steps:</h5>
-                    <ul className="steps-list">
-                      {rec.steps.map((step, stepIndex) => (
-                        <li key={stepIndex}>{step}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                <div className="recommendation-footer">
-                  {rec.resource && (
-                    <a 
-                      href={rec.resource} 
-                      target="_blank" 
-                      rel="noopener noreferrer" 
-                      className="resource-link"
-                    >
-                      Documentation →
-                    </a>
-                  )}
+                <h3 className="text-xl font-medium mt-2">{rec.text}</h3>
+                <div className="mt-3">
+                  <a 
+                    href={rec.githubUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline flex items-center"
+                  >
+                    View on GitHub
+                  </a>
                 </div>
               </div>
             ))}
           </div>
-        </div>
-        <div className="survey-container" style={{ marginTop: '2rem' }}>
-          <p>Help us improve by completing our brief survey:</p>
-          <a
-            href="https://forms.gle/your-google-form-url"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="survey-link"
-          >
-            Complete Survey
-          </a>
-        </div>
-      </div>
-    </AssessmentErrorBoundary>
+          
+          <div className="actions mt-8 flex justify-between">
+            <button 
+              onClick={handleStartOver}
+              className="bg-blue-600 text-white py-2 px-6 rounded-lg hover:bg-blue-700"
+            >
+              Start Over
+            </button>
+            <button 
+              onClick={() => navigate('/summary')}
+              className="bg-green-600 text-white py-2 px-6 rounded-lg hover:bg-green-700"
+            >
+              Finish
+            </button>
+          </div>
+        </>
+      )}
+    </div>
   );
 };
-
-function getScoreDescription(level: ScoreLevel): string {
-  switch(level) {
-    case 'High':
-      return 'Excellent engineering practices';
-    case 'Medium':
-      return 'Good progress with room for improvement';
-    case 'Low':
-      return 'Significant improvement opportunities';
-    default:
-      return 'Assessment results';
-  }
-}
-
-function getPriorityClass(impact: number): string {
-  if (impact >= 8) return 'high';
-  if (impact >= 5) return 'medium';
-  return 'low';
-}
-
-function getPriorityText(impact: number): string {
-  if (impact >= 8) return 'HIGH';
-  if (impact >= 5) return 'MEDIUM';
-  return 'LOW';
-}
 
 export default Results;

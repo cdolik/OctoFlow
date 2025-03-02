@@ -6,6 +6,7 @@ export interface KeyboardShortcut {
   action: () => void;
   category?: string;
   warning?: string;
+  allowInErrorState?: boolean;
 }
 
 export interface KeyboardNavigationConfig {

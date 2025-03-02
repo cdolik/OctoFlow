@@ -1,88 +1,149 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { AssessmentProps, AssessmentError } from '../types/props';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Stage } from '../types';
-import { useAssessment } from '../hooks/useAssessment';
-import { useStorage } from '../hooks/useStorage';
-import { ProgressTracker } from './ProgressTracker';
-import { AutoSave } from './AutoSave';
-import { StageTransition } from './StageTransition';
-
-const AssessmentBase: React.FC<AssessmentProps> = ({ stage, onComplete, onError }) => {
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [responses, setResponses] = useState<Record<number, number>>({});
-
-  useEffect(() => {
-    // Fetch initial data or perform setup
-  }, []);
-
-  const handleResponse = async (questionId: number, value: number) => {
-    try {
-      // await saveResponse(questionId, value, timeSpent);
-      setResponses((prevResponses) => ({ ...prevResponses, [questionId]: value }));
-    } catch (error) {
-      if (onError) onError(error as AssessmentError);
-    }
-  };
-
-  const handleSave = async () => {
-    // Implement save logic
-    return true;
-  };
-
-  return (
-    <div>
-      <ProgressTracker currentStep={currentQuestionIndex + 1} totalSteps={10} stage={stage} />
-      <AutoSave onSave={handleSave} />
-      {/* Render questions and other components */}
-    </div>
-  );
-};
+import { loadState, saveState } from '../utils/storage';
+import { getQuestionsByStage } from '../data/questions';
 
 interface AssessmentProps {
   stage: Stage;
-  onStageComplete?: (score: number) => void;
+  onComplete?: () => void;
 }
 
-export const Assessment: React.FC<AssessmentProps> = ({ stage, onStageComplete }) => {
-  const { responses, saveResponse, completeStage, calculateScore } = useAssessment();
-  const { state } = useStorage();
-
-  const handleQuestionResponse = useCallback(async (questionId: string, value: number) => {
-    await saveResponse(questionId, value);
-  }, [saveResponse]);
-
-  const handleStageComplete = useCallback(async () => {
-    const success = await completeStage(stage);
-    if (success) {
-      const score = calculateScore(stage);
-      onStageComplete?.(score);
+const Assessment: React.FC<AssessmentProps> = ({ onComplete }) => {
+  const navigate = useNavigate();
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [responses, setResponses] = useState<Record<string, { value: boolean; timestamp: number }>>({});
+  
+  const stageQuestions = getQuestionsByStage(Stage.Assessment);
+  
+  // Load saved state on mount
+  useEffect(() => {
+    try {
+      const savedState = loadState();
+      if (savedState && savedState.responses) {
+        setResponses(savedState.responses);
+      }
+    } catch (error) {
+      console.error('Failed to load state:', error);
     }
-  }, [stage, completeStage, calculateScore, onStageComplete]);
-
-  // Show stage transition if stage is completed
-  if (state?.stages?.[stage]?.isComplete) {
+  }, []);
+  
+  // Save state when responses change
+  useEffect(() => {
+    if (Object.keys(responses).length > 0) {
+      saveState({ 
+        currentStage: Stage.Assessment,
+        responses
+      });
+    }
+  }, [responses]);
+  
+  const handleAnswer = (value: boolean) => {
+    const currentQuestion = stageQuestions[currentQuestionIndex];
+    
+    // Record response with timestamp
+    setResponses(prev => ({
+      ...prev,
+      [currentQuestion.id]: {
+        value,
+        timestamp: Date.now()
+      }
+    }));
+    
+    // Move to next question or complete
+    if (currentQuestionIndex < stageQuestions.length - 1) {
+      setCurrentQuestionIndex(prev => prev + 1);
+    } else {
+      handleComplete();
+    }
+  };
+  
+  const handleComplete = () => {
+    // Save final state
+    saveState({
+      currentStage: Stage.Results,
+      responses
+    });
+    
+    // Call onComplete callback if provided
+    if (onComplete) {
+      onComplete();
+    }
+    
+    // Navigate to results page
+    navigate('/results');
+  };
+  
+  // Handle case with no questions
+  if (stageQuestions.length === 0) {
     return (
-      <StageTransition
-        stage={stage}
-        nextStage={null}
-        onTransitionComplete={handleStageComplete}
-      />
+      <div className="assessment-empty p-6 text-center">
+        <h1 className="text-2xl font-bold mb-4">No questions available</h1>
+        <button 
+          onClick={() => navigate('/')} 
+          className="bg-blue-600 text-white py-2 px-6 rounded-lg hover:bg-blue-700"
+        >
+          Go Back
+        </button>
+      </div>
     );
   }
-
+  
+  const currentQuestion = stageQuestions[currentQuestionIndex];
+  const progress = Math.round(((currentQuestionIndex + 1) / stageQuestions.length) * 100);
+  
   return (
-    <div className="assessment">
-      <h2>Assessment for {stage}</h2>
-      <div className="responses">
-        {Object.entries(responses).map(([questionId, value]) => (
-          <div key={questionId} className="response">
-            Question {questionId}: {value}
-          </div>
-        ))}
+    <div className="assessment-container max-w-2xl mx-auto p-6">
+      <div className="progress-bar-container mb-8">
+        <div className="progress-bar h-2 bg-gray-200 rounded">
+          <div 
+            className="progress-fill h-full bg-blue-600 rounded" 
+            style={{ width: `${progress}%` }}
+          ></div>
+        </div>
+        <div className="text-right mt-2 text-sm text-gray-600">
+          Question {currentQuestionIndex + 1} of {stageQuestions.length}
+        </div>
       </div>
-      <button onClick={handleStageComplete}>Complete Stage</button>
+      
+      <div className="question-card bg-white p-6 rounded-lg shadow-md">
+        <h2 className="text-xl font-medium mb-6">{currentQuestion.text}</h2>
+        
+        <div className="answers-container space-y-4">
+          <button
+            onClick={() => handleAnswer(true)}
+            className="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700"
+          >
+            Yes
+          </button>
+          <button
+            onClick={() => handleAnswer(false)}
+            className="w-full py-3 bg-red-600 text-white rounded-lg hover:bg-red-700"
+          >
+            No
+          </button>
+        </div>
+      </div>
+      
+      <div className="navigation mt-6 flex justify-between">
+        <button
+          onClick={() => navigate('/')}
+          className="text-blue-600 hover:underline"
+        >
+          Cancel Assessment
+        </button>
+        
+        {currentQuestionIndex > 0 && (
+          <button
+            onClick={() => setCurrentQuestionIndex(prev => prev - 1)}
+            className="text-blue-600 hover:underline"
+          >
+            Previous Question
+          </button>
+        )}
+      </div>
     </div>
   );
 };
 
-export default AssessmentBase;
+export default Assessment;

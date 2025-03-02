@@ -1,71 +1,55 @@
-import React, { Component, ErrorInfo } from 'react';
-import { errorReporter } from '../utils/errorReporting';
-
-export interface ErrorContext {
-  isCritical?: boolean;
-  component?: string;
-  stage?: Stage;
-}
+import React, { Component, ErrorInfo, ReactNode } from 'react';
 
 interface Props {
-  children: React.ReactNode;
-  fallback: React.ComponentType<{ error: Error }>;
-  onReset?: () => void;
-  onError?: (error: Error) => void;
-  context?: ErrorContext;
+  children: ReactNode;
+  fallback?: ReactNode;
 }
 
 interface State {
-  error: Error | null;
   hasError: boolean;
+  error?: Error;
 }
 
-export class ErrorBoundary extends Component<Props, State> {
+class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
     this.state = {
-      error: null,
       hasError: false
     };
   }
 
   static getDerivedStateFromError(error: Error): State {
-    return {
-      error,
-      hasError: true
-    };
+    // Update state so the next render will show the fallback UI
+    return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    const { context, onError } = this.props;
-    
-    // Report error with context
-    errorReporter.reportError(error, errorInfo.componentStack, context?.stage, {
-      component: context?.component || 'unknown',
-      isCritical: context?.isCritical || false,
-    });
-
-    // Notify parent if handler provided
-    onError?.(error);
+    // You can also log the error to an error reporting service
+    console.error('Uncaught error:', error, errorInfo);
   }
 
   handleReset = (): void => {
-    this.setState({
-      error: null,
-      hasError: false
-    });
-    this.props.onReset?.();
+    this.setState({ hasError: false, error: undefined });
   };
 
-  render(): React.ReactNode {
-    const { fallback: Fallback, children } = this.props;
-    const { error, hasError } = this.state;
-
-    if (hasError && error) {
-      return <Fallback error={error} />;
+  render(): ReactNode {
+    if (this.state.hasError) {
+      // You can render any custom fallback UI
+      return this.props.fallback || (
+        <div className="error-boundary p-6 border border-red-300 rounded-lg bg-red-50 text-center">
+          <h2 className="text-xl font-bold text-red-600 mb-4">Something went wrong</h2>
+          <p className="mb-4">Please try refreshing the page or contact support if the error persists.</p>
+          <button
+            onClick={this.handleReset}
+            className="bg-red-600 text-white py-2 px-6 rounded-lg hover:bg-red-700"
+          >
+            Try Again
+          </button>
+        </div>
+      );
     }
 
-    return children;
+    return this.props.children;
   }
 }
 

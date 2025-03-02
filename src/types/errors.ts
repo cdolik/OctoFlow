@@ -1,4 +1,4 @@
-export type Stage = 'pre-seed' | 'seed' | 'series-a' | 'series-b';
+export type Stage = 'pre-seed' | 'seed' | 'series-a' | 'series-b' | 'welcome' | 'assessment' | 'results' | 'summary';
 
 export type ErrorSeverity = 'low' | 'medium' | 'high' | 'critical';
 
@@ -10,10 +10,32 @@ export interface ErrorContext {
   metadata?: Record<string, unknown>;
 }
 
-export interface AssessmentError extends Error {
+export interface IAssessmentError extends Error {
   severity: ErrorSeverity;
   recoverable: boolean;
   context?: ErrorContext;
+}
+
+// Actual AssessmentError class implementation
+export class AssessmentError extends Error implements IAssessmentError {
+  severity: ErrorSeverity;
+  recoverable: boolean;
+  context?: ErrorContext;
+
+  constructor(
+    message: string, 
+    options: { 
+      severity?: ErrorSeverity, 
+      recoverable?: boolean, 
+      context?: ErrorContext 
+    } = {}
+  ) {
+    super(message);
+    this.name = 'AssessmentError';
+    this.severity = options.severity || 'medium';
+    this.recoverable = options.recoverable !== undefined ? options.recoverable : true;
+    this.context = options.context;
+  }
 }
 
 export interface ErrorReport {
@@ -51,15 +73,11 @@ export const createAssessmentError = (
   severity: ErrorSeverity = 'medium',
   recoverable = true,
   context?: ErrorContext
-): AssessmentError => {
-  const error = new Error(message) as AssessmentError;
-  error.severity = severity;
-  error.recoverable = recoverable;
-  error.context = context;
-  return error;
+): IAssessmentError => {
+  return new AssessmentError(message, { severity, recoverable, context });
 };
 
 // Error type guards
-export const isAssessmentError = (error: unknown): error is AssessmentError => {
+export const isAssessmentError = (error: unknown): error is IAssessmentError => {
   return error instanceof Error && 'severity' in error && 'recoverable' in error;
 };
