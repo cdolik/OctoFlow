@@ -114,6 +114,38 @@ export const recommendations: Recommendation[] = [
     category: 'release',
     priority: 'low',
     applicableScores: { release: [0, 1, 2] }
+  },
+  {
+    id: 'dependabot-security-alerts',
+    text: 'Enable Dependabot for vulnerability alerts',
+    githubUrl: 'https://github.com/features/security',
+    category: 'security',
+    priority: 'high',
+    applicableScores: { security: [0, 1, 2, 3] }
+  },
+  {
+    id: 'github-actions-cicd',
+    text: 'Set up GitHub Actions for CI/CD',
+    githubUrl: 'https://github.com/features/actions',
+    category: 'cicd',
+    priority: 'high',
+    applicableScores: { cicd: [0, 1, 2] }
+  },
+  {
+    id: 'codeql-scanning',
+    text: 'Integrate CodeQL for code scanning',
+    githubUrl: 'https://github.com/features/security/code-scanning',
+    category: 'security',
+    priority: 'high',
+    applicableScores: { security: [1, 2, 3] }
+  },
+  {
+    id: 'github-copilot',
+    text: 'Leverage GitHub Copilot for AI-assisted coding',
+    githubUrl: 'https://github.com/features/copilot',
+    category: 'automation',
+    priority: 'medium',
+    applicableScores: { automation: [2, 3] }
   }
 ];
 

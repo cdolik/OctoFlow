@@ -1,5 +1,4 @@
 import { Stage } from '../types';
-import { trackError } from './analytics';
 import { AssessmentError, ErrorContext } from '../types/errors';
 
 interface ErrorReport {
@@ -15,52 +14,13 @@ interface ErrorReport {
 interface ErrorMetrics {
   totalErrors: number;
   recoverableErrors: number;
-  criticalErrors: number;
+  highSeverityErrors: number;
   recoveryRate: number;
 }
 
-class ErrorReporter {
-  private static instance: ErrorReporter;
-  private readonly maxRetries = 3;
-  private readonly retryDelay = 1000; // 1 second
-
-  private constructor() {}
-
-  static getInstance(): ErrorReporter {
-    if (!ErrorReporter.instance) {
-      ErrorReporter.instance = new ErrorReporter();
-    }
-    return ErrorReporter.instance;
-  }
-
-  async report(error: AssessmentError, context: ErrorContext): Promise<boolean> {
-    for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
-      try {
-        // For MVP, just log to console. In production, this would send to a logging service
-        console.error('Assessment Error:', {
-          name: error.name,
-          message: error.message,
-          severity: error.severity,
-          recoverable: error.recoverable,
-          context,
-          stack: error.stack
-        });
-        
-        return true;
-      } catch (e) {
-        if (attempt === this.maxRetries) {
-          console.error('Failed to report error after max retries:', e);
-          return false;
-        }
-        await this.delay(this.retryDelay * attempt);
-      }
-    }
-    return false;
-  }
-
-  private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
+export function trackError(error: Error, metadata?: Record<string, any>): void {
+  // Simple implementation for MVP
+  console.error('Error tracked:', error, metadata);
 }
 
 export class ErrorReportingService {
@@ -103,7 +63,7 @@ export class ErrorReportingService {
       this.errors = this.errors.slice(0, this.MAX_STORED_ERRORS);
     }
 
-    if (this.isCriticalError(error)) {
+    if (this.isHighSeverityError(error)) {
       await this.persistErrors();
       this.notifyDevTeam(errorReport);
     }
@@ -111,19 +71,8 @@ export class ErrorReportingService {
     trackError(error, {
       stage,
       componentStack,
-      isCritical: this.isCriticalError(error)
+      isHighSeverity: this.isHighSeverityError(error)
     });
-  }
-
-  async attemptRecovery(): Promise<boolean> {
-    try {
-      // Attempt basic recovery steps
-      await this.persistErrors();
-      return true;
-    } catch (error) {
-      console.error('Recovery failed:', error);
-      return false;
-    }
   }
 
   getError(timestamp: string): ErrorReport | undefined {
@@ -147,8 +96,8 @@ export class ErrorReportingService {
 
   getErrorMetrics(): ErrorMetrics {
     const totalErrors = this.errors.length;
-    const criticalErrors = this.errors.filter(
-      report => this.isCriticalError(report.error)
+    const highSeverityErrors = this.errors.filter(
+      report => this.isHighSeverityError(report.error)
     ).length;
     const recoveredErrors = this.errors.filter(
       report => report.recoveryAttempts > 0 && report.resolved
@@ -156,8 +105,8 @@ export class ErrorReportingService {
 
     return {
       totalErrors,
-      recoverableErrors: totalErrors - criticalErrors,
-      criticalErrors,
+      recoverableErrors: totalErrors - highSeverityErrors,
+      highSeverityErrors,
       recoveryRate: totalErrors ? (recoveredErrors / totalErrors) * 100 : 0
     };
   }
@@ -167,13 +116,13 @@ export class ErrorReportingService {
     await this.persistErrors();
   }
 
-  private isCriticalError(error: Error): boolean {
+  private isHighSeverityError(error: Error): boolean {
     return (
       error.name === 'SecurityError' ||
       error.name === 'QuotaExceededError' ||
       error.name === 'RecoveryFailedError' ||
       error instanceof TypeError ||
-      error.message.includes('critical')
+      (error instanceof AssessmentError && error.severity === 'high')
     );
   }
 
@@ -219,7 +168,7 @@ export class ErrorReportingService {
   private notifyDevTeam(errorReport: ErrorReport): void {
     if (process.env.NODE_ENV === 'production') {
       console.error(
-        'Critical Error:',
+        'High Severity Error:',
         errorReport.error.message,
         '\nStack:', errorReport.error.stack,
         '\nComponent Stack:', errorReport.componentStack,
@@ -230,4 +179,4 @@ export class ErrorReportingService {
   }
 }
 
-export const errorReporter = ErrorReporter.getInstance();
+export const errorReporter = ErrorReportingService.getInstance();

@@ -20,7 +20,7 @@ export const AccessibleErrorAnnouncer = forwardRef<HTMLDivElement, Props>(
 
       return [
         error.message,
-        severity === 'critical' ? 'This is a critical error.' : '',
+        severity === 'high' ? 'This is a serious error.' : '',
         recoverable ? 'The application will attempt to recover.' : 'Please try again later.',
         isRecovering ? 'Attempting to recover...' : ''
       ].filter(Boolean).join(' ');

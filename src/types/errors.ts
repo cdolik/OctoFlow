@@ -1,83 +1,45 @@
-export type Stage = 'pre-seed' | 'seed' | 'series-a' | 'series-b' | 'welcome' | 'assessment' | 'results' | 'summary';
-
-export type ErrorSeverity = 'low' | 'medium' | 'high' | 'critical';
+export type ErrorSeverity = 'low' | 'medium' | 'high';
 
 export interface ErrorContext {
   component: string;
-  action: string;
+  message: string;
   timestamp: string;
-  stage?: Stage;
-  metadata?: Record<string, unknown>;
 }
 
-export interface IAssessmentError extends Error {
+export interface BaseError extends Error {
   severity: ErrorSeverity;
   recoverable: boolean;
   context?: ErrorContext;
 }
 
-// Actual AssessmentError class implementation
-export class AssessmentError extends Error implements IAssessmentError {
+export class AssessmentError extends Error implements BaseError {
   severity: ErrorSeverity;
   recoverable: boolean;
   context?: ErrorContext;
 
   constructor(
-    message: string, 
-    options: { 
-      severity?: ErrorSeverity, 
-      recoverable?: boolean, 
-      context?: ErrorContext 
-    } = {}
+    message: string,
+    severity: ErrorSeverity = 'medium',
+    recoverable = true,
+    context?: ErrorContext
   ) {
     super(message);
     this.name = 'AssessmentError';
-    this.severity = options.severity || 'medium';
-    this.recoverable = options.recoverable !== undefined ? options.recoverable : true;
-    this.context = options.context;
+    this.severity = severity;
+    this.recoverable = recoverable;
+    this.context = context;
   }
 }
 
-export interface ErrorReport {
-  id: string;
-  error: Error;
-  context?: ErrorContext;
-  recoveryAttempts: number;
-  timestamp: string;
-  resolved: boolean;
-}
-
-export interface ErrorState {
-  activeErrors: ErrorReport[];
-  isHandlingError: boolean;
-  currentAttempt: number;
-  maxAttempts: number;
-}
-
-// Error factories
 export const createErrorContext = (
   component: string,
-  action: string,
-  stage?: Stage,
-  metadata?: Record<string, unknown>
+  message: string
 ): ErrorContext => ({
   component,
-  action,
-  timestamp: new Date().toISOString(),
-  stage,
-  metadata
+  message,
+  timestamp: new Date().toISOString()
 });
 
-export const createAssessmentError = (
-  message: string,
-  severity: ErrorSeverity = 'medium',
-  recoverable = true,
-  context?: ErrorContext
-): IAssessmentError => {
-  return new AssessmentError(message, { severity, recoverable, context });
-};
-
-// Error type guards
-export const isAssessmentError = (error: unknown): error is IAssessmentError => {
-  return error instanceof Error && 'severity' in error && 'recoverable' in error;
+export const isAssessmentError = (error: unknown): error is AssessmentError => {
+  return error instanceof AssessmentError;
 };

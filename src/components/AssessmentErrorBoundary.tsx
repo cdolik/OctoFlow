@@ -25,9 +25,8 @@ class AssessmentErrorBoundary extends Component<Props, State> {
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     const context: ErrorContext = {
       component: 'AssessmentErrorBoundary',
-      stage: this.props.stage,
-      action: 'render',
-      timestamp: new Date().toISOString(),
+      message: `Error in ${this.props.stage} stage: ${error.message}`,
+      timestamp: new Date().toISOString()
     };
     // Log error to an error reporting service
   }

@@ -48,9 +48,8 @@ export function sanitizeError(error: Error): SanitizedError {
   if (context) {
     context = {
       ...context,
-      action: context.action,
       component: context.component,
-      stage: context.stage,
+      message: context.message,
       timestamp: context.timestamp
     };
   }
@@ -88,7 +87,7 @@ export function createSafeErrorMessage(error: Error): string {
 
 export function shouldExposeErrorDetails(error: Error): boolean {
   if (error instanceof AssessmentError) {
-    return error.severity !== 'critical' && error.recoverable;
+    return error.severity !== 'high' && error.recoverable;
   }
   return process.env.NODE_ENV !== 'production';
 }

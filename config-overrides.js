@@ -1,9 +1,12 @@
-const { override, addWebpackAlias, addBabelPlugin } = require('customize-cra');
-const path = require('path');
+const { override, addBabelPlugin } = require('customize-cra');
+const ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin');
 
 module.exports = override(
-  addWebpackAlias({
-    'react-refresh/runtime': path.resolve(__dirname, 'node_modules/react-refresh/runtime.js')
-  }),
+  (config, env) => {
+    if (env === 'development') {
+      config.plugins.push(new ReactRefreshWebpackPlugin());
+    }
+    return config;
+  },
   addBabelPlugin('styled-jsx/babel')
 );

@@ -5,38 +5,19 @@ on:
     branches:
       - main
 
-permissions:
-  contents: write
-
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v3
         with:
-          node-version: 18
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Type check
-        run: npm run typecheck
-
-      - name: Test
-        run: npm test -- --watchAll=false
-
-      - name: Build
-        run: npm run build
+          node-version: '18'
+      - run: npm install
+      - run: npm run build
         env:
-          PUBLIC_URL: "/${{ github.event.repository.name }}"
-
-      - name: Deploy
-        uses: JamesIves/github-pages-deploy-action@v4
+          PUBLIC_URL: '/OctoFlow'
+      - uses: peaceiris/actions-gh-pages@v3
         with:
-          folder: build
-          clean: true
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./build

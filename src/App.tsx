@@ -1,5 +1,5 @@
 import React from 'react';
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { Stage } from './types';
 import ErrorBoundary from './components/ErrorBoundary';
 import Assessment from './components/Assessment';
@@ -17,12 +17,12 @@ const Welcome: React.FC = () => (
       </p>
       
       <div className="cta-button">
-        <a 
-          href="#/assessment" 
+        <Link 
+          to="/assessment" 
           className="inline-block bg-blue-600 text-white py-3 px-8 rounded-lg hover:bg-blue-700 text-lg"
         >
           Start Assessment
-        </a>
+        </Link>
       </div>
     </div>
   </div>
@@ -40,18 +40,18 @@ const Summary: React.FC = () => (
       </p>
       
       <div className="cta-buttons flex justify-center space-x-4">
-        <a 
-          href="#/" 
+        <Link 
+          to="/" 
           className="inline-block bg-blue-600 text-white py-2 px-6 rounded-lg hover:bg-blue-700"
         >
           Back to Home
-        </a>
-        <a 
-          href="#/results" 
+        </Link>
+        <Link 
+          to="/results" 
           className="inline-block bg-green-600 text-white py-2 px-6 rounded-lg hover:bg-green-700"
         >
           View Results Again
-        </a>
+        </Link>
       </div>
     </div>
   </div>
@@ -59,7 +59,7 @@ const Summary: React.FC = () => (
 
 const App: React.FC = () => {
   return (
-    <HashRouter>
+    <Router>
       <ErrorBoundary>
         <div className="app-container min-h-screen bg-gray-100">
           <Routes>
@@ -71,7 +71,7 @@ const App: React.FC = () => {
           </Routes>
         </div>
       </ErrorBoundary>
-    </HashRouter>
+    </Router>
   );
 };
 
