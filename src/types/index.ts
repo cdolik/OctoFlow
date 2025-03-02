@@ -27,11 +27,16 @@ export interface Category {
 
 export interface Recommendation {
   id: string;
-  text: string;
-  githubUrl: string;
-  category: string;
+  title: string;
   priority: 'low' | 'medium' | 'high';
-  applicableScores: Record<string, number[]>;
+  impact: string;
+  effort: 'low' | 'medium' | 'high';
+  steps: string[];
+  githubUrl: string;
+  stage: 'seed' | 'series-a' | 'series-b';
+  applicableScores: {
+    [key: string]: [number, number]; // [min, max] score range
+  };
 }
 
 export interface StorageState {

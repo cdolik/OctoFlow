@@ -1,7 +1,7 @@
 import React from 'react';
-import { HashRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Stage } from './types';
-import ErrorBoundary from './components/ErrorBoundary';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import Assessment from './components/Assessment';
 import Results from './components/Results';
 
@@ -17,12 +17,12 @@ const Welcome: React.FC = () => (
       </p>
       
       <div className="cta-button">
-        <Link 
-          to="/assessment" 
+        <a 
+          href="#/assessment" 
           className="inline-block bg-blue-600 text-white py-3 px-8 rounded-lg hover:bg-blue-700 text-lg"
         >
           Start Assessment
-        </Link>
+        </a>
       </div>
     </div>
   </div>
@@ -40,18 +40,18 @@ const Summary: React.FC = () => (
       </p>
       
       <div className="cta-buttons flex justify-center space-x-4">
-        <Link 
-          to="/" 
+        <a 
+          href="#/" 
           className="inline-block bg-blue-600 text-white py-2 px-6 rounded-lg hover:bg-blue-700"
         >
           Back to Home
-        </Link>
-        <Link 
-          to="/results" 
+        </a>
+        <a 
+          href="#/results" 
           className="inline-block bg-green-600 text-white py-2 px-6 rounded-lg hover:bg-green-700"
         >
           View Results Again
-        </Link>
+        </a>
       </div>
     </div>
   </div>

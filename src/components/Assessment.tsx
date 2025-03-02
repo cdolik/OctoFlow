@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Stage } from '../types';
 import { loadState, saveState } from '../utils/storage';
 import { getQuestionsByStage } from '../data/questions';
+import ProgressBar from './ProgressBar';
 
 interface AssessmentProps {
   stage: Stage;
@@ -93,54 +94,68 @@ const Assessment: React.FC<AssessmentProps> = ({ onComplete }) => {
   const progress = Math.round(((currentQuestionIndex + 1) / stageQuestions.length) * 100);
   
   return (
-    <div className="assessment-container max-w-2xl mx-auto p-6">
-      <div className="progress-bar-container mb-8">
-        <div className="progress-bar h-2 bg-gray-200 rounded">
-          <div 
-            className="progress-fill h-full bg-blue-600 rounded" 
-            style={{ width: `${progress}%` }}
-          ></div>
-        </div>
-        <div className="text-right mt-2 text-sm text-gray-600">
-          Question {currentQuestionIndex + 1} of {stageQuestions.length}
-        </div>
-      </div>
+    <div className="assessment-container max-w-2xl mx-auto p-6" role="main" aria-labelledby="question-title">
+      <ProgressBar 
+        progress={progress} 
+        label="Assessment progress"
+        customText={`Question ${currentQuestionIndex + 1} of ${stageQuestions.length}`}
+      />
       
       <div className="question-card bg-white p-6 rounded-lg shadow-md">
-        <h2 className="text-xl font-medium mb-6">{currentQuestion.text}</h2>
+        <h2 id="question-title" className="text-xl font-medium mb-6">{currentQuestion.text}</h2>
         
-        <div className="answers-container space-y-4">
+        <div className="answers-container space-y-4" role="radiogroup" aria-labelledby="question-title">
           <button
             onClick={() => handleAnswer(true)}
             className="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700"
+            aria-label="Answer Yes"
+            role="radio"
+            aria-checked="false"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                handleAnswer(true);
+              }
+            }}
           >
             Yes
           </button>
           <button
             onClick={() => handleAnswer(false)}
             className="w-full py-3 bg-red-600 text-white rounded-lg hover:bg-red-700"
+            aria-label="Answer No"
+            role="radio"
+            aria-checked="false"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                handleAnswer(false);
+              }
+            }}
           >
             No
           </button>
         </div>
       </div>
       
-      <div className="navigation mt-6 flex justify-between">
-        <button
-          onClick={() => navigate('/')}
-          className="text-blue-600 hover:underline"
-        >
-          Cancel Assessment
-        </button>
-        
-        {currentQuestionIndex > 0 && (
-          <button
-            onClick={() => setCurrentQuestionIndex(prev => prev - 1)}
-            className="text-blue-600 hover:underline"
-          >
-            Previous Question
-          </button>
-        )}
+      <div className="my-4 p-4 bg-white rounded shadow-md">
+        <div className="text-center">
+          <div className="navigation mt-6 flex justify-between">
+            <button
+              onClick={() => navigate('/')}
+              className="text-blue-600 hover:underline"
+            >
+              Cancel Assessment
+            </button>
+            
+            {currentQuestionIndex > 0 && (
+              <button
+                onClick={() => setCurrentQuestionIndex(prev => prev - 1)}
+                className="text-blue-600 hover:underline"
+              >
+                Previous Question
+              </button>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

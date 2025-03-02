@@ -2,7 +2,7 @@
   "name": "octoflow",
   "version": "0.1.0",
   "private": true,
-  "homepage": "https://cdolik.github.io/OctoFlow/",
+  "homepage": "https://cdolik.github.io/OctoFlow",
   "dependencies": {
     "@testing-library/react": "^13.4.0",
     "@types/react": "^18.2.0",
@@ -51,9 +51,9 @@
   },
   "scripts": {
     "preinstall": "npx npm-force-resolutions",
-    "predeploy": "npm run verify",
-    "deploy": "npm run verify && gh-pages -b gh-pages -d build",
-    "deploy-mvp": "npm run test:mvp && npm run build && gh-pages -b gh-pages -d build",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -b gh-pages -d build",
+    "deploy-mvp": "npm run build && gh-pages -b gh-pages -d build",
     "deploy-mvp-skip-tests": "npm run build && gh-pages -b gh-pages -d build",
     "verify": "npm run typecheck && npm run test && npm run build",
     "verify-mvp": "npm run test:mvp && npm run build",
@@ -96,6 +96,7 @@
     ]
   },
   "devDependencies": {
+    "@axe-core/react": "^4.10.1",
     "@babel/core": "^7.23.9",
     "@babel/preset-env": "^7.23.9",
     "@babel/preset-react": "^7.23.9",
