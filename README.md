@@ -15,6 +15,10 @@ OctoFlow helps startup engineering teams assess their GitHub practices across di
 - **Visual Results**: View your results in an intuitive radar chart visualization 
 - **Client-Side Only**: No backend required - all data stays in your browser
 
+## Live Demo
+
+Visit the live application at: https://cdolik.github.io/OctoFlow/
+
 ## Quick Start
 
 ### Installation
@@ -67,10 +71,22 @@ Your input is invaluable as we continue to improve the tool for engineering team
 
 ## Project Structure
 
-- `src/components/`: UI components (StageSelector, AssessmentFlow, ResultsDashboard)
-- `src/data/`: Question bank and scoring logic
-- `src/App.tsx`: Main application component and state management
-- `public/`: Static assets
+```
+src/
+├── components/           # React components
+│   ├── AssessmentFlow/  # Assessment wizard and logic
+│   ├── RadarChart/      # Results visualization
+│   └── FeedbackForm/    # User feedback collection
+├── data/                # Questions and scoring logic
+└── utils/               # Helper functions and utilities
+```
+
+## Recent Updates
+
+- **MVP Release**: Focused on core assessment functionality and GitHub practices evaluation
+- **Improved UI**: Enhanced user experience with radar chart visualization
+- **GitHub Pages**: Deployed and accessible at https://cdolik.github.io/OctoFlow/
+- **Legacy Code**: Previous performance monitoring features archived in `archive/performance-monitoring` branch
 
 ## Contributing
 
@@ -88,3 +104,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 - GitHub for providing excellent documentation and tools for developers
 - Create React App for the project bootstrapping
+- All contributors and users providing valuable feedback
