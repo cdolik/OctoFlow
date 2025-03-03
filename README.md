@@ -46,6 +46,18 @@ The application will be available at http://localhost:3000
 npm run deploy
 ```
 
+## Feedback and Testing
+
+We're actively collecting feedback on the OctoFlow assessment tool. If you've used the tool, please consider sharing your experience:
+
+[📝 Submit Feedback](https://github.com/coreydolik/OctoFlow/issues/new?template=feedback.md)
+
+You can also report bugs or request new features:
+- [🐞 Report a Bug](https://github.com/coreydolik/OctoFlow/issues/new?template=bug_report.md)
+- [💡 Request a Feature](https://github.com/coreydolik/OctoFlow/issues/new?template=feature_request.md)
+
+Your input is invaluable as we continue to improve the tool for engineering teams at all startup stages.
+
 ## Assessment Process
 
 1. **Select Your Startup Stage**: Choose from Seed/Earlier, Series A, or Series B+
