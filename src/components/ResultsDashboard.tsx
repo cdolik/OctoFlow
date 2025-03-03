@@ -103,7 +103,7 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({ stage, responses, o
       <div className="recommendations">
         <h3>Recommendations</h3>
         {recommendations.length === 0 ? (
-          <p>Great job! You've implemented GitHub best practices effectively.</p>
+          <p>Great job! You&apos;ve implemented GitHub best practices effectively.</p>
         ) : (
           <ul className="recommendation-list">
             {recommendations.map((rec, index) => (
