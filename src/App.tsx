@@ -1,78 +1,117 @@
-import React from 'react';
-import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { Stage } from './types';
-import { ErrorBoundary } from './components/ErrorBoundary';
-import Assessment from './components/Assessment';
-import Results from './components/Results';
+import React, { useState, useEffect } from 'react';
+import './App.css';
+import StageSelector from './components/StageSelector';
+import AssessmentFlow from './components/AssessmentFlow';
+import ResultsDashboard from './components/ResultsDashboard';
+import { StartupStage } from './data/questions';
 
-// Simple Welcome component
-const Welcome: React.FC = () => (
-  <div className="welcome-container max-w-4xl mx-auto p-6 text-center">
-    <div className="welcome-content bg-white p-8 rounded-lg shadow-md">
-      <h1 className="text-3xl font-bold mb-6">Welcome to OctoFlow</h1>
-      
-      <p className="mb-6 text-lg">
-        Optimize your GitHub workflow with personalized GitHub Actions recommendations.
-        Take our quick assessment to discover the best actions for your project.
-      </p>
-      
-      <div className="cta-button">
-        <a 
-          href="#/assessment" 
-          className="inline-block bg-blue-600 text-white py-3 px-8 rounded-lg hover:bg-blue-700 text-lg"
-        >
-          Start Assessment
-        </a>
-      </div>
-    </div>
-  </div>
-);
+enum AppState {
+  StageSelection,
+  Assessment,
+  Results
+}
 
-// Simple Summary component
-const Summary: React.FC = () => (
-  <div className="summary-container max-w-4xl mx-auto p-6 text-center">
-    <div className="summary-content bg-white p-8 rounded-lg shadow-md">
-      <h1 className="text-3xl font-bold mb-6">Assessment Complete</h1>
+function App() {
+  const [appState, setAppState] = useState<AppState>(AppState.StageSelection);
+  const [selectedStage, setSelectedStage] = useState<StartupStage | null>(null);
+  const [responses, setResponses] = useState<Record<string, number>>({});
+  
+  // Check if we have any saved state in sessionStorage
+  useEffect(() => {
+    const savedState = sessionStorage.getItem('octoflow-app-state');
+    const savedStage = sessionStorage.getItem('octoflow-selected-stage');
+    const savedResponses = sessionStorage.getItem('octoflow-responses');
+    
+    if (savedState && savedStage) {
+      try {
+        setAppState(parseInt(savedState, 10));
+        setSelectedStage(savedStage as StartupStage);
+        
+        if (savedResponses) {
+          setResponses(JSON.parse(savedResponses));
+        }
+      } catch (e) {
+        console.error('Failed to restore saved state', e);
+      }
+    }
+  }, []);
+  
+  // Save state to sessionStorage when it changes
+  useEffect(() => {
+    if (selectedStage) {
+      sessionStorage.setItem('octoflow-app-state', appState.toString());
+      sessionStorage.setItem('octoflow-selected-stage', selectedStage);
       
-      <p className="mb-6 text-lg">
-        Thank you for completing the OctoFlow assessment. We hope the recommendations
-        help you optimize your GitHub workflow with the right actions.
-      </p>
-      
-      <div className="cta-buttons flex justify-center space-x-4">
-        <a 
-          href="#/" 
-          className="inline-block bg-blue-600 text-white py-2 px-6 rounded-lg hover:bg-blue-700"
-        >
-          Back to Home
-        </a>
-        <a 
-          href="#/results" 
-          className="inline-block bg-green-600 text-white py-2 px-6 rounded-lg hover:bg-green-700"
-        >
-          View Results Again
-        </a>
-      </div>
-    </div>
-  </div>
-);
-
-const App: React.FC = () => {
+      if (Object.keys(responses).length > 0) {
+        sessionStorage.setItem('octoflow-responses', JSON.stringify(responses));
+      }
+    }
+  }, [appState, selectedStage, responses]);
+  
+  const handleStageSelect = (stage: StartupStage) => {
+    setSelectedStage(stage);
+    setAppState(AppState.Assessment);
+  };
+  
+  const handleAssessmentComplete = (assessmentResponses: Record<string, number>) => {
+    setResponses(assessmentResponses);
+    setAppState(AppState.Results);
+  };
+  
+  const handleReset = () => {
+    // Clear all session storage
+    sessionStorage.removeItem('octoflow-app-state');
+    sessionStorage.removeItem('octoflow-selected-stage');
+    sessionStorage.removeItem('octoflow-responses');
+    
+    // Reset state
+    setSelectedStage(null);
+    setResponses({});
+    setAppState(AppState.StageSelection);
+  };
+  
+  const handleBack = () => {
+    if (appState === AppState.Assessment) {
+      setAppState(AppState.StageSelection);
+    } else if (appState === AppState.Results) {
+      setAppState(AppState.Assessment);
+    }
+  };
+  
   return (
-    <Router>
-      <ErrorBoundary>
-        <div className="app-container min-h-screen bg-gray-100">
-          <Routes>
-            <Route path="/" element={<Welcome />} />
-            <Route path="/assessment" element={<Assessment stage={Stage.Assessment} />} />
-            <Route path="/results" element={<Results />} />
-            <Route path="/summary" element={<Summary />} />
-            <Route path="*" element={<Navigate to="/" />} />
-          </Routes>
-        </div>
-      </ErrorBoundary>
-    </Router>
+    <div className="app-container">
+      <header className="app-header">
+        <h1>OctoFlow</h1>
+        <p>GitHub Practices Assessment for Startups</p>
+      </header>
+      
+      <main className="app-content">
+        {appState === AppState.StageSelection && (
+          <StageSelector onSelectStage={handleStageSelect} />
+        )}
+        
+        {appState === AppState.Assessment && selectedStage && (
+          <AssessmentFlow 
+            stage={selectedStage} 
+            onComplete={handleAssessmentComplete} 
+            onBack={handleBack}
+          />
+        )}
+        
+        {appState === AppState.Results && selectedStage && (
+          <ResultsDashboard 
+            stage={selectedStage}
+            responses={responses}
+            onReset={handleReset}
+          />
+        )}
+      </main>
+      
+      <footer className="app-footer">
+        <p>OctoFlow - GitHub Practices Assessment Tool © {new Date().getFullYear()}</p>
+      </footer>
+    </div>
   );
-};
+}
 
 export default App;
