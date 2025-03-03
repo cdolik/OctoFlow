@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Question, StartupStage, questions } from '../data/questions';
+import { StartupStage, questions } from '../data/questions';
 
 interface AssessmentFlowProps {
   stage: StartupStage;

@@ -1,32 +1,91 @@
 import React from 'react';
 import { Category } from '../data/questions';
+import { Radar } from 'react-chartjs-2';
+import {
+  Chart as ChartJS,
+  RadialLinearScale,
+  PointElement,
+  LineElement,
+  Filler,
+  Tooltip,
+  Legend,
+  ChartOptions
+} from 'chart.js';
+
+// Register Chart.js components
+ChartJS.register(
+  RadialLinearScale,
+  PointElement,
+  LineElement,
+  Filler,
+  Tooltip,
+  Legend
+);
 
 interface RadarChartProps {
   categoryScores: Record<Category, number>;
 }
 
-// This is a placeholder component since Chart.js isn't installed yet
-// In the full implementation, we would:
-// 1. Install dependencies: npm install chart.js react-chartjs-2
-// 2. Import: import { Radar } from 'react-chartjs-2';
-// 3. Implement a proper radar chart with the data
-
 const RadarChart: React.FC<RadarChartProps> = ({ categoryScores }) => {
+  // Prepare data for Chart.js
+  const labels = Object.keys(categoryScores);
+  const scores = Object.values(categoryScores);
+  
+  const chartData = {
+    labels,
+    datasets: [
+      {
+        label: 'Category Scores',
+        data: scores,
+        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+        borderColor: 'rgba(75, 192, 192, 1)',
+        borderWidth: 2,
+        pointBackgroundColor: 'rgba(75, 192, 192, 1)',
+        pointBorderColor: '#fff',
+        pointHoverBackgroundColor: '#fff',
+        pointHoverBorderColor: 'rgba(75, 192, 192, 1)',
+      },
+    ],
+  };
+  
+  const options: ChartOptions<'radar'> = {
+    scales: {
+      r: {
+        min: 0,
+        max: 4,
+        ticks: {
+          stepSize: 1,
+          callback: function(value) {
+            return value.toString();
+          }
+        },
+        pointLabels: {
+          font: {
+            size: 14
+          }
+        }
+      }
+    },
+    plugins: {
+      legend: {
+        display: false
+      },
+      tooltip: {
+        callbacks: {
+          label: function(context) {
+            const label = context.label || '';
+            const value = context.raw !== undefined ? Number(context.raw) : 0;
+            return `${label}: ${value.toFixed(1)}/4.0`;
+          }
+        }
+      }
+    },
+    maintainAspectRatio: false
+  };
+
   return (
-    <div className="radar-chart-placeholder">
-      <h3>Radar Chart Visualization</h3>
-      <p>In the complete implementation, this would be a radar chart displaying:</p>
-      <ul>
-        {Object.entries(categoryScores).map(([category, score]) => (
-          <li key={category}>
-            {category}: {score.toFixed(1)}
-          </li>
-        ))}
-      </ul>
-      <p className="note">
-        Note: For the MVP, we're using this placeholder. The full implementation 
-        would use Chart.js to render a proper radar chart.
-      </p>
+    <div className="radar-chart">
+      <Radar data={chartData} options={options} height={350} />
     </div>
   );
 };

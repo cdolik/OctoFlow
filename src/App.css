@@ -235,52 +235,24 @@ body {
 }
 
 .results-chart {
-  background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  background-color: #f9f9f9;
+  border-radius: 10px;
   padding: 20px;
   margin-bottom: 30px;
-  min-height: 300px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.chart-placeholder {
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
   text-align: center;
-  color: #586069;
 }
 
-.radar-chart-placeholder {
+.radar-chart {
+  height: 350px;
   width: 100%;
-  padding: 20px;
-  border: 1px dashed #e1e4e8;
-  border-radius: 8px;
+  margin: 0 auto;
+  position: relative;
 }
 
-.radar-chart-placeholder h3 {
-  margin-bottom: 15px;
-  text-align: center;
-}
-
-.radar-chart-placeholder ul {
-  list-style-type: none;
-  margin: 20px 0;
-}
-
-.radar-chart-placeholder li {
-  padding: 8px;
-  background-color: #f6f8fa;
-  margin-bottom: 5px;
-  border-radius: 4px;
-}
-
-.radar-chart-placeholder .note {
-  font-style: italic;
-  font-size: 0.9rem;
-  color: #586069;
-  text-align: center;
-  margin-top: 20px;
+/* Hide the placeholder chart styling as we're using the real chart now */
+.radar-chart-placeholder {
+  display: none;
 }
 
 .category-scores {
@@ -449,5 +421,58 @@ body {
   
   .score-buttons button {
     padding: 15px;
+  }
+}
+
+.feedback-form {
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  margin: 20px 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.feedback-form h3 {
+  color: #24292e;
+  margin-bottom: 10px;
+}
+
+.feedback-form p {
+  color: #586069;
+  margin-bottom: 20px;
+}
+
+.feedback-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.feedback-button {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 16px;
+  background: #f6f8fa;
+  border: 1px solid #e1e4e8;
+  border-radius: 6px;
+  color: #24292e;
+  text-decoration: none;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.feedback-button:hover {
+  background: #e1e4e8;
+  text-decoration: none;
+}
+
+@media (max-width: 768px) {
+  .feedback-buttons {
+    flex-direction: column;
+  }
+  
+  .feedback-button {
+    width: 100%;
+    justify-content: center;
   }
 }

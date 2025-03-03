@@ -3,6 +3,7 @@ import './App.css';
 import StageSelector from './components/StageSelector';
 import AssessmentFlow from './components/AssessmentFlow';
 import ResultsDashboard from './components/ResultsDashboard';
+import FeedbackForm from './components/FeedbackForm';
 import { StartupStage } from './data/questions';
 
 enum AppState {
@@ -99,11 +100,14 @@ function App() {
         )}
         
         {appState === AppState.Results && selectedStage && (
-          <ResultsDashboard 
-            stage={selectedStage}
-            responses={responses}
-            onReset={handleReset}
-          />
+          <>
+            <ResultsDashboard 
+              stage={selectedStage}
+              responses={responses}
+              onReset={handleReset}
+            />
+            <FeedbackForm />
+          </>
         )}
       </main>
       
