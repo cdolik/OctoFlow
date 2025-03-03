@@ -1,0 +1,29 @@
+{
+  "files": {
+    "main.css": "/OctoFlow/static/css/main.dacf9002.chunk.css",
+    "main.js": "/OctoFlow/static/js/main.70bc8baf.chunk.js",
+    "main.js.map": "/OctoFlow/static/js/main.70bc8baf.chunk.js.map",
+    "runtime-main.js": "/OctoFlow/static/js/runtime-main.b2d055b5.js",
+    "runtime-main.js.map": "/OctoFlow/static/js/runtime-main.b2d055b5.js.map",
+    "static/js/2.5fdc55ca.chunk.js": "/OctoFlow/static/js/2.5fdc55ca.chunk.js",
+    "static/js/2.5fdc55ca.chunk.js.map": "/OctoFlow/static/js/2.5fdc55ca.chunk.js.map",
+    "static/js/3.5933ef8e.chunk.js": "/OctoFlow/static/js/3.5933ef8e.chunk.js",
+    "static/js/3.5933ef8e.chunk.js.map": "/OctoFlow/static/js/3.5933ef8e.chunk.js.map",
+    "static/js/4.beba94aa.chunk.js": "/OctoFlow/static/js/4.beba94aa.chunk.js",
+    "static/js/4.beba94aa.chunk.js.map": "/OctoFlow/static/js/4.beba94aa.chunk.js.map",
+    "static/js/5.d386966a.chunk.js": "/OctoFlow/static/js/5.d386966a.chunk.js",
+    "static/js/5.d386966a.chunk.js.map": "/OctoFlow/static/js/5.d386966a.chunk.js.map",
+    "index.html": "/OctoFlow/index.html",
+    "precache-manifest.e89e5d8ba8789da041b34f77c09cca2b.js": "/OctoFlow/precache-manifest.e89e5d8ba8789da041b34f77c09cca2b.js",
+    "service-worker.js": "/OctoFlow/service-worker.js",
+    "static/css/main.dacf9002.chunk.css.map": "/OctoFlow/static/css/main.dacf9002.chunk.css.map",
+    "static/js/2.5fdc55ca.chunk.js.LICENSE.txt": "/OctoFlow/static/js/2.5fdc55ca.chunk.js.LICENSE.txt",
+    "static/js/3.5933ef8e.chunk.js.LICENSE.txt": "/OctoFlow/static/js/3.5933ef8e.chunk.js.LICENSE.txt"
+  },
+  "entrypoints": [
+    "static/js/runtime-main.b2d055b5.js",
+    "static/js/2.5fdc55ca.chunk.js",
+    "static/css/main.dacf9002.chunk.css",
+    "static/js/main.70bc8baf.chunk.js"
+  ]
+}
