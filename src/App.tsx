@@ -168,9 +168,20 @@ function AppContent() {
 
 function App() {
   return (
-    <GitHubProvider>
-      <AppContent />
-    </GitHubProvider>
+    <div className="App">
+      <header className="App-header">
+        <img src={`${process.env.PUBLIC_URL}/logo.png`} className="App-logo" alt="logo" />
+        <h1>OctoFlow</h1>
+      </header>
+      <div className="App-content">
+        <GitHubProvider>
+          <AppContent />
+        </GitHubProvider>
+      </div>
+      <footer className="App-footer">
+        <p>OctoFlow &copy; {new Date().getFullYear()} - GitHub Best Practices for Startups</p>
+      </footer>
+    </div>
   );
 }
 

@@ -18,7 +18,7 @@ import {
 } from '../types/github';
 
 // Base URL for API requests
-const BASE_URL = 'http://localhost:5001/github';
+const BASE_URL = 'https://api.github.com';
 
 // Token management
 const TOKEN_STORAGE_KEY = 'github_token';
@@ -51,7 +51,7 @@ export const fetchFromGitHub = async <T>(endpoint: string, params: Record<string
   const token = getGitHubToken();
   
   if (!token) {
-    throw new Error('GitHub token not found');
+    throw new Error('GitHub token is required');
   }
   
   // Convert params to query string
@@ -62,16 +62,19 @@ export const fetchFromGitHub = async <T>(endpoint: string, params: Record<string
     method: 'GET',
     headers: {
       'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
+      'Accept': 'application/vnd.github.v3+json',
+      'User-Agent': 'OctoFlow-App'
     }
   });
   
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || `GitHub API error: ${response.status}`);
+    const errorData = await response.json().catch(() => null);
+    throw new Error(
+      errorData?.message || `GitHub API error: ${response.status} ${response.statusText}`
+    );
   }
   
-  return response.json() as Promise<T>;
+  return response.json();
 };
 
 /**
@@ -81,7 +84,7 @@ export const postToGitHub = async <T>(endpoint: string, data: unknown): Promise<
   const token = getGitHubToken();
   
   if (!token) {
-    throw new Error('GitHub token not found');
+    throw new Error('GitHub token is required');
   }
   
   const url = `${BASE_URL}/${endpoint}`;
@@ -90,17 +93,21 @@ export const postToGitHub = async <T>(endpoint: string, data: unknown): Promise<
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
+      'Accept': 'application/vnd.github.v3+json',
+      'Content-Type': 'application/json',
+      'User-Agent': 'OctoFlow-App'
     },
     body: JSON.stringify(data)
   });
   
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || `GitHub API error: ${response.status}`);
+    const errorData = await response.json().catch(() => null);
+    throw new Error(
+      errorData?.message || `GitHub API error: ${response.status} ${response.statusText}`
+    );
   }
   
-  return response.json() as Promise<T>;
+  return response.json();
 };
 
 /**
