@@ -12,7 +12,11 @@
     "@types/node": "^16.18.126",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
+    "axios": "^1.8.1",
     "chart.js": "^3.9.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
     "framer-motion": "^12.4.10",
     "html2canvas": "^1.4.1",
     "jspdf": "^3.0.0",
@@ -29,7 +33,9 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d build -b gh-pages -m 'Deploy OctoFlow to GitHub Pages'"
+    "deploy": "gh-pages -d build -b gh-pages -m 'Deploy OctoFlow to GitHub Pages'",
+    "server": "node server.js",
+    "dev": "concurrently \"npm run server\" \"npm run start\""
   },
   "eslintConfig": {
     "extends": [
@@ -52,6 +58,12 @@
   "devDependencies": {
     "ajv": "^8.17.1",
     "ajv-keywords": "^5.1.0",
+    "concurrently": "^9.1.2",
     "gh-pages": "^6.3.0"
-  }
+  },
+  "description": "A stage-specific self-assessment tool for startup engineering teams to evaluate GitHub practices and workflows.",
+  "main": ".eslintrc.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
 }

@@ -4,18 +4,24 @@ import StageSelector from './components/StageSelector';
 import AssessmentFlow from './components/AssessmentFlow';
 import ResultsDashboard from './components/ResultsDashboard';
 import FeedbackForm from './components/FeedbackForm';
+import GitHubLogin from './components/GitHubLogin';
+import GitHubDashboard from './components/GitHubDashboard';
+import { GitHubProvider, useGitHub } from './contexts/GitHubContext';
 import { StartupStage } from './data/questions';
+import { GitHubUser } from './types/github';
 
 enum AppState {
   StageSelection,
   Assessment,
-  Results
+  Results,
+  GitHubData
 }
 
-function App() {
+function AppContent() {
   const [appState, setAppState] = useState<AppState>(AppState.StageSelection);
   const [selectedStage, setSelectedStage] = useState<StartupStage | null>(null);
   const [responses, setResponses] = useState<Record<string, number>>({});
+  const { isAuthenticated, loading, login } = useGitHub();
   
   // Check if we have any saved state in sessionStorage
   useEffect(() => {
@@ -76,14 +82,46 @@ function App() {
       setAppState(AppState.StageSelection);
     } else if (appState === AppState.Results) {
       setAppState(AppState.Assessment);
+    } else if (appState === AppState.GitHubData) {
+      setAppState(AppState.Results);
     }
   };
+
+  const handleGitHubNav = () => {
+    setAppState(AppState.GitHubData);
+  };
+
+  const handleLoginSuccess = (userData: GitHubUser) => {
+    login(userData);
+  };
+  
+  if (loading) {
+    return <div className="loading">Loading...</div>;
+  }
   
   return (
     <div className="app-container">
       <header className="app-header">
         <h1>OctoFlow</h1>
         <p>GitHub Practices Assessment for Startups</p>
+        
+        <nav className="app-nav">
+          {appState !== AppState.StageSelection && (
+            <button onClick={handleBack} className="nav-button">
+              <i className="fas fa-arrow-left"></i> Back
+            </button>
+          )}
+          
+          {appState === AppState.Results && (
+            <button onClick={handleGitHubNav} className="nav-button github-button">
+              {isAuthenticated ? (
+                <><i className="fab fa-github"></i> View GitHub Data</>
+              ) : (
+                <><i className="fab fa-github"></i> Connect GitHub</>
+              )}
+            </button>
+          )}
+        </nav>
       </header>
       
       <main className="app-content">
@@ -109,12 +147,30 @@ function App() {
             <FeedbackForm />
           </>
         )}
+
+        {appState === AppState.GitHubData && (
+          <div className="github-container">
+            {!isAuthenticated ? (
+              <GitHubLogin onLoginSuccess={handleLoginSuccess} />
+            ) : (
+              <GitHubDashboard />
+            )}
+          </div>
+        )}
       </main>
       
       <footer className="app-footer">
         <p>OctoFlow - GitHub Practices Assessment Tool © {new Date().getFullYear()}</p>
       </footer>
     </div>
+  );
+}
+
+function App() {
+  return (
+    <GitHubProvider>
+      <AppContent />
+    </GitHubProvider>
   );
 }
 

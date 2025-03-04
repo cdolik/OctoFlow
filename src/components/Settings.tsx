@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { getUserSettings, saveUserSettings, clearAssessmentHistory } from '../utils/storage';
+import { getUserSettings, clearAssessmentHistory } from '../utils/storage';
 
 interface SettingsProps {
   onClose: () => void;

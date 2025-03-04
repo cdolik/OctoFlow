@@ -1998,3 +1998,631 @@ body {
     right: var(--spacing-md);
   }
 }
+
+/* GitHub Login Component Styles */
+.github-login {
+  max-width: 600px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background-color: var(--surface-color);
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.github-login h2 {
+  margin-top: 0;
+  color: var(--primary-color);
+  margin-bottom: 1rem;
+}
+
+.github-login p {
+  margin-bottom: 1.5rem;
+  color: var(--text-color);
+  line-height: 1.5;
+}
+
+.github-login .form-group {
+  margin-bottom: 1.5rem;
+}
+
+.github-login label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.github-login input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 1rem;
+  background-color: var(--input-bg);
+  color: var(--text-color);
+}
+
+.github-login input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(var(--primary-rgb), 0.2);
+}
+
+.github-login small {
+  display: block;
+  margin-top: 0.5rem;
+  color: var(--text-secondary);
+}
+
+.github-login small a {
+  color: var(--primary-color);
+  text-decoration: none;
+}
+
+.github-login small a:hover {
+  text-decoration: underline;
+}
+
+.github-login small code {
+  background-color: var(--code-bg);
+  padding: 0.2rem 0.4rem;
+  border-radius: 3px;
+  font-size: 0.85em;
+}
+
+.github-login .error-message {
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  background-color: var(--danger-light);
+  color: var(--danger-color);
+  border-radius: 4px;
+  border-left: 4px solid var(--danger-color);
+}
+
+.github-login .primary-button {
+  width: 100%;
+  padding: 0.75rem 1.5rem;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.github-login .primary-button:hover {
+  background-color: var(--primary-dark);
+}
+
+.github-login .primary-button:disabled {
+  background-color: var(--disabled-color);
+  cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+  .github-login {
+    padding: 1.5rem;
+    margin: 1rem;
+  }
+}
+
+/* GitHub Dashboard Styles */
+.github-dashboard {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+}
+
+.user-avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  margin-right: 1rem;
+}
+
+.user-details h2 {
+  margin: 0 0 0.25rem 0;
+  color: var(--text-color);
+}
+
+.username {
+  margin: 0 0 0.5rem 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.user-bio {
+  margin: 0.5rem 0 0 0;
+  color: var(--text-color);
+  font-size: 0.9rem;
+  max-width: 500px;
+}
+
+.logout-button {
+  padding: 0.5rem 1rem;
+  background-color: transparent;
+  color: var(--danger-color);
+  border: 1px solid var(--danger-color);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.logout-button:hover {
+  background-color: var(--danger-color);
+  color: white;
+}
+
+.dashboard-tabs {
+  display: flex;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.tab-button {
+  padding: 0.75rem 1.25rem;
+  background-color: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-secondary);
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tab-button:hover {
+  color: var(--primary-color);
+}
+
+.tab-button.active {
+  color: var(--primary-color);
+  border-bottom: 2px solid var(--primary-color);
+}
+
+.tab-button:disabled {
+  color: var(--disabled-color);
+  cursor: not-allowed;
+}
+
+.org-selector {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.org-selector label {
+  margin-right: 0.75rem;
+  font-weight: 500;
+}
+
+.org-selector select {
+  padding: 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background-color: var(--input-bg);
+  color: var(--text-color);
+  font-size: 0.9rem;
+}
+
+.repositories-list h3 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+}
+
+.repo-count {
+  margin-left: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  font-weight: normal;
+}
+
+.no-repos {
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.repo-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.repo-item {
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+  background-color: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.repo-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.repo-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.75rem;
+}
+
+.repo-name {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.repo-name a {
+  color: var(--primary-color);
+  text-decoration: none;
+}
+
+.repo-name a:hover {
+  text-decoration: underline;
+}
+
+.repo-stats {
+  display: flex;
+  align-items: center;
+}
+
+.repo-stat {
+  display: flex;
+  align-items: center;
+  margin-left: 1rem;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.repo-stat i {
+  margin-right: 0.25rem;
+}
+
+.repo-description {
+  margin: 0.5rem 0 1rem;
+  color: var(--text-color);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.repo-meta {
+  display: flex;
+  align-items: center;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.repo-language {
+  display: flex;
+  align-items: center;
+  margin-right: 1.5rem;
+}
+
+.language-color {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: 0.4rem;
+}
+
+.repo-updated {
+  font-size: 0.85rem;
+}
+
+.loading {
+  text-align: center;
+  padding: 2rem;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.error-container {
+  text-align: center;
+  padding: 2rem;
+}
+
+.error-message {
+  color: var(--danger-color);
+  margin-bottom: 1rem;
+}
+
+.retry-button {
+  padding: 0.5rem 1.5rem;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.retry-button:hover {
+  background-color: var(--primary-dark);
+}
+
+@media (max-width: 768px) {
+  .dashboard-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .user-info {
+    margin-bottom: 1rem;
+  }
+  
+  .repo-header {
+    flex-direction: column;
+  }
+  
+  .repo-stats {
+    margin-top: 0.5rem;
+  }
+  
+  .repo-stat {
+    margin-left: 0;
+    margin-right: 1rem;
+  }
+}
+
+/* App Navigation Styles */
+.app-nav {
+  display: flex;
+  margin-top: 1rem;
+}
+
+.nav-button {
+  padding: 0.5rem 1rem;
+  margin-right: 0.5rem;
+  background-color: var(--surface-color);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.nav-button:hover {
+  background-color: var(--hover-color);
+}
+
+.nav-button.github-button {
+  background-color: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+}
+
+.nav-button.github-button:hover {
+  background-color: var(--primary-dark);
+}
+
+.github-container {
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .app-nav {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .nav-button {
+    margin-bottom: 0.5rem;
+    width: 100%;
+  }
+}
+
+/* Repository Analysis Styles */
+.repository-analysis {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem;
+  background-color: var(--surface-color);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.analysis-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.analysis-header h2 {
+  margin: 0;
+  color: var(--text-color);
+}
+
+.close-button {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  line-height: 1;
+}
+
+.close-button:hover {
+  color: var(--danger-color);
+}
+
+.overall-score {
+  display: flex;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background-color: var(--background-color);
+  border-radius: 8px;
+}
+
+.score-circle {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  border: 6px solid;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  margin-right: 1.5rem;
+  background-color: var(--surface-color);
+}
+
+.score-value {
+  font-size: 2rem;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.score-label {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-top: 0.25rem;
+}
+
+.score-summary {
+  flex: 1;
+}
+
+.score-summary p {
+  margin: 0;
+  font-size: 1.1rem;
+  line-height: 1.5;
+}
+
+.analysis-results {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.analysis-category {
+  padding: 1.5rem;
+  background-color: var(--background-color);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.category-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.category-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.category-score {
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+.category-details {
+  margin-bottom: 1rem;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.recommendations h4 {
+  margin-top: 0;
+  margin-bottom: 0.75rem;
+  font-size: 1rem;
+}
+
+.recommendations ul {
+  margin: 0;
+  padding-left: 1.5rem;
+}
+
+.recommendations li {
+  margin-bottom: 0.5rem;
+  line-height: 1.4;
+}
+
+.analysis-actions {
+  display: flex;
+  justify-content: center;
+}
+
+.analysis-actions .primary-button {
+  padding: 0.75rem 2rem;
+  font-size: 1rem;
+}
+
+@media (max-width: 768px) {
+  .repository-analysis {
+    padding: 1.5rem;
+  }
+  
+  .overall-score {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .score-circle {
+    margin-right: 0;
+    margin-bottom: 1rem;
+  }
+  
+  .analysis-results {
+    grid-template-columns: 1fr;
+  }
+}
+
+.repo-actions {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.analyze-button {
+  padding: 0.5rem 1rem;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.analyze-button:hover {
+  background-color: var(--primary-dark);
+}
+
+@media (max-width: 768px) {
+  .repo-actions {
+    justify-content: center;
+  }
+  
+  .analyze-button {
+    width: 100%;
+    padding: 0.75rem;
+  }
+}
