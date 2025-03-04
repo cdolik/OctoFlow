@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { 
   getRepositoryDetails, 
-  getRepositoryWorkflows, 
-  getRepositoryTopics 
+  getRepositoryTopics,
+  getRepositoryWorkflows
 } from '../services/githubApi';
-import { GitHubRepository, GitHubWorkflowsResponse, GitHubTopicsResponse } from '../types/github';
+import { GitHubRepository, GitHubWorkflowsResponse } from '../types/github';
 
 interface RepositoryAnalysisProps {
   repoOwner: string;
@@ -84,7 +84,7 @@ const RepositoryAnalysis: React.FC<RepositoryAnalysisProps> = ({
       category: 'Documentation',
       score: docsScore,
       recommendations: getDocsRecommendations(docsScore),
-      details: `README: ${repoDetails.has_readme ? 'Yes' : 'No'}, Wiki: ${repoDetails.has_wiki ? 'Enabled' : 'Disabled'}`
+      details: `README: ${repoDetails?.has_readme ? 'Yes' : 'No'}, Wiki: ${repoDetails?.has_wiki ? 'Enabled' : 'Disabled'}`
     });
     totalScore += docsScore;
     
@@ -94,7 +94,7 @@ const RepositoryAnalysis: React.FC<RepositoryAnalysisProps> = ({
       category: 'Security',
       score: securityScore,
       recommendations: getSecurityRecommendations(securityScore),
-      details: `Security policy: ${repoDetails.security_and_analysis?.secret_scanning?.status === 'enabled' ? 'Enabled' : 'Not enabled'}`
+      details: `Security policy: ${repoDetails?.security_and_analysis?.secret_scanning?.status === 'enabled' ? 'Enabled' : 'Not enabled'}`
     });
     totalScore += securityScore;
     
@@ -104,7 +104,7 @@ const RepositoryAnalysis: React.FC<RepositoryAnalysisProps> = ({
       category: 'Community',
       score: communityScore,
       recommendations: getCommunityRecommendations(communityScore),
-      details: `Issues: ${repoDetails.has_issues ? 'Enabled' : 'Disabled'}, Topics: ${topics.length}`
+      details: `Issues: ${repoDetails?.has_issues ? 'Enabled' : 'Disabled'}, Topics: ${topics.length}`
     });
     totalScore += communityScore;
     
@@ -122,23 +122,23 @@ const RepositoryAnalysis: React.FC<RepositoryAnalysisProps> = ({
   
   const calculateDocsScore = (): number => {
     let score = 1;
-    if (repoDetails.has_readme) score += 1;
-    if (repoDetails.has_wiki) score += 0.5;
-    if (repoDetails.description && repoDetails.description.length > 20) score += 0.5;
+    if (repoDetails?.has_readme) score += 1;
+    if (repoDetails?.has_wiki) score += 0.5;
+    if (repoDetails?.description && repoDetails.description.length > 20) score += 0.5;
     return Math.min(score, 3);
   };
   
   const calculateSecurityScore = (): number => {
     let score = 1;
-    if (repoDetails.security_and_analysis?.secret_scanning?.status === 'enabled') score += 1;
-    if (repoDetails.security_and_analysis?.advanced_security?.status === 'enabled') score += 1;
+    if (repoDetails?.security_and_analysis?.secret_scanning?.status === 'enabled') score += 1;
+    if (repoDetails?.security_and_analysis?.advanced_security?.status === 'enabled') score += 1;
     return score;
   };
   
   const calculateCommunityScore = (): number => {
     let score = 1;
-    if (repoDetails.has_issues) score += 0.5;
-    if (repoDetails.has_projects) score += 0.5;
+    if (repoDetails?.has_issues) score += 0.5;
+    if (repoDetails?.has_projects) score += 0.5;
     if (topics.length >= 3) score += 1;
     return Math.min(score, 3);
   };

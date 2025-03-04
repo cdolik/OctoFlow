@@ -17,7 +17,8 @@ import {
   GitHubTopicsResponse
 } from '../types/github';
 
-const API_BASE_URL = 'http://localhost:5000/github';
+// Base URL for API requests
+const BASE_URL = 'http://localhost:5001/github';
 
 // Token management
 const TOKEN_STORAGE_KEY = 'github_token';
@@ -55,7 +56,7 @@ export const fetchFromGitHub = async <T>(endpoint: string, params: Record<string
   
   // Convert params to query string
   const queryParams = new URLSearchParams(params).toString();
-  const url = `${API_BASE_URL}/${endpoint}${queryParams ? `?${queryParams}` : ''}`;
+  const url = `${BASE_URL}/${endpoint}${queryParams ? `?${queryParams}` : ''}`;
   
   const response = await fetch(url, {
     method: 'GET',
@@ -83,7 +84,7 @@ export const postToGitHub = async <T>(endpoint: string, data: unknown): Promise<
     throw new Error('GitHub token not found');
   }
   
-  const url = `${API_BASE_URL}/${endpoint}`;
+  const url = `${BASE_URL}/${endpoint}`;
   
   const response = await fetch(url, {
     method: 'POST',

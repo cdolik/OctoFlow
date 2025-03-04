@@ -44,6 +44,7 @@ export interface GitHubRepository {
   has_pages: boolean;
   has_projects: boolean;
   has_downloads: boolean;
+  has_readme?: boolean;
   archived: boolean;
   disabled: boolean;
   visibility: string;
