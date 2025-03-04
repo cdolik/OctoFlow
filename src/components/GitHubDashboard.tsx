@@ -6,6 +6,7 @@ import {
   getUserOrganizations
 } from '../services/githubApi';
 import RepositoryAnalysis from './RepositoryAnalysis';
+import RepositoryTrends from './RepositoryTrends';
 import { GitHubRepository, GitHubOrganization } from '../types/github';
 
 const GitHubDashboard: React.FC = () => {
@@ -17,6 +18,8 @@ const GitHubDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'personal' | 'org'>('personal');
   const [selectedOrg, setSelectedOrg] = useState<string | null>(null);
   const [selectedRepo, setSelectedRepo] = useState<{owner: string, name: string} | null>(null);
+  const [showAnalysis, setShowAnalysis] = useState(false);
+  const [showTrends, setShowTrends] = useState(false);
 
   // Fetch user's repositories and organizations on component mount
   useEffect(() => {
@@ -107,6 +110,15 @@ const GitHubDashboard: React.FC = () => {
   // Close repository analysis
   const handleCloseAnalysis = () => {
     setSelectedRepo(null);
+  };
+
+  const handleViewTrends = (owner: string, name: string) => {
+    setSelectedRepo({ owner, name });
+    setShowTrends(true);
+  };
+
+  const handleCloseTrends = () => {
+    setShowTrends(false);
   };
 
   if (loading && repositories.length === 0) {
@@ -251,13 +263,31 @@ const GitHubDashboard: React.FC = () => {
                       className="analyze-button"
                       onClick={() => handleAnalyzeRepo(repo.owner.login, repo.name)}
                     >
-                      <i className="fas fa-chart-line"></i> Analyze Repository
+                      Analyze Repository
+                    </button>
+                    <button 
+                      className="trends-button"
+                      onClick={() => handleViewTrends(repo.owner.login, repo.name)}
+                    >
+                      View Trends
                     </button>
                   </div>
                 </li>
               ))}
             </ul>
           )}
+        </div>
+      )}
+
+      {showTrends && selectedRepo && (
+        <div className="modal-backdrop">
+          <div className="modal-content">
+            <button className="close-button" onClick={handleCloseTrends}>×</button>
+            <RepositoryTrends 
+              repoOwner={selectedRepo.owner} 
+              repoName={selectedRepo.name} 
+            />
+          </div>
         </div>
       )}
     </div>

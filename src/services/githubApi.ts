@@ -44,6 +44,41 @@ export const clearGitHubToken = (): void => {
   localStorage.removeItem(TOKEN_STORAGE_KEY);
 };
 
+// Helper function to handle API errors
+const handleGitHubError = (error: any, actionDescription: string): Error => {
+  console.error(`GitHub API Error (${actionDescription}):`, error);
+  
+  // Check if it's a response error
+  if (error.response) {
+    const status = error.response.status;
+    
+    // Handle specific status codes
+    switch (status) {
+      case 401:
+        return new Error('Authentication failed. Please check your GitHub token and try again.');
+      case 403:
+        if (error.response.headers['x-ratelimit-remaining'] === '0') {
+          return new Error('GitHub API rate limit exceeded. Please try again later.');
+        }
+        return new Error('Access forbidden. You may not have permission to perform this action.');
+      case 404:
+        return new Error('Resource not found. The repository or data you requested doesn\'t exist.');
+      case 422:
+        return new Error('Invalid request. Please check your inputs and try again.');
+      default:
+        return new Error(`GitHub API error (${status}): ${error.response.data?.message || 'Unknown error'}`);
+    }
+  }
+  
+  // Network or other errors
+  if (error.request) {
+    return new Error('Network error. Please check your internet connection and try again.');
+  }
+  
+  // Default fallback
+  return new Error(`Error ${actionDescription}: ${error.message || 'Unknown error'}`);
+};
+
 /**
  * Make a GET request to the GitHub API
  */
@@ -58,23 +93,31 @@ export const fetchFromGitHub = async <T>(endpoint: string, params: Record<string
   const queryParams = new URLSearchParams(params).toString();
   const url = `${BASE_URL}/${endpoint}${queryParams ? `?${queryParams}` : ''}`;
   
-  const response = await fetch(url, {
-    method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Accept': 'application/vnd.github.v3+json',
-      'User-Agent': 'OctoFlow-App'
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/vnd.github.v3+json',
+        'User-Agent': 'OctoFlow-App'
+      }
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null);
+      throw { 
+        response: {
+          status: response.status,
+          data: errorData,
+          statusText: response.statusText
+        }
+      };
     }
-  });
-  
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => null);
-    throw new Error(
-      errorData?.message || `GitHub API error: ${response.status} ${response.statusText}`
-    );
+    
+    return response.json();
+  } catch (error) {
+    throw handleGitHubError(error, `fetching ${endpoint}`);
   }
-  
-  return response.json();
 };
 
 /**
@@ -89,25 +132,33 @@ export const postToGitHub = async <T>(endpoint: string, data: unknown): Promise<
   
   const url = `${BASE_URL}/${endpoint}`;
   
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Accept': 'application/vnd.github.v3+json',
-      'Content-Type': 'application/json',
-      'User-Agent': 'OctoFlow-App'
-    },
-    body: JSON.stringify(data)
-  });
-  
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => null);
-    throw new Error(
-      errorData?.message || `GitHub API error: ${response.status} ${response.statusText}`
-    );
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/vnd.github.v3+json',
+        'Content-Type': 'application/json',
+        'User-Agent': 'OctoFlow-App'
+      },
+      body: JSON.stringify(data)
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null);
+      throw { 
+        response: {
+          status: response.status,
+          data: errorData,
+          statusText: response.statusText
+        }
+      };
+    }
+    
+    return response.json();
+  } catch (error) {
+    throw handleGitHubError(error, `posting to ${endpoint}`);
   }
-  
-  return response.json();
 };
 
 /**
