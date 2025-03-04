@@ -103,7 +103,7 @@ export const calculateEligibility = (
     }
     
     // Overall eligibility
-    isEligibleForProgram = fundingStageEligible && isNetNew && teamSizeEligible;
+    isEligibleForProgram = Boolean(fundingStageEligible && isNetNew && teamSizeEligible);
   }
   
   // Check GitHub practices scores

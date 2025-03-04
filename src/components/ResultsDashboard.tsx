@@ -234,14 +234,25 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({ stage, responses, o
           )}
           
           {activeTab === 'eligibility' && (
-            <motion.div
-              variants={sectionVariants}
-              initial="hidden"
-              animate="visible"
-              transition={{ delay: 0.1 }}
-            >
-              <EligibilityModule categoryScores={categoryScores} companyInfo={companyInfo} />
-            </motion.div>
+            <>
+              <motion.div
+                variants={sectionVariants}
+                initial="hidden"
+                animate="visible"
+                transition={{ delay: 0.1 }}
+              >
+                <EligibilityModule categoryScores={categoryScores} companyInfo={companyInfo} />
+              </motion.div>
+              
+              <motion.div
+                variants={sectionVariants}
+                initial="hidden"
+                animate="visible"
+                transition={{ delay: 0.2 }}
+              >
+                <ImprovementRoadmap categoryScores={categoryScores} companyInfo={companyInfo} />
+              </motion.div>
+            </>
           )}
           
           {activeTab === 'badge' && (

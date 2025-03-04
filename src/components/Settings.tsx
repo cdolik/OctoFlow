@@ -90,17 +90,6 @@ const Settings: React.FC<SettingsProps> = ({
     }
   };
 
-  // Save settings
-  const handleSave = () => {
-    saveUserSettings(settings);
-    setSaveSuccess(true);
-    
-    // Hide success message after a delay
-    setTimeout(() => {
-      setSaveSuccess(false);
-    }, 2000);
-  };
-
   // Clear history with confirmation
   const handleClearHistory = () => {
     if (showConfirmClear) {
@@ -124,21 +113,26 @@ const Settings: React.FC<SettingsProps> = ({
       notificationsEnabled
     };
     
-    localStorage.setItem('octoflow_settings', JSON.stringify(settings));
+    localStorage.setItem('userSettings', JSON.stringify(settings));
     
-    // Update company info if the callback is provided
+    // Update company info if callback is provided
     if (onCompanyInfoUpdate) {
       onCompanyInfoUpdate({
         employeeCount,
         devCount,
-        fundingStage: fundingStage || undefined,
+        fundingStage,
         usingGitHubEnterprise,
         usingAdvancedSecurity,
-        timeWithGitHub: timeWithGitHub || undefined
+        timeWithGitHub
       });
     }
     
-    onClose();
+    setSaveSuccess(true);
+    
+    // Hide success message after a delay
+    setTimeout(() => {
+      setSaveSuccess(false);
+    }, 3000);
   };
 
   // Handle employee count change

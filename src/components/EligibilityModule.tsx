@@ -258,7 +258,7 @@ const EligibilityModule: React.FC<EligibilityModuleProps> = ({ categoryScores, c
         <div className="eligibility-cta">
           <h4>Ready to apply for GitHub for Startups?</h4>
           <p>
-            If you're eligible, take the next step and apply for the GitHub for Startups program to access
+            If you&apos;re eligible, take the next step and apply for the GitHub for Startups program to access
             exclusive benefits for your startup.
           </p>
           <div className="cta-buttons">

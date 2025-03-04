@@ -36,12 +36,8 @@ const BadgeGenerator: React.FC<BadgeGeneratorProps> = ({ scores, overallScore })
   // Get eligibility level color
   const getEligibilityColor = (level: EligibilityLevel): string => {
     switch (level) {
-      case EligibilityLevel.HighlyRecommended:
-        return 'brightgreen';
       case EligibilityLevel.Eligible:
         return 'green';
-      case EligibilityLevel.PartiallyEligible:
-        return 'yellow';
       case EligibilityLevel.NotEligible:
         return 'red';
       default:
@@ -104,7 +100,7 @@ const BadgeGenerator: React.FC<BadgeGeneratorProps> = ({ scores, overallScore })
           <select 
             id="badge-variant" 
             value={badgeVariant} 
-            onChange={(e) => setBadgeVariant(e.target.value as any)}
+            onChange={(e) => setBadgeVariant(e.target.value as 'standard' | 'github-startups')}
           >
             <option value="standard">Standard OctoFlow Badge</option>
             <option value="github-startups">GitHub for Startups Eligibility</option>
@@ -116,7 +112,7 @@ const BadgeGenerator: React.FC<BadgeGeneratorProps> = ({ scores, overallScore })
           <select 
             id="badge-style" 
             value={badgeType} 
-            onChange={(e) => setBadgeType(e.target.value as any)}
+            onChange={(e) => setBadgeType(e.target.value as 'flat' | 'plastic' | 'flat-square' | 'for-the-badge')}
           >
             <option value="flat">Flat</option>
             <option value="plastic">Plastic</option>
@@ -183,7 +179,7 @@ const BadgeGenerator: React.FC<BadgeGeneratorProps> = ({ scores, overallScore })
           <>
             <p>
               This badge displays your eligibility status for the GitHub for Startups program.
-              It shows potential collaborators and users that you've been assessed for the program
+              It shows potential collaborators and users that you&apos;ve been assessed for the program
               and your current eligibility level.
             </p>
             <p>
@@ -194,8 +190,8 @@ const BadgeGenerator: React.FC<BadgeGeneratorProps> = ({ scores, overallScore })
         ) : (
           <>
             <p>
-              This badge indicates that your repository has been assessed using OctoFlow's GitHub workflow evaluation.
-              It doesn't display specific scores but serves as a reference that you've completed the assessment and
+              This badge indicates that your repository has been assessed using OctoFlow&apos;s GitHub workflow evaluation.
+              It doesn&apos;t display specific scores but serves as a reference that you&apos;ve completed the assessment and
               are working on implementing GitHub best practices.
             </p>
             <p>
