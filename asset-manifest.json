@@ -1,20 +1,21 @@
 {
   "files": {
-    "main.css": "/OctoFlow/static/css/main.49a65730.css",
-    "main.js": "/OctoFlow/static/js/main.d8e222a5.js",
+    "main.css": "/OctoFlow/static/css/main.f17afa19.css",
+    "main.js": "/OctoFlow/static/js/main.3d83bec9.js",
     "static/js/629.d44898a9.chunk.js": "/OctoFlow/static/js/629.d44898a9.chunk.js",
     "static/js/977.f9c2f16c.chunk.js": "/OctoFlow/static/js/977.f9c2f16c.chunk.js",
     "static/js/732.30e86816.chunk.js": "/OctoFlow/static/js/732.30e86816.chunk.js",
     "static/js/453.fe56f76c.chunk.js": "/OctoFlow/static/js/453.fe56f76c.chunk.js",
+    "static/media/github-logo.svg": "/OctoFlow/static/media/github-logo.eb1ef2a39568b3464913628b8e53dee9.svg",
     "index.html": "/OctoFlow/index.html",
-    "main.49a65730.css.map": "/OctoFlow/static/css/main.49a65730.css.map",
-    "main.d8e222a5.js.map": "/OctoFlow/static/js/main.d8e222a5.js.map",
+    "main.f17afa19.css.map": "/OctoFlow/static/css/main.f17afa19.css.map",
+    "main.3d83bec9.js.map": "/OctoFlow/static/js/main.3d83bec9.js.map",
     "629.d44898a9.chunk.js.map": "/OctoFlow/static/js/629.d44898a9.chunk.js.map",
     "732.30e86816.chunk.js.map": "/OctoFlow/static/js/732.30e86816.chunk.js.map",
     "453.fe56f76c.chunk.js.map": "/OctoFlow/static/js/453.fe56f76c.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.49a65730.css",
-    "static/js/main.d8e222a5.js"
+    "static/css/main.f17afa19.css",
+    "static/js/main.3d83bec9.js"
   ]
 }
