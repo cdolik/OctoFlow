@@ -23,6 +23,10 @@ body {
   color: white;
   padding: 20px;
   text-align: center;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
 .app-header h1 {
@@ -2367,4 +2371,80 @@ body {
   color: #cb2431;
 }
 
-/* ... more existing styles ... */
+/* Logo and Header Styles */
+.logo-container {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.github-logo {
+  width: 40px;
+  height: 40px;
+  margin-right: 10px;
+}
+
+.unofficial-badge {
+  background-color: #f9826c;
+  color: #24292e;
+  font-size: 0.7rem;
+  font-weight: bold;
+  padding: 3px 6px;
+  border-radius: 4px;
+  position: absolute;
+  top: -10px;
+  right: -10px;
+}
+
+.disclaimer-banner {
+  background-color: #f9826c;
+  color: #24292e;
+  padding: 5px 10px;
+  font-size: 0.8rem;
+  width: 100%;
+  text-align: center;
+  margin-top: 10px;
+}
+
+.nav-toggle {
+  display: none;
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  .nav-toggle {
+    display: block;
+  }
+  
+  .app-nav {
+    display: none;
+  }
+  
+  .app-nav.open {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    margin-top: 10px;
+  }
+  
+  .app-header {
+    flex-direction: column;
+  }
+  
+  .logo-container {
+    margin-bottom: 10px;
+  }
+}
+
+/* App Header Styles */
+.App-header {
+  background-color: #24292e;
+  color: white;
+  padding: 20px;
+  text-align: center;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  position: relative;
+}

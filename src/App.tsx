@@ -1,37 +1,42 @@
 import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Link, useNavigate, Navigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import axios from 'axios';
+import { FiMenu, FiX, FiGithub, FiInfo, FiSettings, FiLogOut, FiUser } from 'react-icons/fi';
 import './App.css';
 import StageSelector from './components/StageSelector';
 import AssessmentFlow from './components/AssessmentFlow';
 import ResultsDashboard from './components/ResultsDashboard';
 import FeedbackForm from './components/FeedbackForm';
 import GitHubLogin from './components/GitHubLogin';
+import GitHubOAuth from './components/GitHubOAuth';
 import GitHubDashboard from './components/GitHubDashboard';
 import { GitHubProvider, useGitHub } from './contexts/GitHubContext';
 import { StartupStage } from './data/questions';
 import { GitHubUser } from './types/github';
+import './styles/GitHubOAuth.css';
+import { GITHUB_CLIENT_ID, APP_DISCLAIMER } from './config';
+// Import the GitHub logo
+import logo from './assets/github-logo.svg';
 
-enum AppState {
-  StageSelection,
-  Assessment,
-  Results,
-  GitHubData
-}
+// Get the base path for GitHub Pages
+const basePath = process.env.PUBLIC_URL || '';
 
+// Component that wraps our main content and provides access to navigation
 function AppContent() {
-  const [appState, setAppState] = useState<AppState>(AppState.StageSelection);
+  const navigate = useNavigate();
   const [selectedStage, setSelectedStage] = useState<StartupStage | null>(null);
   const [responses, setResponses] = useState<Record<string, number>>({});
   const { isAuthenticated, loading, login } = useGitHub();
+  const [menuOpen, setMenuOpen] = useState(false);
   
   // Check if we have any saved state in sessionStorage
   useEffect(() => {
-    const savedState = sessionStorage.getItem('octoflow-app-state');
     const savedStage = sessionStorage.getItem('octoflow-selected-stage');
     const savedResponses = sessionStorage.getItem('octoflow-responses');
     
-    if (savedState && savedStage) {
+    if (savedStage) {
       try {
-        setAppState(parseInt(savedState, 10));
         setSelectedStage(savedStage as StartupStage);
         
         if (savedResponses) {
@@ -46,23 +51,22 @@ function AppContent() {
   // Save state to sessionStorage when it changes
   useEffect(() => {
     if (selectedStage) {
-      sessionStorage.setItem('octoflow-app-state', appState.toString());
       sessionStorage.setItem('octoflow-selected-stage', selectedStage);
       
       if (Object.keys(responses).length > 0) {
         sessionStorage.setItem('octoflow-responses', JSON.stringify(responses));
       }
     }
-  }, [appState, selectedStage, responses]);
+  }, [selectedStage, responses]);
   
   const handleStageSelect = (stage: StartupStage) => {
     setSelectedStage(stage);
-    setAppState(AppState.Assessment);
+    navigate('/assessment');
   };
   
   const handleAssessmentComplete = (assessmentResponses: Record<string, number>) => {
     setResponses(assessmentResponses);
-    setAppState(AppState.Results);
+    navigate('/results');
   };
   
   const handleReset = () => {
@@ -74,25 +78,16 @@ function AppContent() {
     // Reset state
     setSelectedStage(null);
     setResponses({});
-    setAppState(AppState.StageSelection);
+    navigate('/');
   };
   
   const handleBack = () => {
-    if (appState === AppState.Assessment) {
-      setAppState(AppState.StageSelection);
-    } else if (appState === AppState.Results) {
-      setAppState(AppState.Assessment);
-    } else if (appState === AppState.GitHubData) {
-      setAppState(AppState.Results);
-    }
-  };
-
-  const handleGitHubNav = () => {
-    setAppState(AppState.GitHubData);
+    navigate(-1);
   };
 
   const handleLoginSuccess = (userData: GitHubUser) => {
     login(userData);
+    navigate('/dashboard');
   };
   
   if (loading) {
@@ -102,61 +97,92 @@ function AppContent() {
   return (
     <div className="app-container">
       <header className="app-header">
-        <h1>OctoFlow</h1>
+        <Link to="/" className="app-logo-link">
+          <div className="logo-container">
+            <img src={logo} alt="GitHub Logo" className="github-logo" />
+            <h1>OctoFlow</h1>
+            <div className="unofficial-badge">Unofficial</div>
+          </div>
+        </Link>
         <p>GitHub Practices Assessment for Startups</p>
         
-        <nav className="app-nav">
-          {appState !== AppState.StageSelection && (
-            <button onClick={handleBack} className="nav-button">
-              <i className="fas fa-arrow-left"></i> Back
-            </button>
-          )}
+        <nav className={`app-nav ${menuOpen ? 'open' : ''}`}>
+          <button onClick={handleBack} className="nav-button">
+            <i className="fas fa-arrow-left"></i> Back
+          </button>
           
-          {appState === AppState.Results && (
-            <button onClick={handleGitHubNav} className="nav-button github-button">
-              {isAuthenticated ? (
-                <><i className="fab fa-github"></i> View GitHub Data</>
-              ) : (
-                <><i className="fab fa-github"></i> Connect GitHub</>
-              )}
-            </button>
+          {!isAuthenticated ? (
+            <Link to="/auth" className="nav-button github-button">
+              <i className="fab fa-github"></i> Connect GitHub
+            </Link>
+          ) : (
+            <Link to="/dashboard" className="nav-button github-button">
+              <i className="fab fa-github"></i> GitHub Dashboard
+            </Link>
           )}
         </nav>
+        <div className="nav-toggle" onClick={() => setMenuOpen(!menuOpen)}>
+          {menuOpen ? <FiX size={24} /> : <FiMenu size={24} />}
+        </div>
       </header>
       
       <main className="app-content">
-        {appState === AppState.StageSelection && (
-          <StageSelector onSelectStage={handleStageSelect} />
-        )}
-        
-        {appState === AppState.Assessment && selectedStage && (
-          <AssessmentFlow 
-            stage={selectedStage} 
-            onComplete={handleAssessmentComplete} 
-            onBack={handleBack}
-          />
-        )}
-        
-        {appState === AppState.Results && selectedStage && (
-          <>
-            <ResultsDashboard 
-              stage={selectedStage}
-              responses={responses}
-              onReset={handleReset}
-            />
-            <FeedbackForm />
-          </>
-        )}
+        <Routes>
+          <Route path="/" element={<StageSelector onSelectStage={handleStageSelect} />} />
+          
+          <Route path="/assessment" element={
+            selectedStage ? (
+              <AssessmentFlow 
+                stage={selectedStage} 
+                onComplete={handleAssessmentComplete} 
+                onBack={handleBack}
+              />
+            ) : (
+              <Navigate to="/" replace />
+            )
+          } />
+          
+          <Route path="/results" element={
+            selectedStage ? (
+              <>
+                <ResultsDashboard 
+                  stage={selectedStage}
+                  responses={responses}
+                  onReset={handleReset}
+                />
+                <FeedbackForm />
+              </>
+            ) : (
+              <Navigate to="/" replace />
+            )
+          } />
 
-        {appState === AppState.GitHubData && (
-          <div className="github-container">
-            {!isAuthenticated ? (
+          <Route 
+            path="/auth"
+            element={
+              <GitHubOAuth
+                clientId={GITHUB_CLIENT_ID}
+                onLoginSuccess={handleLoginSuccess}
+              />
+            }
+          />
+          
+          <Route path="/login" element={
+            !isAuthenticated ? (
               <GitHubLogin onLoginSuccess={handleLoginSuccess} />
             ) : (
+              <Navigate to="/dashboard" replace />
+            )
+          } />
+          
+          <Route path="/dashboard" element={
+            isAuthenticated ? (
               <GitHubDashboard />
-            )}
-          </div>
-        )}
+            ) : (
+              <Navigate to="/auth" replace />
+            )
+          } />
+        </Routes>
       </main>
       
       <footer className="app-footer">
@@ -167,21 +193,29 @@ function AppContent() {
 }
 
 function App() {
+  const [menuOpen, setMenuOpen] = useState(false);
+  
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={`${process.env.PUBLIC_URL}/logo.png`} className="App-logo" alt="logo" />
-        <h1>OctoFlow</h1>
-      </header>
-      <div className="App-content">
+    <Router basename={basePath}>
+      <div className="App">
+        <header className="App-header">
+          <div className="logo-container">
+            <img src={logo} alt="GitHub Logo" className="github-logo" />
+            <h1>OctoFlow</h1>
+            <div className="unofficial-badge">Unofficial</div>
+          </div>
+          <div className="disclaimer-banner">
+            {APP_DISCLAIMER}
+          </div>
+          <div className="nav-toggle" onClick={() => setMenuOpen(!menuOpen)}>
+            {menuOpen ? <FiX size={24} /> : <FiMenu size={24} />}
+          </div>
+        </header>
         <GitHubProvider>
           <AppContent />
         </GitHubProvider>
       </div>
-      <footer className="App-footer">
-        <p>OctoFlow &copy; {new Date().getFullYear()} - GitHub Best Practices for Startups</p>
-      </footer>
-    </div>
+    </Router>
   );
 }
 

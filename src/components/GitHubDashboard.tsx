@@ -9,6 +9,12 @@ import RepositoryAnalysis from './RepositoryAnalysis';
 import RepositoryTrends from './RepositoryTrends';
 import { GitHubRepository, GitHubOrganization } from '../types/github';
 
+// Define interface for selected repository
+interface SelectedRepo {
+  owner: string;
+  name: string;
+}
+
 const GitHubDashboard: React.FC = () => {
   const { user, logout } = useGitHub();
   const [repositories, setRepositories] = useState<GitHubRepository[]>([]);
@@ -17,8 +23,7 @@ const GitHubDashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'personal' | 'org'>('personal');
   const [selectedOrg, setSelectedOrg] = useState<string | null>(null);
-  const [selectedRepo, setSelectedRepo] = useState<{owner: string, name: string} | null>(null);
-  const [showAnalysis, setShowAnalysis] = useState(false);
+  const [selectedRepo, setSelectedRepo] = useState<SelectedRepo | null>(null);
   const [showTrends, setShowTrends] = useState(false);
 
   // Fetch user's repositories and organizations on component mount
@@ -136,8 +141,8 @@ const GitHubDashboard: React.FC = () => {
     );
   }
 
-  // If repository is selected for analysis, show the analysis component
-  if (selectedRepo) {
+  // If repository is selected for analysis and trends are not being shown, show the analysis component
+  if (selectedRepo && !showTrends) {
     return (
       <RepositoryAnalysis 
         repoOwner={selectedRepo.owner}

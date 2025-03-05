@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
 import { Category } from '../data/questions';
+import { StartupStage } from '../data/questions';
 import { generateImprovementRoadmap } from '../utils/eligibility';
+import { motion } from 'framer-motion';
 
 interface ImprovementRoadmapProps {
   categoryScores: Record<Category, number>;
+  stage?: StartupStage;
   companyInfo?: {
     employeeCount?: number;
     devCount?: number;
@@ -14,7 +17,7 @@ interface ImprovementRoadmapProps {
   };
 }
 
-const ImprovementRoadmap: React.FC<ImprovementRoadmapProps> = ({ categoryScores, companyInfo }) => {
+const ImprovementRoadmap: React.FC<ImprovementRoadmapProps> = ({ categoryScores, stage, companyInfo }) => {
   const [expandedCategory, setExpandedCategory] = useState<Category | null>(null);
   
   const roadmap = generateImprovementRoadmap(categoryScores, companyInfo);

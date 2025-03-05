@@ -28,6 +28,89 @@ const requireToken = (req, res, next) => {
   next();
 };
 
+// Helper function to get user from session/token
+const getUserFromSession = async (req) => {
+  // This is a simplified version - in a real app, you would retrieve user data
+  // from a database, session, or other storage mechanism
+  
+  // If there's a GitHub token, fetch user data from GitHub API
+  if (req.githubToken) {
+    try {
+      const response = await axios.get(`${GITHUB_API_URL}/user`, {
+        headers: {
+          'Authorization': `Bearer ${req.githubToken}`,
+          'Accept': 'application/vnd.github.v3+json',
+          'User-Agent': 'OctoFlow-App'
+        }
+      });
+      
+      // For demo purposes, we'll set hardcoded eligibility values
+      // In a real app, these would be retrieved from your database
+      return {
+        id: response.data.id.toString(),
+        login: response.data.login,
+        name: response.data.name,
+        email: response.data.email,
+        isGitHubEnterpriseCustomer: false, // Demo value
+        seriesFundingStage: 'Series A', // Demo value
+        isGitHubForStartupsPartner: true, // Demo value
+        employeeCount: 50, // Demo value
+        companyAgeYears: 2 // Demo value
+      };
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      throw error;
+    }
+  }
+  
+  // Return demo user if no token
+  return {
+    id: 'demo-user',
+    login: 'demo-user',
+    name: 'Demo User',
+    email: 'demo@example.com',
+    isGitHubEnterpriseCustomer: false,
+    seriesFundingStage: 'Series A',
+    isGitHubForStartupsPartner: true,
+    employeeCount: 50,
+    companyAgeYears: 2
+  };
+};
+
+// GitHub for Startups eligibility check endpoint
+app.get('/api/check-eligibility', async (req, res) => {
+  try {
+    const user = await getUserFromSession(req);
+    
+    // Check eligibility criteria
+    const isEligible = (
+      user.isGitHubEnterpriseCustomer === false &&
+      user.seriesFundingStage !== 'Series C+' &&
+      user.isGitHubForStartupsPartner === true
+    );
+    
+    // Get ineligibility reasons if not eligible
+    const ineligibilityReasons = [];
+    
+    if (user.isGitHubEnterpriseCustomer) {
+      ineligibilityReasons.push("Already a GitHub Enterprise/Advanced Security customer");
+    }
+    
+    if (user.seriesFundingStage === 'Series C+') {
+      ineligibilityReasons.push("Series C or later companies are not eligible");
+    }
+    
+    if (!user.isGitHubForStartupsPartner) {
+      ineligibilityReasons.push("Not affiliated with a GitHub for Startups partner");
+    }
+    
+    res.json({ isEligible, ineligibilityReasons });
+  } catch (error) {
+    console.error('Eligibility check error:', error);
+    res.status(500).json({ error: 'Failed to check eligibility status' });
+  }
+});
+
 // GitHub API proxy - GET requests
 app.get('/github/*', requireToken, async (req, res) => {
   try {

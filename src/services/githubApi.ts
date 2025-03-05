@@ -44,39 +44,127 @@ export const clearGitHubToken = (): void => {
   localStorage.removeItem(TOKEN_STORAGE_KEY);
 };
 
+/**
+ * GitHub API Error class for better error handling
+ */
+export class GitHubApiError extends Error {
+  status?: number;
+  endpoint: string;
+  isRateLimitError: boolean;
+  
+  constructor(message: string, endpoint: string, status?: number, isRateLimitError = false) {
+    super(message);
+    this.name = 'GitHubApiError';
+    this.endpoint = endpoint;
+    this.status = status;
+    this.isRateLimitError = isRateLimitError;
+  }
+  
+  // Get a user-friendly message that can be displayed in the UI
+  getUserFriendlyMessage(): string {
+    if (this.isRateLimitError) {
+      return 'GitHub API rate limit exceeded. Please try again later or authenticate to get a higher rate limit.';
+    }
+    
+    switch (this.status) {
+      case 401:
+        return 'Your GitHub authentication has expired. Please sign in again.';
+      case 403:
+        return 'You don\'t have permission to access this resource on GitHub.';
+      case 404:
+        return 'The requested GitHub resource could not be found. Please check that the repository exists.';
+      case 422:
+        return 'The GitHub API couldn\'t process your request. Please check your inputs.';
+      case 500:
+      case 502:
+      case 503:
+      case 504:
+        return 'GitHub is experiencing issues right now. Please try again later.';
+      default:
+        return this.message || 'An error occurred while communicating with GitHub.';
+    }
+  }
+}
+
 // Helper function to handle API errors
-const handleGitHubError = (error: any, actionDescription: string): Error => {
-  console.error(`GitHub API Error (${actionDescription}):`, error);
+const handleGitHubError = (error: any, endpoint: string): GitHubApiError => {
+  console.error(`GitHub API Error (${endpoint}):`, error);
   
   // Check if it's a response error
   if (error.response) {
     const status = error.response.status;
+    const errorMessage = error.response.data?.message || 'Unknown error';
     
     // Handle specific status codes
     switch (status) {
       case 401:
-        return new Error('Authentication failed. Please check your GitHub token and try again.');
+        return new GitHubApiError(
+          'Authentication failed. Please check your GitHub token and try again.',
+          endpoint,
+          status
+        );
       case 403:
-        if (error.response.headers['x-ratelimit-remaining'] === '0') {
-          return new Error('GitHub API rate limit exceeded. Please try again later.');
+        // Check if it's a rate limit error
+        if (error.response.headers && 
+            error.response.headers['x-ratelimit-remaining'] === '0') {
+          const resetTime = error.response.headers['x-ratelimit-reset'];
+          const resetDate = resetTime ? new Date(parseInt(resetTime) * 1000).toLocaleTimeString() : 'soon';
+          
+          return new GitHubApiError(
+            `GitHub API rate limit exceeded. Limit will reset at ${resetDate}.`,
+            endpoint,
+            status,
+            true
+          );
         }
-        return new Error('Access forbidden. You may not have permission to perform this action.');
+        return new GitHubApiError(
+          'Access forbidden. You may not have permission to perform this action.',
+          endpoint,
+          status
+        );
       case 404:
-        return new Error('Resource not found. The repository or data you requested doesn\'t exist.');
+        return new GitHubApiError(
+          'Resource not found. The repository or data you requested doesn\'t exist.',
+          endpoint,
+          status
+        );
       case 422:
-        return new Error('Invalid request. Please check your inputs and try again.');
+        return new GitHubApiError(
+          `Validation failed: ${errorMessage}`,
+          endpoint,
+          status
+        );
+      case 500:
+      case 502:
+      case 503:
+      case 504:
+        return new GitHubApiError(
+          `GitHub service error (${status}): ${errorMessage}`,
+          endpoint,
+          status
+        );
       default:
-        return new Error(`GitHub API error (${status}): ${error.response.data?.message || 'Unknown error'}`);
+        return new GitHubApiError(
+          `GitHub API error (${status}): ${errorMessage}`,
+          endpoint,
+          status
+        );
     }
   }
   
   // Network or other errors
   if (error.request) {
-    return new Error('Network error. Please check your internet connection and try again.');
+    return new GitHubApiError(
+      'Network error. Please check your internet connection and try again.',
+      endpoint
+    );
   }
   
   // Default fallback
-  return new Error(`Error ${actionDescription}: ${error.message || 'Unknown error'}`);
+  return new GitHubApiError(
+    `Error accessing GitHub API: ${error.message || 'Unknown error'}`,
+    endpoint
+  );
 };
 
 /**
@@ -86,7 +174,7 @@ export const fetchFromGitHub = async <T>(endpoint: string, params: Record<string
   const token = getGitHubToken();
   
   if (!token) {
-    throw new Error('GitHub token is required');
+    throw new GitHubApiError('GitHub token is required for authentication', endpoint, 401);
   }
   
   // Convert params to query string
@@ -109,14 +197,15 @@ export const fetchFromGitHub = async <T>(endpoint: string, params: Record<string
         response: {
           status: response.status,
           data: errorData,
-          statusText: response.statusText
+          statusText: response.statusText,
+          headers: Object.fromEntries(response.headers.entries())
         }
       };
     }
     
-    return response.json();
+    return await response.json();
   } catch (error) {
-    throw handleGitHubError(error, `fetching ${endpoint}`);
+    throw handleGitHubError(error, endpoint);
   }
 };
 
@@ -127,7 +216,7 @@ export const postToGitHub = async <T>(endpoint: string, data: unknown): Promise<
   const token = getGitHubToken();
   
   if (!token) {
-    throw new Error('GitHub token is required');
+    throw new GitHubApiError('GitHub token is required for authentication', endpoint, 401);
   }
   
   const url = `${BASE_URL}/${endpoint}`;
@@ -150,14 +239,15 @@ export const postToGitHub = async <T>(endpoint: string, data: unknown): Promise<
         response: {
           status: response.status,
           data: errorData,
-          statusText: response.statusText
+          statusText: response.statusText,
+          headers: Object.fromEntries(response.headers.entries())
         }
       };
     }
     
-    return response.json();
+    return await response.json();
   } catch (error) {
-    throw handleGitHubError(error, `posting to ${endpoint}`);
+    throw handleGitHubError(error, endpoint);
   }
 };
 

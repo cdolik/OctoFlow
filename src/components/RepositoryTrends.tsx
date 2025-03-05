@@ -34,15 +34,17 @@ const RepositoryTrends: React.FC<RepositoryTrendsProps> = ({ repoOwner, repoName
         setCommits(commitsData);
         setPullRequests(prsData);
         setContributors(contributorsData);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Error fetching repository trends:', err);
-        setError(err.message || 'Failed to load repository trends');
+        setError(err instanceof Error ? err.message : 'Failed to load repository trends');
       } finally {
         setIsLoading(false);
       }
     };
     
-    fetchTrendData();
+    if (repoOwner && repoName) {
+      fetchTrendData();
+    }
   }, [repoOwner, repoName]);
 
   // Calculate commit activity by week

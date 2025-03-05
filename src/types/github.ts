@@ -18,6 +18,19 @@ export interface GitHubUser {
   updated_at: string;
 }
 
+// User type for GitHub for Startups eligibility
+export interface User {
+  id: string;
+  login: string;
+  name?: string;
+  email?: string;
+  isGitHubEnterpriseCustomer: boolean;
+  seriesFundingStage: string;
+  isGitHubForStartupsPartner: boolean;
+  employeeCount: number;
+  companyAgeYears: number;
+}
+
 export interface GitHubRepository {
   id: number;
   name: string;

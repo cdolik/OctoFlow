@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { StartupStage, Category, calculateCategoryScores, questions } from '../data/questions';
 import ExportShare from './ExportShare';
 import HistoryDashboard from './HistoryDashboard';
-import EligibilityModule from './EligibilityModule';
 import ScoresSummary from './ScoresSummary';
 import RecommendationsList from './RecommendationsList';
 import ActionButtons from './ActionButtons';
@@ -11,6 +10,8 @@ import { motion } from 'framer-motion';
 import { saveAssessmentToHistory } from '../utils/storage';
 import BadgeGenerator from './BadgeGenerator';
 import ImprovementRoadmap from './ImprovementRoadmap';
+import StartupEligibilityCTA from './StartupEligibilityCTA';
+import { User } from '../types/github';
 
 // We'll use React.lazy to load the Chart.js components only when needed
 const RadarChart = React.lazy(() => import('./RadarChart'));
@@ -34,15 +35,21 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({ stage, responses, o
   const [isChartLoaded, setIsChartLoaded] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [companyInfo, setCompanyInfo] = useState<{
-    employeeCount?: number;
-    devCount?: number;
-    fundingStage?: string;
-    usingGitHubEnterprise?: boolean;
-    usingAdvancedSecurity?: boolean;
-    timeWithGitHub?: string;
-  }>({});
-  const [activeTab, setActiveTab] = useState<'scores' | 'eligibility' | 'badge'>('scores');
+  const [activeTab, setActiveTab] = useState<'scores' | 'badge'>('scores');
+  const [currentUser, setCurrentUser] = useState<User | undefined>(undefined);
+
+  // Animation variants for sections
+  const sectionVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: { 
+        duration: 0.5,
+        ease: "easeOut"
+      }
+    }
+  };
 
   // Calculate scores and generate recommendations when component mounts
   useEffect(() => {
@@ -82,25 +89,39 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({ stage, responses, o
     saveAssessmentToHistory(stage, responses, scores);
   }, [stage, responses]);
   
+  // Fetch user data for eligibility check
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        // In a real app, you would fetch this from your backend
+        // This is a placeholder for demonstration
+        const demoUser: User = {
+          id: 'demo-user',
+          login: 'demo-user',
+          name: 'Demo User',
+          email: 'demo@example.com',
+          isGitHubEnterpriseCustomer: false,
+          seriesFundingStage: 'Series A',
+          isGitHubForStartupsPartner: true,
+          employeeCount: 50,
+          companyAgeYears: 2
+        };
+        
+        setCurrentUser(demoUser);
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      }
+    };
+    
+    fetchUserData();
+  }, []);
+  
   // For the MVP, we'll render a simple placeholder while waiting for Chart.js
   const renderChartPlaceholder = () => (
     <div className="chart-placeholder">
       <p>Loading chart...</p>
     </div>
   );
-  
-  // Animation variants for sections
-  const sectionVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { 
-      opacity: 1, 
-      y: 0,
-      transition: { 
-        duration: 0.5,
-        ease: "easeOut"
-      }
-    }
-  };
   
   const handleViewHistory = () => {
     setShowHistory(true);
@@ -118,18 +139,6 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({ stage, responses, o
     setShowSettings(false);
   };
 
-  // Handle company info update
-  const handleCompanyInfoUpdate = (info: {
-    employeeCount?: number;
-    devCount?: number;
-    fundingStage?: string;
-    usingGitHubEnterprise?: boolean;
-    usingAdvancedSecurity?: boolean;
-    timeWithGitHub?: string;
-  }) => {
-    setCompanyInfo(info);
-  };
-
   // Calculate overall score
   const calculateOverallScore = (): number => {
     const scores = Object.values(categoryScores);
@@ -138,8 +147,21 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({ stage, responses, o
   };
 
   return (
-    <>
-      <div className="results-dashboard">
+    <div className="results-dashboard">
+      {/* Main disclaimer banner */}
+      <div className="main-disclaimer-banner">
+        <p><strong>Disclaimer:</strong> This is an unofficial GitHub OctoFlow application. Not affiliated with GitHub, Inc.</p>
+      </div>
+      
+      {showSettings && (
+        <Settings onClose={handleCloseSettings} />
+      )}
+      
+      {showHistory && (
+        <HistoryDashboard onClose={handleCloseHistory} />
+      )}
+      
+      <div className="results-container">
         <motion.h2
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -180,12 +202,6 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({ stage, responses, o
               Scores & Recommendations
             </button>
             <button 
-              className={`tab-button ${activeTab === 'eligibility' ? 'active' : ''}`}
-              onClick={() => setActiveTab('eligibility')}
-            >
-              GitHub for Startups Eligibility
-            </button>
-            <button 
               className={`tab-button ${activeTab === 'badge' ? 'active' : ''}`}
               onClick={() => setActiveTab('badge')}
             >
@@ -217,6 +233,28 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({ stage, responses, o
               {/* Use the RecommendationsList component */}
               <RecommendationsList recommendations={recommendations} />
               
+              {/* Add the ImprovementRoadmap component */}
+              <motion.div
+                variants={sectionVariants}
+                initial="hidden"
+                animate="visible"
+                transition={{ delay: 0.3 }}
+              >
+                <ImprovementRoadmap 
+                  categoryScores={categoryScores} 
+                />
+              </motion.div>
+
+              {/* Add the StartupEligibilityCTA component */}
+              <motion.div
+                variants={sectionVariants}
+                initial="hidden"
+                animate="visible"
+                transition={{ delay: 0.4 }}
+              >
+                <StartupEligibilityCTA />
+              </motion.div>
+              
               {/* Add the ExportShare component */}
               <motion.div
                 variants={sectionVariants}
@@ -229,28 +267,6 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({ stage, responses, o
                   categoryScores={categoryScores}
                   recommendations={recommendations}
                 />
-              </motion.div>
-            </>
-          )}
-          
-          {activeTab === 'eligibility' && (
-            <>
-              <motion.div
-                variants={sectionVariants}
-                initial="hidden"
-                animate="visible"
-                transition={{ delay: 0.1 }}
-              >
-                <EligibilityModule categoryScores={categoryScores} companyInfo={companyInfo} />
-              </motion.div>
-              
-              <motion.div
-                variants={sectionVariants}
-                initial="hidden"
-                animate="visible"
-                transition={{ delay: 0.2 }}
-              >
-                <ImprovementRoadmap categoryScores={categoryScores} companyInfo={companyInfo} />
               </motion.div>
             </>
           )}
@@ -273,10 +289,7 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({ stage, responses, o
           onReset={onReset} 
         />
       </div>
-      
-      {showHistory && <HistoryDashboard onClose={handleCloseHistory} />}
-      {showSettings && <Settings onClose={handleCloseSettings} onCompanyInfoUpdate={handleCompanyInfoUpdate} companyInfo={companyInfo} />}
-    </>
+    </div>
   );
 };
 
