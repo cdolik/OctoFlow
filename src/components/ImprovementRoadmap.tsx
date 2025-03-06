@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Category } from '../data/questions';
 import { StartupStage } from '../data/questions';
 import { generateImprovementRoadmap } from '../utils/eligibility';
-import { motion } from 'framer-motion';
 
 interface ImprovementRoadmapProps {
   categoryScores: Record<Category, number>;
@@ -53,7 +52,7 @@ const ImprovementRoadmap: React.FC<ImprovementRoadmapProps> = ({ categoryScores,
   
   return (
     <div className="improvement-roadmap">
-      <h3>Improvement Roadmap</h3>
+      <h3>Improvement Roadmap {stage && `for ${stage}`}</h3>
       <p className="roadmap-description">
         Based on your assessment, here are specific improvements that can help you qualify for the GitHub for Startups program.
         Each category includes actionable steps and resources to help you implement these improvements.

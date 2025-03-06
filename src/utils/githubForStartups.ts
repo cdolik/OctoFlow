@@ -76,7 +76,7 @@ export function getGitHubStartupsBenefits(): string[] {
  * @returns GitHub for Startups partners page URL
  */
 export function getPartnersUrl(): string {
-  return "https://github.com/enterprise/startups/partners";
+  return "https://github.com/enterprise/startups";
 }
 
 /**

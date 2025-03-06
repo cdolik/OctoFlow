@@ -1,16 +1,42 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { getGitHubStartupsBenefits, getPartnersUrl } from '../utils/githubForStartups';
+import { StartupStage } from '../data/questions';
+import { User } from '../types/github';
 import './EligibilityModule.css'; // We'll reuse the same styles
 
-const StartupEligibilityCTA: React.FC = () => {
+interface StartupEligibilityCTAProps {
+  user?: User;
+  stage: StartupStage;
+}
+
+const StartupEligibilityCTA: React.FC<StartupEligibilityCTAProps> = ({ user, stage }) => {
   const [expanded, setExpanded] = useState(false);
+  const [isEligible, setIsEligible] = useState(false);
+  
+  // Determine eligibility based on user data
+  useEffect(() => {
+    if (user) {
+      const eligible = 
+        !user.isGitHubEnterpriseCustomer && // Not already on Enterprise
+        user.seriesFundingStage !== 'Series C+' && // Series B or earlier
+        user.isGitHubForStartupsPartner; // Affiliated with a partner
+      
+      setIsEligible(eligible);
+    }
+  }, [user]);
+  
+  // If we have user data but they're not eligible, don't show the badge
+  if (user && !isEligible) {
+    return null;
+  }
   
   return (
     <div className="startup-eligibility-cta">
       <div className="cta-header" onClick={() => setExpanded(!expanded)}>
         <div className="cta-title">
           <i className="fas fa-rocket"></i>
-          <h3>GitHub for Startups Benefits</h3>
+          <h3>GitHub for Startups Benefits {stage && `(${stage})`}</h3>
+          {isEligible && <span className="eligibility-badge">You may qualify!</span>}
         </div>
         <div className="cta-toggle">
           <i className={`fas fa-chevron-${expanded ? 'up' : 'down'}`}></i>
@@ -41,7 +67,7 @@ const StartupEligibilityCTA: React.FC = () => {
           
           <div className="cta-actions">
             <a 
-              href={getPartnersUrl()} 
+              href={getPartnersUrl()}
               target="_blank" 
               rel="noopener noreferrer" 
               className="secondary-button"

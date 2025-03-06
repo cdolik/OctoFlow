@@ -19,19 +19,192 @@ body {
 }
 
 .app-header {
-  background-color: #24292e;
-  color: white;
-  padding: 20px;
-  text-align: center;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  flex-wrap: wrap;
+  padding: 0.5rem 1rem;
+  background-color: #f6f8fa;
+  border-bottom: 1px solid #e1e4e8;
+  position: relative;
+}
+
+.logo-container {
+  display: flex;
+  align-items: center;
+}
+
+.app-logo-link {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  color: #24292e;
+}
+
+.github-logo {
+  height: 32px;
+  margin-right: 10px;
 }
 
 .app-header h1 {
+  font-size: 1.5rem;
   margin: 0;
-  font-size: 2rem;
+  color: #24292e;
+}
+
+.unofficial-badge {
+  background-color: #0969da;
+  color: white;
+  font-size: 0.6rem;
+  padding: 2px 6px;
+  border-radius: 10px;
+  margin-left: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.app-nav {
+  display: flex;
+  align-items: center;
+}
+
+.nav-menu {
+  display: flex;
+  align-items: center;
+}
+
+.nav-button {
+  padding: 0.5rem 1rem;
+  margin-left: 0.5rem;
+  text-decoration: none;
+  color: #24292e;
+  border-radius: 6px;
+  transition: background-color 0.2s;
+}
+
+.nav-button:hover {
+  background-color: #e1e4e8;
+}
+
+.github-button {
+  background-color: #24292e;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  margin-left: 0.5rem;
+  transition: background-color 0.2s;
+}
+
+.github-button:hover {
+  background-color: #0366d6;
+}
+
+.github-button:disabled {
+  background-color: #94d3a2;
+  cursor: not-allowed;
+}
+
+.nav-toggle {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  color: #24292e;
+}
+
+/* Mobile responsive styles */
+@media (max-width: 768px) {
+  .nav-toggle {
+    display: block;
+  }
+  
+  .nav-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    flex-direction: column;
+    background-color: #f6f8fa;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    border-radius: 0 0 6px 6px;
+    width: 200px;
+    padding: 1rem;
+    z-index: 100;
+    display: none;
+  }
+  
+  .nav-menu.open {
+    display: flex;
+  }
+  
+  .nav-button, .github-button {
+    margin: 0.25rem 0;
+    width: 100%;
+    text-align: center;
+  }
+}
+
+.app-footer {
+  background-color: #f6f8fa;
+  padding: 1rem;
+  text-align: center;
+  border-top: 1px solid #e1e4e8;
+  margin-top: auto;
+  font-size: 0.9rem;
+  color: #586069;
+}
+
+.app-footer a {
+  color: #0366d6;
+  text-decoration: none;
+}
+
+.app-footer a:hover {
+  text-decoration: underline;
+}
+
+.main-disclaimer-banner {
+  background-color: #f1f8ff;
+  color: #0366d6;
+  text-align: center;
+  padding: 0.5rem;
+  font-size: 0.8rem;
+  border-bottom: 1px solid #c8e1ff;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .app-header {
+    flex-wrap: wrap;
+    padding: 12px 16px;
+  }
+  
+  .app-nav {
+    display: none;
+    position: absolute;
+    top: 70px;
+    left: 0;
+    right: 0;
+    background: #24292e;
+    padding: 16px;
+    flex-direction: column;
+    z-index: 100;
+  }
+  
+  .app-nav.open {
+    display: flex;
+  }
+  
+  .nav-toggle {
+    display: block;
+  }
+  
+  .app-content {
+    padding: 12px;
+  }
 }
 
 .app-content {
@@ -39,14 +212,7 @@ body {
   padding: 20px;
   max-width: 1200px;
   margin: 0 auto;
-}
-
-.app-footer {
-  background-color: #24292e;
-  color: white;
-  padding: 10px;
-  text-align: center;
-  font-size: 0.9rem;
+  width: 100%;
 }
 
 /* Stage Selector */
@@ -2447,4 +2613,52 @@ body {
   align-items: center;
   flex-wrap: wrap;
   position: relative;
+}
+
+/* Welcome message */
+.welcome-message {
+  background-color: #f1f8ff;
+  border: 1px solid #c8e1ff;
+  border-radius: 6px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.welcome-message h3 {
+  font-size: 1.2rem;
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: #0366d6;
+}
+
+.welcome-message p {
+  margin-bottom: 1rem;
+  color: #24292e;
+}
+
+.welcome-message ul {
+  margin-left: 1.5rem;
+  margin-bottom: 0;
+}
+
+.welcome-message li {
+  margin-bottom: 0.5rem;
+  color: #24292e;
+}
+
+.welcome-message li:last-child {
+  margin-bottom: 0;
+}
+
+@media (max-width: 768px) {
+  .welcome-message {
+    padding: 1rem;
+  }
+  
+  .welcome-message h3 {
+    font-size: 1.1rem;
+  }
 }

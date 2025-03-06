@@ -1,47 +1,69 @@
-# OctoFlow
+# OctoFlow: GitHub Practices Assessment Tool
 
-A stage-specific self-assessment tool for startup engineering teams to evaluate GitHub practices and workflows.
-
-## Overview
-
-OctoFlow helps startup engineering teams assess their GitHub practices across different stages of company growth. By answering a series of questions, teams receive tailored recommendations linked directly to official GitHub documentation.
+OctoFlow is an assessment tool designed to help startups and organizations evaluate their GitHub practices based on their startup stage, providing actionable recommendations to improve workflow and efficiency.
 
 ## Features
 
-- **Stage-Specific Assessment**: Choose from Seed/Earlier, Series A, or Series B+ startup stages
-- **Comprehensive Evaluation**: Assessment covers Security, Collaboration, Automation, Compliance, Testing, and Documentation
-- **Actionable Recommendations**: Get prioritized improvement suggestions with direct links to GitHub documentation
-- **Progress Persistence**: Assessment progress automatically saved using sessionStorage
-- **Visual Results**: View your results in an intuitive radar chart visualization 
-- **Client-Side Only**: No backend required - all data stays in your browser
+### Core Assessment
+- **Stage-based Assessment:** Evaluate GitHub practices based on Beginner, Intermediate, or Advanced startup stages
+- **Dynamic Flow:** Skip questions or entire stages based on your current GitHub maturity level
+- **Smart Recommendations:** Receive tailored recommendations based on assessment results
 
-## Live Demo
+### Personalization
+- **Team Information:** Customize your assessment based on team size
+- **Tech Stack:** Specify your primary programming language for more relevant recommendations
+- **Compliance Needs:** Identify your specific compliance requirements (SOC2, HIPAA, GDPR, etc.)
 
-Visit the live application at: https://cdolik.github.io/OctoFlow/
+### Results & Insights
+- **Maturity Score Visualization:** Visual representation of your GitHub maturity across key categories
+- **Quick-win Recommendations:** Prioritized list of easy-to-implement improvements
+- **Improvement Roadmap:** Long-term plan for advancing your GitHub practices
+- **Visual Results:** Intuitive radar chart visualization of your GitHub practices maturity
 
-## Quick Start
+### Sharing & Resources
+- **Email Sharing:** Share assessment results via email
+- **Resource Hub:** Access curated documentation and best practices
+- **Repository Badge:** Add a badge to your repository showing your GitHub practices maturity
+
+### User Experience
+- **Progress Indicators:** Track your progress through the assessment
+- **Smooth Animations:** Enjoy a modern, responsive interface
+- **Mobile-Friendly Design:** Access the tool from any device
+- **Progress Persistence:** Assessment progress automatically saved using sessionStorage
+
+## Assessment Process
+
+1. **Select Your Startup Stage:** Choose from Beginner, Intermediate, or Advanced
+2. **Customize:** Add information about your team size and tech stack
+3. **Answer Questions:** Evaluate your current practices on a scale of 1-4
+4. **Skip When Needed:** Skip questions or stages that don't apply to your organization
+5. **Review Results:** Get a visual representation of your strengths and areas for improvement
+6. **Implement Recommendations:** Follow direct links to GitHub documentation to enhance your workflows
+
+## Getting Started
+
+### Prerequisites
+- Node.js (v14+)
+- npm (v6+)
 
 ### Installation
-
+1. Clone the repository
 ```bash
-# Clone the repository
-git clone https://github.com/coreydolik/OctoFlow.git
+git clone https://github.com/your-username/octoflow.git
+```
 
-# Navigate to the project directory
-cd OctoFlow
-
-# Install dependencies
+2. Install dependencies
+```bash
+cd octoflow
 npm install
 ```
 
-### Development
-
+3. Start the development server
 ```bash
-# Start the development server
 npm start
 ```
 
-The application will be available at http://localhost:3000
+4. Open your browser and navigate to `http://localhost:3000`
 
 ### Deployment
 
@@ -50,58 +72,38 @@ The application will be available at http://localhost:3000
 npm run deploy
 ```
 
-## Feedback and Testing
-
-We're actively collecting feedback on the OctoFlow assessment tool. If you've used the tool, please consider sharing your experience:
-
-[📝 Submit Feedback](https://github.com/coreydolik/OctoFlow/issues/new?template=feedback.md)
-
-You can also report bugs or request new features:
-- [🐞 Report a Bug](https://github.com/coreydolik/OctoFlow/issues/new?template=bug_report.md)
-- [💡 Request a Feature](https://github.com/coreydolik/OctoFlow/issues/new?template=feature_request.md)
-
-Your input is invaluable as we continue to improve the tool for engineering teams at all startup stages.
-
-## Assessment Process
-
-1. **Select Your Startup Stage**: Choose from Seed/Earlier, Series A, or Series B+
-2. **Answer Questions**: Evaluate your current practices on a scale of 1-4
-3. **Review Results**: Get a visual representation of your strengths and areas for improvement
-4. **Implement Recommendations**: Follow direct links to GitHub documentation to enhance your workflows
-
 ## Project Structure
 
 ```
 src/
 ├── components/           # React components
-│   ├── AssessmentFlow/  # Assessment wizard and logic
-│   ├── RadarChart/      # Results visualization
-│   └── FeedbackForm/    # User feedback collection
-├── data/                # Questions and scoring logic
-└── utils/               # Helper functions and utilities
+│   ├── AssessmentFlow/   # Assessment wizard and logic
+│   ├── PersonalizationInputs/ # User customization options
+│   ├── ResultsDashboard/ # Results display and recommendations
+│   ├── RadarChart/       # Results visualization
+│   └── ResourceHub/      # Documentation and resources
+├── data/                 # Questions and scoring logic
+├── styles/               # CSS stylesheets
+└── utils/                # Helper functions and utilities
 ```
 
-## Recent Updates
+## Feedback and Contributing
 
-- **MVP Release**: Focused on core assessment functionality and GitHub practices evaluation
-- **Improved UI**: Enhanced user experience with radar chart visualization
-- **GitHub Pages**: Deployed and accessible at https://cdolik.github.io/OctoFlow/
-- **Legacy Code**: Previous performance monitoring features archived in `archive/performance-monitoring` branch
+We're actively collecting feedback on the OctoFlow assessment tool. Your input is invaluable as we continue to improve the tool for engineering teams at all startup stages.
 
-## Contributing
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+## Future Enhancements
+
+- **GitHub OAuth Integration:** Analyze repositories directly through GitHub API integration
+- **Dynamic Question Flow:** Questions that adapt based on previous answers
+- **Results Persistence:** Save and compare results over time
+- **Team Collaboration:** Share assessments with team members for collaborative improvement
 
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
-## Acknowledgments
+## Disclaimer
 
-- GitHub for providing excellent documentation and tools for developers
-- Create React App for the project bootstrapping
-- All contributors and users providing valuable feedback
+This is an unofficial application and is not affiliated with, sponsored by, or endorsed by GitHub, Inc. GitHub, the GitHub logo, and the Octocat are trademarks of GitHub, Inc.

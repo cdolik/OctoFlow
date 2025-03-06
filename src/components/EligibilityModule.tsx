@@ -292,71 +292,115 @@ const EligibilityModule: React.FC<EligibilityModuleProps> = ({ user }) => {
     const ineligibilityReasons = getIneligibilityReasonsFromAnswers();
     
     return (
-      <div className="wizard-step results-step">
-        <h3>Eligibility Results</h3>
+      <div className="eligibility-results">
+        <h3>GitHub for Startups Status</h3>
         
-        <div className={`eligibility-status ${eligible ? 'eligible' : 'ineligible'}`}>
-          <div className="status-icon">
-            <i className={`fas ${eligible ? 'fa-check-circle' : 'fa-times-circle'}`}></i>
-          </div>
-          <div className="status-text">
-            <h4>{eligible ? 'Eligible!' : 'Not Eligible'}</h4>
-            <p>
-              {eligible
-                ? 'Your startup appears to qualify for GitHub for Startups based on your answers!'
-                : 'Your startup does not currently qualify for GitHub for Startups.'}
-            </p>
-          </div>
+        <div className="eligibility-status">
+          {eligible ? (
+            <>
+              <div className="eligibility-level">
+                <div className="level-label">Status:</div>
+                <div className="level-value eligible">Eligible</div>
+              </div>
+              <p>
+                Based on your answers, your startup qualifies for the GitHub for Startups program.
+                Complete your application to receive benefits.
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="eligibility-level">
+                <div className="level-label">Status:</div>
+                <div className="level-value not-eligible">Not Currently Eligible</div>
+              </div>
+              <div className="eligibility-warning">
+                <i className="fas fa-info-circle"></i>
+                <p>
+                  Based on your answers, your startup may not qualify for the GitHub for Startups program at this time.
+                </p>
+              </div>
+            </>
+          )}
         </div>
         
-        {eligible ? (
-          <div className="next-steps">
-            <h4>Next Steps</h4>
-            <p>To apply for GitHub for Startups:</p>
-            <ol>
-              <li>Ask your partner (VC/accelerator/incubator) for a referral to GitHub for Startups</li>
-              <li>Complete the application once you receive the referral link</li>
-              <li>GitHub will review your application and grant the benefits if approved</li>
-            </ol>
-            <div className="cta-buttons">
-              <a 
-                href="https://github.com/enterprise/startups" 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="primary-button"
-              >
-                Learn More About GitHub for Startups <i className="fas fa-external-link-alt"></i>
-              </a>
-            </div>
-          </div>
-        ) : (
+        {!eligible && ineligibilityReasons.length > 0 && (
           <div className="ineligibility-reasons">
-            <h4>Why You&apos;re Not Eligible</h4>
+            <h4>Reason{ineligibilityReasons.length > 1 ? 's' : ''}:</h4>
             <ul>
               {ineligibilityReasons.map((reason, index) => (
                 <li key={index}>{reason}</li>
               ))}
             </ul>
             <p>
-              You can still explore other GitHub plans if you don&apos;t qualify for GitHub for Startups.
+              Note that you can still use GitHub and all of its features. 
+              The GitHub for Startups program offers specific benefits for qualifying startups.
+            </p>
+          </div>
+        )}
+        
+        {eligible && (
+          <div className="eligibility-cta">
+            <h4>Next Steps</h4>
+            <p>
+              Complete your application on the GitHub for Startups portal to receive your benefits.
+            </p>
+            <div className="cta-buttons">
+              <a 
+                href={getPartnersUrl()} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="apply-button"
+              >
+                <i className="fas fa-external-link-alt"></i>
+                Apply Now
+              </a>
+              
+              <button 
+                onClick={resetWizard}
+                className="learn-more-button"
+              >
+                <i className="fas fa-redo"></i>
+                Start Over
+              </button>
+            </div>
+          </div>
+        )}
+        
+        {!eligible && (
+          <div className="eligibility-cta">
+            <h4>Other GitHub Options</h4>
+            <p>
+              While you may not qualify for the GitHub for Startups program, 
+              GitHub offers many features for teams of all sizes.
             </p>
             <div className="cta-buttons">
               <a 
                 href="https://github.com/pricing" 
                 target="_blank" 
-                rel="noopener noreferrer" 
-                className="secondary-button"
+                rel="noopener noreferrer"
+                className="apply-button"
               >
-                Explore GitHub Plans <i className="fas fa-external-link-alt"></i>
+                <i className="fas fa-external-link-alt"></i>
+                Explore GitHub Plans
               </a>
+              
+              <button 
+                onClick={resetWizard}
+                className="learn-more-button"
+              >
+                <i className="fas fa-redo"></i>
+                Start Over
+              </button>
             </div>
           </div>
         )}
         
-        <div className="wizard-nav">
-          <button onClick={resetWizard} className="secondary-button">
-            Start Over
-          </button>
+        <div className="eligibility-disclaimer">
+          <p>
+            <small>
+              {getDisclaimerMessage()}
+            </small>
+          </p>
         </div>
       </div>
     );

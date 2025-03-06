@@ -1,25 +1,28 @@
-import React, { useState, useEffect } from 'react';
-import { StartupStage, Category, calculateCategoryScores, questions } from '../data/questions';
-import ExportShare from './ExportShare';
-import HistoryDashboard from './HistoryDashboard';
-import ScoresSummary from './ScoresSummary';
-import RecommendationsList from './RecommendationsList';
-import ActionButtons from './ActionButtons';
-import Settings from './Settings';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { saveAssessmentToHistory } from '../utils/storage';
-import BadgeGenerator from './BadgeGenerator';
-import ImprovementRoadmap from './ImprovementRoadmap';
+import { StartupStage, Category } from '../data/questions';
+import MaturityScoreCard from './MaturityScoreCard';
+import QuickWinRecommendations from './QuickWinRecommendations';
+import ResourceHub from './ResourceHub';
+import ExportShare from './ExportShare';
 import StartupEligibilityCTA from './StartupEligibilityCTA';
-import { User } from '../types/github';
+import ImprovementRoadmap from './ImprovementRoadmap';
+import { User } from '../services/githubApi';
+import { fetchCurrentUser } from '../services/githubApi';
+import { saveAssessmentToHistory } from '../utils/historyUtils';
+import { questions } from '../data/questions';
+import { PersonalizationData } from './PersonalizationInputs';
+import LoadingSkeleton from './LoadingSkeleton';
+import { useNavigate } from 'react-router-dom';
 
 // We'll use React.lazy to load the Chart.js components only when needed
 const RadarChart = React.lazy(() => import('./RadarChart'));
 
 interface ResultsDashboardProps {
   stage: StartupStage;
-  responses: Record<string, number>;
+  allResponses: Record<StartupStage, Record<string, number>>;
   onReset: () => void;
+  personalizationData?: PersonalizationData;
 }
 
 interface RecommendationItem {
@@ -29,14 +32,32 @@ interface RecommendationItem {
   priority: 'high' | 'medium' | 'low';
 }
 
-const ResultsDashboard: React.FC<ResultsDashboardProps> = ({ stage, responses, onReset }) => {
+// Memoize the MaturityScoreCard component to prevent unnecessary re-renders
+const MemoizedMaturityScoreCard = React.memo(MaturityScoreCard);
+
+// Memoize the QuickWinRecommendations component to prevent unnecessary re-renders
+const MemoizedQuickWinRecommendations = React.memo(QuickWinRecommendations);
+
+// Memoize the ResourceHub component to prevent unnecessary re-renders
+const MemoizedResourceHub = React.memo(ResourceHub);
+
+const ResultsDashboard: React.FC<ResultsDashboardProps> = ({ 
+  stage, 
+  allResponses,
+  onReset,
+  personalizationData 
+}) => {
+  const [currentStage, setCurrentStage] = useState<StartupStage>(stage);
+  const [activeTab, setActiveTab] = useState<string>('overview');
+  const [showHistory, setShowHistory] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [categoryScores, setCategoryScores] = useState<Record<Category, number>>({} as Record<Category, number>);
   const [recommendations, setRecommendations] = useState<RecommendationItem[]>([]);
   const [isChartLoaded, setIsChartLoaded] = useState(false);
-  const [showHistory, setShowHistory] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
-  const [activeTab, setActiveTab] = useState<'scores' | 'badge'>('scores');
   const [currentUser, setCurrentUser] = useState<User | undefined>(undefined);
+  const [overallScore, setOverallScore] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate();
 
   // Animation variants for sections
   const sectionVariants = {
@@ -51,19 +72,62 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({ stage, responses, o
     }
   };
 
-  // Calculate scores and generate recommendations when component mounts
+  // Track available stages (ones with responses)
+  const availableStages = Object.entries(allResponses)
+    .filter(([_, responses]) => Object.keys(responses).length > 0)
+    .map(([stage, _]) => stage as StartupStage);
+  
   useEffect(() => {
-    const scores = calculateCategoryScores(responses);
+    // When props.stage changes, update the current stage
+    setCurrentStage(stage);
+  }, [stage]);
+  
+  // Get responses for current stage
+  const currentResponses = allResponses[currentStage] || {};
+  
+  // Get stage display name
+  const getStageDisplayName = (stage: StartupStage): string => {
+    switch (stage) {
+      case StartupStage.Beginner: return 'Beginner';
+      case StartupStage.Intermediate: return 'Intermediate';
+      case StartupStage.Advanced: return 'Advanced';
+      default: return stage;
+    }
+  };
+  
+  // Use useCallback for functions to prevent unnecessary re-creation
+  const handleStageChange = useCallback((newStage: StartupStage) => {
+    setCurrentStage(newStage);
+    // Reset active tab when changing stages
+    setActiveTab('overview');
+  }, []);
+  
+  // Calculate scores and generate recommendations when component mounts or stage changes
+  useEffect(() => {
+    setIsLoading(true);
+    
+    const currentResponses = allResponses[currentStage];
+    if (!currentResponses || Object.keys(currentResponses).length === 0) {
+      setIsLoading(false);
+      return;
+    }
+    
+    const scores = calculateCategoryScores(currentResponses);
     setCategoryScores(scores);
+    
+    // Calculate overall score
+    const scoreValues = Object.values(scores);
+    const avgScore = scoreValues.reduce((sum, score) => sum + score, 0) / scoreValues.length;
+    setOverallScore(avgScore);
     
     // Generate recommendations based on lowest scoring categories
     const lowScoreThreshold = 2.5; // Scores below this will generate recommendations
     const newRecommendations: RecommendationItem[] = [];
     
     // Get low-scoring questions
-    const stageQuestionList = questions[stage];
+    const stageQuestionList = questions[currentStage];
     stageQuestionList.forEach(question => {
-      const score = responses[question.id] || 0;
+      const score = currentResponses[question.id] || 0;
       if (score <= lowScoreThreshold) {
         newRecommendations.push({
           category: question.category,
@@ -82,12 +146,14 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({ stage, responses, o
     
     setRecommendations(newRecommendations);
     
-    // Simulate chart loading (in a real app, this would be handled by React.Suspense)
-    setTimeout(() => setIsChartLoaded(true), 500);
+    // Simulate loading time for better UX
+    setTimeout(() => {
+      setIsLoading(false);
+    }, 800);
     
     // Save assessment result to history
-    saveAssessmentToHistory(stage, responses, scores);
-  }, [stage, responses]);
+    saveAssessmentToHistory(currentStage, currentResponses, scores);
+  }, [currentStage, allResponses]);
   
   // Fetch user data for eligibility check
   useEffect(() => {
@@ -116,6 +182,19 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({ stage, responses, o
     fetchUserData();
   }, []);
   
+  // Validate that we have actual responses to display
+  useEffect(() => {
+    // Check if we have any responses for any stage
+    const hasAnyResponses = Object.values(allResponses).some(
+      stageResponses => Object.keys(stageResponses).length > 0
+    );
+    
+    if (!hasAnyResponses) {
+      // No responses found, redirect to home
+      navigate('/');
+    }
+  }, [allResponses, navigate]);
+  
   // For the MVP, we'll render a simple placeholder while waiting for Chart.js
   const renderChartPlaceholder = () => (
     <div className="chart-placeholder">
@@ -123,28 +202,33 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({ stage, responses, o
     </div>
   );
   
-  const handleViewHistory = () => {
+  const handleViewHistory = useCallback(() => {
     setShowHistory(true);
-  };
+  }, []);
   
-  const handleCloseHistory = () => {
+  const handleCloseHistory = useCallback(() => {
     setShowHistory(false);
-  };
+  }, []);
   
-  const handleOpenSettings = () => {
+  const handleOpenSettings = useCallback(() => {
     setShowSettings(true);
-  };
+  }, []);
   
-  const handleCloseSettings = () => {
+  const handleCloseSettings = useCallback(() => {
     setShowSettings(false);
-  };
+  }, []);
 
-  // Calculate overall score
-  const calculateOverallScore = (): number => {
-    const scores = Object.values(categoryScores);
-    if (scores.length === 0) return 0;
-    return scores.reduce((sum, score) => sum + score, 0) / scores.length;
-  };
+  // Use useMemo for expensive calculations
+  const getLowScoringCategories = useMemo(() => {
+    // Get categories with scores below 2.5
+    const lowCategories: Category[] = [];
+    Object.entries(categoryScores).forEach(([category, score]) => {
+      if (score < 2.5) {
+        lowCategories.push(category as Category);
+      }
+    });
+    return lowCategories;
+  }, [categoryScores]);
 
   return (
     <div className="results-dashboard">
@@ -167,7 +251,7 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({ stage, responses, o
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          {stage} Assessment Results
+          Assessment Results
         </motion.h2>
         
         <motion.div 
@@ -188,106 +272,222 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({ stage, responses, o
           </div>
         </motion.div>
         
-        <motion.div 
-          className="results-tabs"
-          variants={sectionVariants}
-          initial="hidden"
-          animate="visible"
-        >
-          <div className="tab-buttons">
-            <button 
-              className={`tab-button ${activeTab === 'scores' ? 'active' : ''}`}
-              onClick={() => setActiveTab('scores')}
-            >
-              Scores & Recommendations
-            </button>
-            <button 
-              className={`tab-button ${activeTab === 'badge' ? 'active' : ''}`}
-              onClick={() => setActiveTab('badge')}
-            >
-              Repository Badge
-            </button>
+        {/* Add stage selector */}
+        <div className="stage-selector">
+          <h3>Assessment Stages</h3>
+          <div className="stage-buttons">
+            {availableStages.length === 0 ? (
+              <p>No assessment data available. Please complete an assessment.</p>
+            ) : (
+              availableStages.map((stageOption) => (
+                <button
+                  key={stageOption}
+                  className={`stage-button ${currentStage === stageOption ? 'active' : ''}`}
+                  onClick={() => handleStageChange(stageOption)}
+                >
+                  {getStageDisplayName(stageOption)}
+                  {currentStage === stageOption && <span className="current-indicator">✓</span>}
+                </button>
+              ))
+            )}
           </div>
           
-          {activeTab === 'scores' && (
-            <>
-              <motion.div 
-                className="results-chart"
-                variants={sectionVariants}
-                initial="hidden"
-                animate="visible"
-                transition={{ delay: 0.1 }}
-              >
-                {isChartLoaded ? (
-                  <React.Suspense fallback={renderChartPlaceholder()}>
-                    <RadarChart categoryScores={categoryScores} />
-                  </React.Suspense>
-                ) : (
-                  renderChartPlaceholder()
-                )}
-              </motion.div>
-              
-              {/* Use the ScoresSummary component */}
-              <ScoresSummary categoryScores={categoryScores} />
-              
-              {/* Use the RecommendationsList component */}
-              <RecommendationsList recommendations={recommendations} />
-              
-              {/* Add the ImprovementRoadmap component */}
-              <motion.div
-                variants={sectionVariants}
-                initial="hidden"
-                animate="visible"
-                transition={{ delay: 0.3 }}
-              >
-                <ImprovementRoadmap 
-                  categoryScores={categoryScores} 
-                />
-              </motion.div>
-
-              {/* Add the StartupEligibilityCTA component */}
-              <motion.div
-                variants={sectionVariants}
-                initial="hidden"
-                animate="visible"
-                transition={{ delay: 0.4 }}
-              >
-                <StartupEligibilityCTA />
-              </motion.div>
-              
-              {/* Add the ExportShare component */}
-              <motion.div
-                variants={sectionVariants}
-                initial="hidden"
-                animate="visible"
-                transition={{ delay: 0.5 }}
-              >
-                <ExportShare 
-                  stage={stage}
-                  categoryScores={categoryScores}
-                  recommendations={recommendations}
-                />
-              </motion.div>
-            </>
+          {availableStages.length > 0 && (
+            <div className="stage-navigation-hint">
+              <p>
+                <strong>Tip:</strong> You can view results for different completed stages by clicking the buttons above.
+              </p>
+            </div>
           )}
-          
-          {activeTab === 'badge' && (
-            <motion.div
-              variants={sectionVariants}
-              initial="hidden"
-              animate="visible"
-              transition={{ delay: 0.1 }}
-            >
-              <BadgeGenerator scores={categoryScores} overallScore={calculateOverallScore()} />
-            </motion.div>
-          )}
-        </motion.div>
+        </div>
         
-        {/* Use the ActionButtons component */}
-        <ActionButtons 
-          onViewHistory={handleViewHistory} 
-          onReset={onReset} 
-        />
+        {/* Main dashboard content */}
+        {Object.values(allResponses).every(responses => Object.keys(responses).length === 0) ? (
+          <motion.div 
+            className="no-assessment-data"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
+          >
+            <h3>No Assessment Data Available</h3>
+            <p>You haven't completed any assessments yet.</p>
+            <p>Return to the home page to start an assessment for your GitHub practices.</p>
+            <button 
+              className="primary-button"
+              onClick={() => {
+                // Navigate to home page
+                window.location.href = '/';
+              }}
+            >
+              Start Assessment
+            </button>
+          </motion.div>
+        ) : (
+          <>
+            {/* Loading skeletons */}
+            {isLoading ? (
+              <div className="results-content loading">
+                <LoadingSkeleton type="chart" height="200px" />
+                <div className="skeleton-row">
+                  <LoadingSkeleton type="card" count={3} height="120px" width="32%" />
+                </div>
+                <LoadingSkeleton type="text" count={2} />
+                <LoadingSkeleton type="card" height="300px" />
+              </div>
+            ) : (
+              /* Results content - only show when loaded */
+              <div className="results-content">
+                <motion.div 
+                  className="results-tabs"
+                  variants={sectionVariants}
+                  initial="hidden"
+                  animate="visible"
+                >
+                  <div className="tab-buttons">
+                    <button 
+                      className={`tab-button ${activeTab === 'scores' ? 'active' : ''}`}
+                      onClick={() => setActiveTab('scores')}
+                    >
+                      Scores & Recommendations
+                    </button>
+                    <button 
+                      className={`tab-button ${activeTab === 'resources' ? 'active' : ''}`}
+                      onClick={() => setActiveTab('resources')}
+                    >
+                      Resource Hub
+                    </button>
+                    <button 
+                      className={`tab-button ${activeTab === 'badge' ? 'active' : ''}`}
+                      onClick={() => setActiveTab('badge')}
+                    >
+                      Repository Badge
+                    </button>
+                  </div>
+                  
+                  {activeTab === 'scores' && (
+                    <>
+                      {/* Stage name header */}
+                      <h3 className="selected-stage-header">{currentStage} Stage Results</h3>
+                      
+                      {/* MaturityScoreCard - New component */}
+                      <motion.div
+                        variants={sectionVariants}
+                        initial="hidden"
+                        animate="visible"
+                        transition={{ delay: 0.1 }}
+                      >
+                        <MemoizedMaturityScoreCard 
+                          categoryScores={categoryScores} 
+                          stage={currentStage}
+                        />
+                      </motion.div>
+                      
+                      {/* Quick Win Recommendations - New component */}
+                      <motion.div
+                        variants={sectionVariants}
+                        initial="hidden"
+                        animate="visible"
+                        transition={{ delay: 0.2 }}
+                      >
+                        <MemoizedQuickWinRecommendations 
+                          recommendations={recommendations}
+                        />
+                      </motion.div>
+                      
+                      <motion.div 
+                        className="results-chart"
+                        variants={sectionVariants}
+                        initial="hidden"
+                        animate="visible"
+                        transition={{ delay: 0.3 }}
+                      >
+                        {isChartLoaded ? (
+                          <React.Suspense fallback={renderChartPlaceholder()}>
+                            <RadarChart categoryScores={categoryScores} />
+                          </React.Suspense>
+                        ) : (
+                          renderChartPlaceholder()
+                        )}
+                      </motion.div>
+                      
+                      {/* Use the ScoresSummary component */}
+                      <ScoresSummary categoryScores={categoryScores} />
+                      
+                      {/* Use the RecommendationsList component */}
+                      <RecommendationsList recommendations={recommendations} />
+                      
+                      {/* Add the ImprovementRoadmap component */}
+                      <motion.div
+                        variants={sectionVariants}
+                        initial="hidden"
+                        animate="visible"
+                        transition={{ delay: 0.3 }}
+                      >
+                        <ImprovementRoadmap 
+                          categoryScores={categoryScores} 
+                        />
+                      </motion.div>
+
+                      {/* Add the StartupEligibilityCTA component */}
+                      <motion.div
+                        variants={sectionVariants}
+                        initial="hidden"
+                        animate="visible"
+                        transition={{ delay: 0.4 }}
+                      >
+                        <StartupEligibilityCTA 
+                          user={currentUser} 
+                          stage={currentStage}
+                        />
+                      </motion.div>
+                      
+                      {/* Add the ExportShare component */}
+                      <motion.div
+                        variants={sectionVariants}
+                        initial="hidden"
+                        animate="visible"
+                        transition={{ delay: 0.5 }}
+                      >
+                        <ExportShare 
+                          stage={currentStage}
+                          categoryScores={categoryScores}
+                          recommendations={recommendations}
+                          personalizationData={personalizationData}
+                        />
+                      </motion.div>
+                      
+                      {/* Add the ActionButtons component */}
+                      <ActionButtons onReset={onReset} onViewHistory={handleViewHistory} />
+                    </>
+                  )}
+                  
+                  {activeTab === 'resources' && (
+                    <motion.div
+                      variants={sectionVariants}
+                      initial="hidden"
+                      animate="visible"
+                    >
+                      <MemoizedResourceHub />
+                    </motion.div>
+                  )}
+                  
+                  {activeTab === 'badge' && (
+                    <motion.div
+                      variants={sectionVariants}
+                      initial="hidden"
+                      animate="visible"
+                    >
+                      <BadgeGenerator 
+                        scores={categoryScores}
+                        overallScore={overallScore}
+                      />
+                    </motion.div>
+                  )}
+                </motion.div>
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );

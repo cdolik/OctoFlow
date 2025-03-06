@@ -331,6 +331,29 @@ button:disabled {
   margin-top: 15px;
 }
 
+.eligibility-badge {
+  background-color: #28a745;
+  color: white;
+  font-size: 0.8rem;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: 12px;
+  margin-left: 10px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(40, 167, 69, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(40, 167, 69, 0);
+  }
+}
+
 @media (max-width: 600px) {
   .eligibility-module {
     margin: 10px;
