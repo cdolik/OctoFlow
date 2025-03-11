@@ -1,0 +1,62 @@
+name: OctoFlow Data Collection
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # Run daily at midnight
+  workflow_dispatch:     # Allow manual triggering
+    inputs:
+      repository:
+        description: 'Repository to analyze (format: owner/repo)'
+        required: true
+        default: 'owner/repo'
+
+jobs:
+  collect-data:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+          
+      - name: Install dependencies
+        run: npm install
+        
+      - name: Determine repository
+        id: repo-info
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "REPO=${{ github.event.inputs.repository }}" >> $GITHUB_ENV
+          else
+            echo "REPO=${{ github.repository }}" >> $GITHUB_ENV
+          fi
+          IFS='/' read -r OWNER REPO <<< "$REPO"
+          echo "OWNER=$OWNER" >> $GITHUB_ENV
+          echo "REPO_NAME=$REPO" >> $GITHUB_ENV
+          
+      - name: Fetch PR data
+        run: |
+          mkdir -p data/raw/$(date +%Y-%m-%d)
+          # Use GITHUB_TOKEN from secrets
+          export GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
+          node src/scripts/fetchPRData.js ${{ env.OWNER }} ${{ env.REPO_NAME }} > data/raw/$(date +%Y-%m-%d)/pr-data.json
+        
+      - name: Analyze PRs (Rule-Based)
+        run: |
+          mkdir -p data/insights/$(date +%Y-%m-%d)
+          node src/scripts/analyzePRs.js data/raw/$(date +%Y-%m-%d)/pr-data.json > data/insights/$(date +%Y-%m-%d)/pr-insights.json
+        
+      - name: Update summary data
+        run: |
+          node src/scripts/updateSummary.js
+          
+      - name: Commit data
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add data/
+          git commit -m "Update data [skip ci]" || exit 0
+          git push

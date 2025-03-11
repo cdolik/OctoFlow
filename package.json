@@ -1,0 +1,84 @@
+{
+  "name": "octoflow",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "homepage": "https://cdolik.github.io/OctoFlow/",
+  "dependencies": {
+    "@testing-library/dom": "^10.4.0",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^14.0.0",
+    "@testing-library/user-event": "^13.5.0",
+    "@types/jest": "^27.5.2",
+    "@types/node": "^16.18.126",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "axios": "^1.8.1",
+    "chart.js": "^3.9.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "framer-motion": "^12.4.10",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^3.0.0",
+    "react": "^18.2.0",
+    "react-chartjs-2": "^4.3.1",
+    "react-dom": "^18.2.0",
+    "react-icons": "^5.5.0",
+    "react-router-dom": "^7.2.0",
+    "react-scripts": "5.0.1",
+    "typescript": "^4.9.5",
+    "web-vitals": "^2.1.4",
+    "node-fetch": "^3.3.1"
+  },
+  "scripts": {
+    "start": "cross-env NODE_OPTIONS=--openssl-legacy-provider react-scripts start",
+    "build": "cross-env NODE_OPTIONS=--openssl-legacy-provider react-scripts build",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "eject": "react-scripts eject",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d build -b gh-pages -m 'Deploy OctoFlow to GitHub Pages'",
+    "server": "node server.js",
+    "dev": "concurrently \"npm run server\" \"npm run start\"",
+    "collect": "node src/scripts/fetchPRData.js",
+    "analyze": "node src/scripts/analyzePRs.js",
+    "update-summary": "node src/scripts/updateSummary.js",
+    "analyze-all": "./run-analysis.sh"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "ajv": "^8.17.1",
+    "ajv-keywords": "^5.1.0",
+    "concurrently": "^9.1.2",
+    "cross-env": "^7.0.3",
+    "gh-pages": "^6.3.0"
+  },
+  "description": "AI-Powered GitHub Productivity & Growth Dashboard",
+  "main": "index.js",
+  "keywords": [
+    "github",
+    "analytics",
+    "ai",
+    "productivity",
+    "developer-tools"
+  ],
+  "author": "",
+  "license": "MIT"
+}

@@ -1,0 +1,60 @@
+{
+  "lastUpdated": "2025-03-11T21:45:14.440Z",
+  "prStats": {
+    "totalAnalyzed": 6,
+    "averageScore": 70.83333333333333,
+    "scoreDistribution": {
+      "excellent": 0,
+      "good": 4,
+      "needsImprovement": 2,
+      "poor": 0
+    },
+    "recentPRs": [
+      {
+        "title": "Octoflow mvp",
+        "score": 60,
+        "recommendations": [
+          "Consider using conventional commit prefixes in your title (e.g., \"feat:\", \"fix:\").",
+          "Add a description to your PR explaining the changes.",
+          "Consider breaking this PR into smaller ones (10+ files changed)."
+        ]
+      },
+      {
+        "title": "update: Refactored tsconfig and removed Hero import",
+        "score": 70,
+        "recommendations": [
+          "Consider using conventional commit prefixes in your title (e.g., \"feat:\", \"fix:\").",
+          "Add a description to your PR explaining the changes.",
+          "This PR has no reviews. Consider requesting a review."
+        ]
+      },
+      {
+        "title": "update package.json",
+        "score": 60,
+        "recommendations": [
+          "Consider using conventional commit prefixes in your title (e.g., \"feat:\", \"fix:\").",
+          "Add a description to your PR explaining the changes.",
+          "Consider breaking this PR into smaller ones (10+ files changed)."
+        ]
+      },
+      {
+        "title": "Finalize the core user flow for OctoFlow MVP",
+        "score": 75,
+        "recommendations": [
+          "Consider using conventional commit prefixes in your title (e.g., \"feat:\", \"fix:\").",
+          "Consider explaining WHY this change is needed in the description.",
+          "Consider explaining how you tested these changes."
+        ]
+      },
+      {
+        "title": "update pre-deploy to use the same workflow as deploy",
+        "score": 85,
+        "recommendations": [
+          "Consider using conventional commit prefixes in your title (e.g., \"feat:\", \"fix:\").",
+          "Add a description to your PR explaining the changes.",
+          "This PR has reviews but no comments. Consider asking for more detailed feedback."
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,156 @@
+.github-oauth-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+  min-height: 80vh;
+}
+
+.oauth-card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  padding: 2rem;
+  max-width: 500px;
+  width: 100%;
+  text-align: center;
+}
+
+.oauth-card h2 {
+  color: #24292e;
+  margin-bottom: 1rem;
+  font-size: 1.8rem;
+}
+
+.oauth-card p {
+  color: #586069;
+  margin-bottom: 1.5rem;
+  line-height: 1.5;
+}
+
+.github-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #24292e;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 12px 24px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  transition: all 0.2s ease;
+  margin-bottom: 1.5rem;
+}
+
+.github-button:hover {
+  background-color: #0366d6;
+}
+
+.github-button:disabled {
+  background-color: #6a737d;
+  cursor: not-allowed;
+}
+
+.github-button svg {
+  margin-right: 10px;
+  font-size: 1.2rem;
+}
+
+.error-message {
+  background-color: #ffebe9;
+  border: 1px solid #ff8182;
+  border-radius: 6px;
+  color: #cf222e;
+  padding: 12px;
+  margin-bottom: 1.5rem;
+  text-align: left;
+}
+
+.oauth-permissions {
+  margin-top: 2rem;
+  text-align: left;
+  border-top: 1px solid #e1e4e8;
+  padding-top: 1.5rem;
+}
+
+.oauth-permissions h3 {
+  font-size: 1.1rem;
+  margin-bottom: 1rem;
+  color: #24292e;
+}
+
+.oauth-permissions ul {
+  list-style-type: none;
+  padding: 0;
+  margin-bottom: 1rem;
+}
+
+.oauth-permissions li {
+  margin-bottom: 0.5rem;
+  padding: 8px 12px;
+  background-color: #f6f8fa;
+  border-radius: 6px;
+  color: #24292e;
+  font-size: 0.9rem;
+}
+
+.permission-note {
+  font-size: 0.85rem;
+  color: #6a737d;
+  font-style: italic;
+  margin-top: 1rem;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .oauth-card {
+    background: #0d1117;
+    color: #c9d1d9;
+  }
+  
+  .oauth-card h2 {
+    color: #f0f6fc;
+  }
+  
+  .oauth-card p {
+    color: #8b949e;
+  }
+  
+  .github-button {
+    background-color: #238636;
+  }
+  
+  .github-button:hover {
+    background-color: #2ea043;
+  }
+  
+  .github-button:disabled {
+    background-color: #1f6feb;
+  }
+  
+  .error-message {
+    background-color: rgba(248, 81, 73, 0.15);
+    border-color: rgba(248, 81, 73, 0.4);
+    color: #f85149;
+  }
+  
+  .oauth-permissions {
+    border-color: #30363d;
+  }
+  
+  .oauth-permissions h3 {
+    color: #f0f6fc;
+  }
+  
+  .oauth-permissions li {
+    background-color: #161b22;
+    color: #c9d1d9;
+  }
+  
+  .permission-note {
+    color: #8b949e;
+  }
+} 

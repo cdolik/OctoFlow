@@ -1,0 +1,251 @@
+/* PRInsightsDashboard.css */
+
+.pr-insights-dashboard {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.pr-insights-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  border-bottom: 1px solid #e1e4e8;
+  padding-bottom: 15px;
+}
+
+.pr-insights-header h1 {
+  margin: 0;
+  font-size: 24px;
+  color: #24292e;
+}
+
+.last-updated {
+  font-size: 14px;
+  color: #586069;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  grid-gap: 20px;
+}
+
+.dashboard-card {
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+  padding: 20px;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.dashboard-card:hover {
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.16), 0 3px 6px rgba(0, 0, 0, 0.23);
+}
+
+.dashboard-card h2 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  font-size: 18px;
+  color: #24292e;
+  border-bottom: 1px solid #e1e4e8;
+  padding-bottom: 10px;
+}
+
+/* Summary Card */
+.summary-card {
+  grid-column: span 1;
+}
+
+.summary-stats {
+  display: flex;
+  justify-content: space-around;
+  text-align: center;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.stat-value {
+  font-size: 36px;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: 14px;
+  color: #586069;
+  margin-top: 5px;
+}
+
+/* Distribution Card */
+.distribution-card {
+  grid-column: span 1;
+}
+
+.score-distribution {
+  display: flex;
+  flex-direction: column;
+}
+
+.distribution-bar {
+  display: flex;
+  height: 30px;
+  width: 100%;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 15px;
+}
+
+.bar-segment {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 12px;
+  min-width: 30px;
+}
+
+.bar-segment.excellent {
+  background-color: #4CAF50;
+}
+
+.bar-segment.good {
+  background-color: #2196F3;
+}
+
+.bar-segment.needs-improvement {
+  background-color: #FF9800;
+}
+
+.bar-segment.poor {
+  background-color: #F44336;
+}
+
+.distribution-legend {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+}
+
+.legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  margin-right: 5px;
+}
+
+.legend-color.excellent {
+  background-color: #4CAF50;
+}
+
+.legend-color.good {
+  background-color: #2196F3;
+}
+
+.legend-color.needs-improvement {
+  background-color: #FF9800;
+}
+
+.legend-color.poor {
+  background-color: #F44336;
+}
+
+/* Recent PRs Table */
+.recent-prs-card {
+  grid-column: span 2;
+}
+
+.recent-prs-table {
+  overflow-x: auto;
+}
+
+.recent-prs-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.recent-prs-table th,
+.recent-prs-table td {
+  padding: 10px;
+  text-align: left;
+  border-bottom: 1px solid #e1e4e8;
+}
+
+.recent-prs-table th {
+  font-weight: 600;
+  color: #24292e;
+}
+
+.score-pill {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 12px;
+  color: white;
+  font-weight: bold;
+  text-align: center;
+  min-width: 30px;
+}
+
+.recommendation-list {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 14px;
+}
+
+.recommendation-list li {
+  margin-bottom: 5px;
+}
+
+/* Loading State */
+.pr-insights-loading,
+.pr-insights-error,
+.pr-insights-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 50px;
+  text-align: center;
+}
+
+.loading-spinner {
+  border: 4px solid rgba(0, 0, 0, 0.1);
+  border-radius: 50%;
+  border-top: 4px solid #2188ff;
+  width: 30px;
+  height: 30px;
+  animation: spin 1s linear infinite;
+  margin-top: 20px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .recent-prs-card {
+    grid-column: span 1;
+  }
+  
+  .distribution-legend {
+    grid-template-columns: 1fr;
+  }
+} 

@@ -1,0 +1,231 @@
+[
+  {
+    "id": "PR_kwDON5_jCc6ME4gc",
+    "title": "Octoflow mvp",
+    "body": "",
+    "createdAt": "2025-02-21T16:42:07Z",
+    "updatedAt": "2025-02-21T16:42:21Z",
+    "mergedAt": "2025-02-21T16:42:18Z",
+    "closedAt": "2025-02-21T16:42:18Z",
+    "state": "MERGED",
+    "additions": 454,
+    "deletions": 1401,
+    "changedFiles": 33,
+    "author": {
+      "login": "cdolik",
+      "avatarUrl": "https://avatars.githubusercontent.com/u/104642274?u=8df42bbfe4c0a1b6088026104a18497497d94642&v=4"
+    },
+    "reviews": {
+      "nodes": []
+    },
+    "comments": {
+      "nodes": []
+    },
+    "commits": {
+      "nodes": [
+        {
+          "commit": {
+            "message": "OctoFlow MVP – Execution & Testing Checklist\n\nUpdate routing, components, and tests for OctoFlow MVP.\n\n* **Routing & TypeScript Enhancements**:\n  - Change `BrowserRouter` to `HashRouter` in `src/App.tsx`.\n  - Add proper TypeScript types for props and state in `src/App.tsx`.\n  - Standardize prop names to `onSelect` in `src/components/Hero.tsx` and `src/components/StageSelector.tsx`.\n\n* **Component TypeScript Conversion & Prop Standardization**:\n  - Add type annotations for props and state in `src/components/Assessment.tsx`.\n  - Add type annotations for props and state in `src/components/withFlowValidation.tsx`.\n\n* **Testing Setup**:\n  - Move global mocks (Chart.js, fetch, setImmediate polyfill) into `src/setupTests.js`.\n  - Ensure Chart.js mock is defined within the allowed scope for `jest.mock()`.\n\n* **Babel & Dependency Configuration**:\n  - Update `babel.config.js` to include appropriate presets and plugins.\n  - Ensure necessary type definitions are included in `tsconfig.json`.\n\n* **Testing & Test Coverage**:\n  - Expand tests for auto-save functionality in `src/tests/AutoSave.test.tsx`.\n  - Expand tests for error boundaries in `src/components/ErrorBoundary.test.tsx`.\n  - Expand tests for stage-specific filtering in `src/tests/StageSelector.test.tsx`.\n\n---\n\nFor more details, open the [Copilot Workspace session](https://copilot-workspace.githubnext.com/cdolik/OctoFlow?shareId=XXXX-XXXX-XXXX-XXXX)."
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "PR_kwDON5_jCc6MGcOw",
+    "title": "update: Refactored tsconfig and removed Hero import",
+    "body": "",
+    "createdAt": "2025-02-21T20:54:17Z",
+    "updatedAt": "2025-02-21T20:54:26Z",
+    "mergedAt": "2025-02-21T20:54:24Z",
+    "closedAt": "2025-02-21T20:54:24Z",
+    "state": "MERGED",
+    "additions": 171,
+    "deletions": 166,
+    "changedFiles": 6,
+    "author": {
+      "login": "cdolik",
+      "avatarUrl": "https://avatars.githubusercontent.com/u/104642274?u=8df42bbfe4c0a1b6088026104a18497497d94642&v=4"
+    },
+    "reviews": {
+      "nodes": []
+    },
+    "comments": {
+      "nodes": []
+    },
+    "commits": {
+      "nodes": [
+        {
+          "commit": {
+            "message": "update: Refactored tsconfig and removed Hero import"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "PR_kwDON5_jCc6MHUEX",
+    "title": "update package.json",
+    "body": "",
+    "createdAt": "2025-02-21T23:56:32Z",
+    "updatedAt": "2025-02-21T23:56:38Z",
+    "mergedAt": "2025-02-21T23:56:37Z",
+    "closedAt": "2025-02-21T23:56:37Z",
+    "state": "MERGED",
+    "additions": 558,
+    "deletions": 340,
+    "changedFiles": 13,
+    "author": {
+      "login": "cdolik",
+      "avatarUrl": "https://avatars.githubusercontent.com/u/104642274?u=8df42bbfe4c0a1b6088026104a18497497d94642&v=4"
+    },
+    "reviews": {
+      "nodes": []
+    },
+    "comments": {
+      "nodes": []
+    },
+    "commits": {
+      "nodes": [
+        {
+          "commit": {
+            "message": "update package.json"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "PR_kwDON5_jCc6MLRCk",
+    "title": "Finalize the core user flow for OctoFlow MVP",
+    "body": "\n\n---\n\nFor more details, open the [Copilot Workspace session](https://copilot-workspace.githubnext.com/cdolik/OctoFlow/pull/5?shareId=2b64c5e8-946e-4e97-ab3b-a3ad4b748656).",
+    "createdAt": "2025-02-22T22:14:43Z",
+    "updatedAt": "2025-02-22T22:16:39Z",
+    "mergedAt": "2025-02-22T22:16:37Z",
+    "closedAt": "2025-02-22T22:16:37Z",
+    "state": "MERGED",
+    "additions": 248,
+    "deletions": 153,
+    "changedFiles": 9,
+    "author": {
+      "login": "cdolik",
+      "avatarUrl": "https://avatars.githubusercontent.com/u/104642274?u=8df42bbfe4c0a1b6088026104a18497497d94642&v=4"
+    },
+    "reviews": {
+      "nodes": []
+    },
+    "comments": {
+      "nodes": []
+    },
+    "commits": {
+      "nodes": [
+        {
+          "commit": {
+            "message": "Finalize the core user flow for OctoFlow MVP\n\n\n\n---\n\nFor more details, open the [Copilot Workspace session](https://copilot-workspace.githubnext.com/cdolik/OctoFlow?shareId=XXXX-XXXX-XXXX-XXXX)."
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "PR_kwDON5_jCc6MjSy9",
+    "title": "update pre-deploy to use the same workflow as deploy",
+    "body": "",
+    "createdAt": "2025-02-26T01:37:35Z",
+    "updatedAt": "2025-02-26T01:40:08Z",
+    "mergedAt": "2025-02-26T01:40:06Z",
+    "closedAt": "2025-02-26T01:40:06Z",
+    "state": "MERGED",
+    "additions": 35,
+    "deletions": 15,
+    "changedFiles": 10,
+    "author": {
+      "login": "cdolik",
+      "avatarUrl": "https://avatars.githubusercontent.com/u/104642274?u=8df42bbfe4c0a1b6088026104a18497497d94642&v=4"
+    },
+    "reviews": {
+      "nodes": [
+        {
+          "author": {
+            "login": "gemini-code-assist"
+          },
+          "body": "Hello @cdolik, I'm Gemini Code Assist[^1]! I'm currently reviewing this pull request and will post my feedback shortly. In the meantime, here's a summary to help you and other reviewers quickly get up to speed!\n\n## Summary of Changes\nThis pull request aims to update the pre-deploy workflow to align it with the deploy workflow. This involves merging the `main` branch into the `gh-pages` branch in both workflows to ensure consistency. Additionally, it includes a change in `src/App.test.tsx` to update the function name from `getAssessmentData` to `getAssessmentState` to reflect a more accurate representation of the data being retrieved. The pull request also includes minor formatting changes to remove trailing whitespace in several files.\n\n### Highlights\n* **Workflow Alignment**: The `pre-deploy.yml` workflow is updated to include a step that merges the `main` branch into the `gh-pages` branch, mirroring the process in the `deploy.yml` workflow.\n* **Function Name Update**: The function name `getAssessmentData` is updated to `getAssessmentState` in `src/App.test.tsx` for better clarity.\n* **Deployment Verification**: The `pre-deploy.yml` workflow now includes a step to verify the `gh-pages` configuration using `node scripts/verify-deployment.js`.\n\n### Changelog\n<details>\n<summary>Click here to see the changelog</summary>\n\n* **.github/workflows/deploy.yml**\n  * Added a step to merge `main` into `gh-pages` and push the changes.\n* **.github/workflows/pre-deploy.yml**\n  * Added a step to verify `gh-pages` configuration.\n  * Added a step to merge `main` into `gh-pages` and push the changes.\n* **src/App.test.tsx**\n  * Renamed `getAssessmentData` to `getAssessmentState` to align with the data being retrieved.\n  * Updated all instances of `getAssessmentData` to `getAssessmentState`.\n* **src/components/ErrorBoundary.tsx**\n  * Removed trailing whitespace.\n* **src/hooks/useAssessmentSession.ts**\n  * Removed trailing whitespace.\n* **src/hooks/useStageTransition.ts**\n  * Removed trailing whitespace.\n* **src/hooks/useStageValidation.ts**\n  * Removed trailing whitespace.\n* **src/hooks/useStorage.ts**\n  * Removed trailing whitespace.\n* **src/types/index.ts**\n  * Removed comment `// Core Types`.\n* **src/utils/storage.ts**\n  * Removed trailing whitespace.\n\n</details>\n\n\n<details>\n\n<summary><b>Using Gemini Code Assist</b></summary>\n<br>\n\nThe full guide for Gemini Code Assist can be found on our [documentation page](https://developers.google.com/gemini-code-assist/docs/review-github-code), here are some quick tips.\n\n<b>Invoking Gemini</b>\n\nYou can request assistance from Gemini at any point in your pull request via creating an issue comment (i.e. comment on the pull request page) using either `/gemini <command>` or `@gemini-code-assist <command>`. Below is a summary of the supported commands.\n\nFeature | Command | Description\n--- | --- | ---\nCode Review | `/gemini review` | Performs a code review for the current pull request in its current state.\nPull Request Summary | `/gemini summary` | Provides a summary of the current pull request in its current state.\nComment | @gemini-code-assist | Responds in comments when explicitly tagged, both in issue comments and review comments.\nHelp | `/gemini help` | Displays a list of available commands.\n\n<b>Customization</b>\n\nTo customize Gemini Code Assist for GitHub experience, repository maintainers can create a configuration file and/or provide a custom code review style guide (such as PEP-8 for Python) by creating and adding files to a `.gemini/` folder in the base of the repository. Detailed instructions can be found [here](https://developers.google.com/gemini-code-assist/docs/review-github-code).\n\n<b>Limitations & Feedback</b>\n\nGemini Code Assist is currently in preview and may make mistakes. Please leave feedback on any instances where its feedback is incorrect or counter productive. You can react with :thumbsup: and :thumbsdown: on @gemini-code-assist comments to provide feedback.\n\n</details>\n\n<b>You can also get AI-powered code generation, chat, as well as code reviews directly in the IDE at no cost with the [Gemini Code Assist IDE Extension](https://cloud.google.com/products/gemini/code-assist).</b>\n\n\n[^1]: Review the [Privacy Notices](https://policies.google.com/privacy), [Generative AI Prohibited Use Policy](https://policies.google.com/terms/generative-ai/use-policy), [Terms of Service](https://policies.google.com/terms), and learn how to configure Gemini Code Assist in GitHub [here](https://developers.google.com/gemini-code-assist/docs/review-github-code). Gemini can make mistakes, so double check it and [use code with caution](https://support.google.com/legal/answer/13505487).\n\n---\n\n**Trivia time!**\n\nWhat is YAML, the language used to define the Github Action workflows?\n\n<details>\n<summary><b>Click here for the answer</b></summary>\n<br>\nYAML stands for \"YAML Ain't Markup Language\". It is a human-readable data-serialization language. It is commonly used for configuration files and in applications where data is being stored or transmitted.\n\n</details>\n",
+          "state": "COMMENTED"
+        },
+        {
+          "author": {
+            "login": "gemini-code-assist"
+          },
+          "body": "## Code Review\nThe pull request updates the pre-deploy workflow to use the same workflow as deploy. The changes include merging the main branch into the gh-pages branch in both `deploy.yml` and `pre-deploy.yml`, and renaming `getAssessmentData` to `getAssessmentState` in the test files. It would be helpful to understand the reasoning behind these changes and whether they could be optimized.\n\n### Summary of Findings\n* **Redundant Merge Step**: The merge step in both `deploy.yml` and `pre-deploy.yml` seems redundant. It's crucial to understand why this merge is necessary in both workflows and whether it could be consolidated or optimized.\n* **Test File Changes**: The renaming of `getAssessmentData` to `getAssessmentState` in the test files requires careful consideration. It's important to ensure that this change doesn't introduce any regressions or unexpected behavior in the tests.\n* **Missing Justification**: The pull request description lacks a clear justification for the changes. It's essential to provide context and explain the reasoning behind these updates to facilitate a more informed review.\n\n### Assessment\nThe pull request aims to update the pre-deploy workflow to align with the deploy workflow, primarily by incorporating a step to merge the main branch into the gh-pages branch. Additionally, it includes changes to use `getAssessmentState` instead of `getAssessmentData` in the test files. While the changes seem straightforward, there are a few points that need clarification and potential improvements. Please have others review and approve this code before merging.",
+          "state": "COMMENTED"
+        }
+      ]
+    },
+    "comments": {
+      "nodes": []
+    },
+    "commits": {
+      "nodes": [
+        {
+          "commit": {
+            "message": "update pre-deploy to use the same workflow as deploy"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "PR_kwDON5_jCc6MxIN1",
+    "title": "Fix build and import errors, enhance validation flow",
+    "body": "\n\n---\n\nFor more details, open the [Copilot Workspace session](https://copilot-workspace.githubnext.com/cdolik/OctoFlow/pull/9?shareId=0bafde0d-711d-45ca-bbe8-540843122c52).",
+    "createdAt": "2025-02-27T09:31:18Z",
+    "updatedAt": "2025-02-27T12:27:50Z",
+    "mergedAt": "2025-02-27T12:27:49Z",
+    "closedAt": "2025-02-27T12:27:49Z",
+    "state": "MERGED",
+    "additions": 359,
+    "deletions": 380,
+    "changedFiles": 15,
+    "author": {
+      "login": "cdolik",
+      "avatarUrl": "https://avatars.githubusercontent.com/u/104642274?u=8df42bbfe4c0a1b6088026104a18497497d94642&v=4"
+    },
+    "reviews": {
+      "nodes": [
+        {
+          "author": {
+            "login": "gemini-code-assist"
+          },
+          "body": "Hello @cdolik, I'm Gemini Code Assist[^1]! I'm currently reviewing this pull request and will post my feedback shortly. In the meantime, here's a summary to help you and other reviewers quickly get up to speed!\n\n## Summary of Changes\nThis pull request focuses on fixing build and import errors, and enhancing the validation flow within the application. It includes changes to the build process, dependency management, and test implementations to ensure the application functions correctly and provides appropriate feedback to the user during the assessment process.\n\n### Highlights\n* **Build Process Fixes**: The pull request introduces a `.devcontainer/devcontainer.json` file to define build tasks and updates the `package.json` to use `react-app-rewired` for customizing the build process, addressing potential build errors.\n* **Dependency Management**: The pull request adds `customize-cra` and `react-app-rewired` as dependencies in `package.json` to allow for overriding webpack configurations, specifically to resolve issues with `react-refresh/runtime`.\n* **Workflow Adjustments**: The pull request modifies the `deploy.yml` workflow to adjust the dependencies between jobs, ensuring that deployment occurs after the build and test stages are successful.\n* **Validation Enhancement**: The pull request enhances the assessment validation flow by implementing score threshold checks in `Assessment.tsx` and `Summary.tsx`, preventing progression if the user's score is below the required threshold.\n* **Testing Improvements**: The pull request adds new test cases in `App.test.tsx` and `Assessment.test.tsx` to verify the score threshold validation and the display of summary screen metrics.\n* **Import Fixes**: The pull request fixes import statements in `App.tsx` and `AppRoutes.tsx` to ensure correct module resolution.\n\n### Changelog\n<details>\n<summary>Click here to see the changelog</summary>\n\n* **.devcontainer/devcontainer.json**\n  * Added a new file to define build tasks for the development container.\n* **.github/workflows/deploy.yml**\n  * Modified the workflow to ensure deployment occurs after successful build and test stages.\n* **config-overrides.js**\n  * Added a new file to override webpack configurations and resolve issues with `react-refresh/runtime`.\n* **package.json**\n  * Updated dependencies to include `customize-cra` and `react-app-rewired`.\n  * Modified scripts to use `react-app-rewired` for `start`, `build`, and `test` commands.\n* **src/App.test.tsx**\n  * Added new test cases to verify score threshold validation and summary screen metrics.\n* **src/App.tsx**\n  * Fixed import statement for `AppRoutes`.\n* **src/components/AppRoutes.tsx**\n  * Fixed import statements for `LoadingSpinner` and `ErrorBoundary`.\n* **src/components/Assessment.test.tsx**\n  * Added new test cases to verify score threshold validation and progression control.\n* **src/components/Assessment.tsx**\n  * Implemented score threshold checks to prevent progression if the user's score is below the required threshold.\n* **src/components/Summary.test.tsx**\n  * Added new test cases to verify the display of accumulated metrics and tailored recommendations.\n* **src/components/Summary.tsx**\n  * Implemented score threshold checks to prevent progression if the user's score is below the required threshold.\n  * Added display of accumulated metrics and tailored recommendations.\n* **src/utils/flowState.ts**\n  * Added `validateStageRequirements` function to check score threshold and missing responses.\n* **src/utils/scoring.ts**\n  * Added `calculateStageScores`, `calculateMetrics`, and `getStageQuestions` functions for score calculation and metrics retrieval.\n* **src/utils/storage.ts**\n  * Added `saveMetricsAndRecommendations` function to save metrics and recommendations.\n\n</details>\n\n\n<details>\n\n<summary><b>Using Gemini Code Assist</b></summary>\n<br>\n\nThe full guide for Gemini Code Assist can be found on our [documentation page](https://developers.google.com/gemini-code-assist/docs/review-github-code), here are some quick tips.\n\n<b>Invoking Gemini</b>\n\nYou can request assistance from Gemini at any point in your pull request via creating an issue comment (i.e. comment on the pull request page) using either `/gemini <command>` or `@gemini-code-assist <command>`. Below is a summary of the supported commands.\n\nFeature | Command | Description\n--- | --- | ---\nCode Review | `/gemini review` | Performs a code review for the current pull request in its current state.\nPull Request Summary | `/gemini summary` | Provides a summary of the current pull request in its current state.\nComment | @gemini-code-assist | Responds in comments when explicitly tagged, both in issue comments and review comments.\nHelp | `/gemini help` | Displays a list of available commands.\n\n<b>Customization</b>\n\nTo customize Gemini Code Assist for GitHub experience, repository maintainers can create a configuration file and/or provide a custom code review style guide (such as PEP-8 for Python) by creating and adding files to a `.gemini/` folder in the base of the repository. Detailed instructions can be found [here](https://developers.google.com/gemini-code-assist/docs/review-github-code).\n\n<b>Limitations & Feedback</b>\n\nGemini Code Assist is currently in preview and may make mistakes. Please leave feedback on any instances where its feedback is incorrect or counter productive. You can react with :thumbsup: and :thumbsdown: on @gemini-code-assist comments to provide feedback.\n\n</details>\n\n<b>You can also get AI-powered code generation, chat, as well as code reviews directly in the IDE at no cost with the [Gemini Code Assist IDE Extension](https://cloud.google.com/products/gemini/code-assist).</b>\n\n\n[^1]: Review the [Privacy Notices](https://policies.google.com/privacy), [Generative AI Prohibited Use Policy](https://policies.google.com/terms/generative-ai/use-policy), [Terms of Service](https://policies.google.com/terms), and learn how to configure Gemini Code Assist in GitHub [here](https://developers.google.com/gemini-code-assist/docs/review-github-code). Gemini can make mistakes, so double check it and [use code with caution](https://support.google.com/legal/answer/13505487).\n\n---\n\n> A build that fails, a test that cries,\n> An import amiss, beneath watchful eyes.\n> But fear not, coder, with steady hand,\n> To mend the code and make it grand.\n\n",
+          "state": "COMMENTED"
+        },
+        {
+          "author": {
+            "login": "gemini-code-assist"
+          },
+          "body": "## Code Review\nThe pull request addresses build and import errors and enhances the validation flow. The changes include updates to dependencies, build configurations, and test cases. The addition of score threshold validation is a significant improvement. Overall, the changes look good, but there are a few areas that could be improved.\n\n### Summary of Findings\n\n\n### Merge Readiness\nThe pull request is almost ready for merging. The changes related to build errors, dependency updates, and the validation flow enhancement are valuable. I recommend addressing the comments provided to ensure code quality and clarity. I am unable to directly approve this pull request, and recommend that others review and approve this code before merging.",
+          "state": "COMMENTED"
+        },
+        {
+          "author": {
+            "login": "cdolik"
+          },
+          "body": "Because package-lock.json is auto-generated, the simplest approach is often to accept one version (usually the newer branch’s) and then regenerate it. Here’s how you can do it:\r\n\t1.\tDiscard package-lock.json in the merge\r\n\t•\tIn the merge conflict resolution, choose either main or fix-build-errors version for package-lock.json (whichever is more up to date).\r\n\t•\tAlternatively, delete package-lock.json entirely.\r\n\t2.\tRe-generate the lock file\r\n\t•\tRun npm install locally, which will create a fresh package-lock.json consistent with your current dependencies.\r\n\t3.\tCommit the new lock file\r\n\t•\tAdd and commit the newly generated package-lock.json to resolve the conflict and ensure consistency across environments.\r\n\r\nThis avoids manually editing package-lock.json, which is error-prone.",
+          "state": "COMMENTED"
+        }
+      ]
+    },
+    "comments": {
+      "nodes": []
+    },
+    "commits": {
+      "nodes": [
+        {
+          "commit": {
+            "message": "Fix build and import errors, enhance validation flow\n\n\n\n---\n\nFor more details, open the [Copilot Workspace session](https://copilot-workspace.githubnext.com/cdolik/OctoFlow?shareId=XXXX-XXXX-XXXX-XXXX)."
+          }
+        }
+      ]
+    }
+  }
+]

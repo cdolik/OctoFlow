@@ -1,0 +1,109 @@
+[
+  {
+    "prId": "PR_kwDON5_jCc6ME4gc",
+    "prTitle": "Octoflow mvp",
+    "analysis": {
+      "score": 60,
+      "titleQuality": "Good",
+      "descriptionQuality": "Poor",
+      "recommendations": [
+        "Consider using conventional commit prefixes in your title (e.g., \"feat:\", \"fix:\").",
+        "Add a description to your PR explaining the changes.",
+        "Consider breaking this PR into smaller ones (10+ files changed)."
+      ],
+      "positiveAspects": [
+        "PR title has good length."
+      ]
+    }
+  },
+  {
+    "prId": "PR_kwDON5_jCc6MGcOw",
+    "prTitle": "update: Refactored tsconfig and removed Hero import",
+    "analysis": {
+      "score": 70,
+      "titleQuality": "Good",
+      "descriptionQuality": "Poor",
+      "recommendations": [
+        "Consider using conventional commit prefixes in your title (e.g., \"feat:\", \"fix:\").",
+        "Add a description to your PR explaining the changes.",
+        "This PR has no reviews. Consider requesting a review."
+      ],
+      "positiveAspects": [
+        "PR title has good length."
+      ]
+    }
+  },
+  {
+    "prId": "PR_kwDON5_jCc6MHUEX",
+    "prTitle": "update package.json",
+    "analysis": {
+      "score": 60,
+      "titleQuality": "Good",
+      "descriptionQuality": "Poor",
+      "recommendations": [
+        "Consider using conventional commit prefixes in your title (e.g., \"feat:\", \"fix:\").",
+        "Add a description to your PR explaining the changes.",
+        "Consider breaking this PR into smaller ones (10+ files changed)."
+      ],
+      "positiveAspects": [
+        "PR title has good length."
+      ]
+    }
+  },
+  {
+    "prId": "PR_kwDON5_jCc6MLRCk",
+    "prTitle": "Finalize the core user flow for OctoFlow MVP",
+    "analysis": {
+      "score": 75,
+      "titleQuality": "Good",
+      "descriptionQuality": "Good",
+      "recommendations": [
+        "Consider using conventional commit prefixes in your title (e.g., \"feat:\", \"fix:\").",
+        "Consider explaining WHY this change is needed in the description.",
+        "Consider explaining how you tested these changes."
+      ],
+      "positiveAspects": [
+        "PR title has good length.",
+        "PR has a reasonably detailed description."
+      ]
+    }
+  },
+  {
+    "prId": "PR_kwDON5_jCc6MjSy9",
+    "prTitle": "update pre-deploy to use the same workflow as deploy",
+    "analysis": {
+      "score": 85,
+      "titleQuality": "Good",
+      "descriptionQuality": "Poor",
+      "recommendations": [
+        "Consider using conventional commit prefixes in your title (e.g., \"feat:\", \"fix:\").",
+        "Add a description to your PR explaining the changes.",
+        "This PR has reviews but no comments. Consider asking for more detailed feedback."
+      ],
+      "positiveAspects": [
+        "PR title has good length.",
+        "PR has a reasonable number of code changes.",
+        "PR has 2 review(s)."
+      ]
+    }
+  },
+  {
+    "prId": "PR_kwDON5_jCc6MxIN1",
+    "prTitle": "Fix build and import errors, enhance validation flow",
+    "analysis": {
+      "score": 75,
+      "titleQuality": "Good",
+      "descriptionQuality": "Good",
+      "recommendations": [
+        "Consider using conventional commit prefixes in your title (e.g., \"feat:\", \"fix:\").",
+        "Consider explaining WHY this change is needed in the description.",
+        "Consider explaining how you tested these changes."
+      ],
+      "positiveAspects": [
+        "PR title has good length.",
+        "PR has a reasonably detailed description.",
+        "PR has 3 review(s)."
+      ]
+    }
+  }
+]

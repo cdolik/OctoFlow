@@ -1,0 +1,375 @@
+.eligibility-module {
+  background-color: var(--color-bg-secondary);
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  margin: 20px auto;
+  max-width: 800px;
+  padding: 20px;
+  width: 100%;
+}
+
+.disclaimer {
+  background-color: rgba(255, 165, 0, 0.1);
+  border-left: 4px solid orange;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  padding: 10px 15px;
+}
+
+.eligibility-wizard {
+  background-color: var(--color-bg-primary);
+  border-radius: 6px;
+  padding: 20px;
+}
+
+.wizard-step {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.wizard-step h3 {
+  color: var(--color-heading);
+  font-size: 1.5rem;
+  margin-bottom: 10px;
+}
+
+.eligibility-criteria-list,
+.benefits-list {
+  margin-left: 20px;
+}
+
+.eligibility-criteria-list li,
+.benefits-list li {
+  margin-bottom: 8px;
+}
+
+.benefits-toggle {
+  margin: 10px 0;
+}
+
+.text-button {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 500;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.text-button:hover {
+  color: var(--color-primary-dark);
+}
+
+.benefits-section {
+  background-color: rgba(0, 120, 212, 0.05);
+  border-radius: 6px;
+  margin-top: 10px;
+  padding: 15px;
+}
+
+.benefits-section h4 {
+  font-size: 1.2rem;
+  margin-bottom: 10px;
+}
+
+.option-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 10px 0;
+}
+
+.wizard-option {
+  background-color: var(--color-bg-secondary);
+  border: 2px solid var(--color-border);
+  border-radius: 6px;
+  cursor: pointer;
+  padding: 15px;
+  transition: all 0.2s ease;
+}
+
+.wizard-option:hover {
+  border-color: var(--color-primary-light);
+  transform: translateY(-2px);
+}
+
+.wizard-option.selected {
+  background-color: rgba(0, 120, 212, 0.1);
+  border-color: var(--color-primary);
+  box-shadow: 0 2px 8px rgba(0, 120, 212, 0.15);
+}
+
+.option-label {
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+.wizard-nav {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+.primary-button,
+.secondary-button {
+  align-items: center;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 1rem;
+  font-weight: 500;
+  gap: 8px;
+  padding: 10px 18px;
+  transition: all 0.2s ease;
+}
+
+.primary-button {
+  background-color: var(--color-primary);
+  color: white;
+}
+
+.primary-button:hover {
+  background-color: var(--color-primary-dark);
+  transform: translateY(-2px);
+}
+
+.secondary-button {
+  background-color: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+}
+
+.secondary-button:hover {
+  background-color: var(--color-bg-secondary);
+  border-color: var(--color-border-dark);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.partner-info {
+  margin: 15px 0;
+}
+
+.partner-link {
+  align-items: center;
+  color: var(--color-primary);
+  display: inline-flex;
+  font-weight: 500;
+  gap: 6px;
+  text-decoration: underline;
+}
+
+.partner-link:hover {
+  color: var(--color-primary-dark);
+}
+
+.results-step {
+  text-align: center;
+}
+
+.eligibility-status {
+  align-items: center;
+  background-color: var(--color-bg-secondary);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin: 20px auto;
+  padding: 25px;
+  width: 100%;
+}
+
+.status-icon {
+  font-size: 3rem;
+}
+
+.eligibility-status.eligible .status-icon {
+  color: var(--color-success);
+}
+
+.eligibility-status.ineligible .status-icon {
+  color: var(--color-danger);
+}
+
+.status-text h4 {
+  font-size: 1.8rem;
+  margin-bottom: 10px;
+}
+
+.next-steps,
+.ineligibility-reasons {
+  background-color: var(--color-bg-secondary);
+  border-radius: 8px;
+  margin: 20px auto;
+  padding: 20px;
+  text-align: left;
+  width: 100%;
+}
+
+.next-steps h4,
+.ineligibility-reasons h4 {
+  font-size: 1.3rem;
+  margin-bottom: 15px;
+}
+
+.next-steps ol {
+  margin-left: 25px;
+}
+
+.next-steps li {
+  margin-bottom: 10px;
+}
+
+.ineligibility-reasons ul {
+  margin-left: 20px;
+}
+
+.ineligibility-reasons li {
+  color: var(--color-danger);
+  margin-bottom: 8px;
+}
+
+.cta-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 25px;
+}
+
+/* Styles for StartupEligibilityCTA component */
+.startup-eligibility-cta {
+  background-color: var(--color-bg-secondary);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin: 20px 0;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.cta-header {
+  align-items: center;
+  background: linear-gradient(to right, rgba(0, 120, 212, 0.1), transparent);
+  border-left: 4px solid var(--color-primary);
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  padding: 15px 20px;
+  transition: background-color 0.2s ease;
+}
+
+.cta-header:hover {
+  background-color: rgba(0, 120, 212, 0.1);
+}
+
+.cta-title {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+}
+
+.cta-title i {
+  color: var(--color-primary);
+  font-size: 1.3rem;
+}
+
+.cta-title h3 {
+  color: var(--color-heading);
+  font-size: 1.3rem;
+  margin: 0;
+}
+
+.cta-toggle i {
+  color: var(--color-text-secondary);
+  font-size: 1rem;
+  transition: transform 0.2s ease;
+}
+
+.cta-content {
+  border-top: 1px solid var(--color-border);
+  padding: 15px 20px;
+}
+
+.cta-description p {
+  color: var(--color-text);
+  margin-bottom: 10px;
+}
+
+.cta-eligibility {
+  background-color: rgba(0, 120, 212, 0.05);
+  border-radius: 6px;
+  margin: 15px 0;
+  padding: 12px 15px;
+}
+
+.cta-eligibility h4 {
+  color: var(--color-heading);
+  font-size: 1.1rem;
+  margin-bottom: 8px;
+}
+
+.cta-eligibility ul {
+  margin-left: 20px;
+}
+
+.cta-eligibility li {
+  color: var(--color-text);
+  margin-bottom: 6px;
+}
+
+.cta-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 15px;
+}
+
+.eligibility-badge {
+  background-color: #28a745;
+  color: white;
+  font-size: 0.8rem;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: 12px;
+  margin-left: 10px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(40, 167, 69, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(40, 167, 69, 0);
+  }
+}
+
+@media (max-width: 600px) {
+  .eligibility-module {
+    margin: 10px;
+    padding: 15px;
+  }
+
+  .wizard-step h3 {
+    font-size: 1.3rem;
+  }
+
+  .cta-buttons,
+  .cta-actions {
+    flex-direction: column;
+  }
+  
+  .cta-title h3 {
+    font-size: 1.1rem;
+  }
+} 
