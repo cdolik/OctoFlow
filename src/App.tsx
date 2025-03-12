@@ -263,8 +263,6 @@ function AppContent() {
                 <Navigate to="/auth" replace />
               )
             } />
-            
-            <Route path="/pr-insights" element={<PRInsightsDashboard />} />
           </Routes>
         </main>
         

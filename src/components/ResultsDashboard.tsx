@@ -7,6 +7,7 @@ import ResourceHub from './ResourceHub';
 import ExportShare from './ExportShare';
 import StartupEligibilityCTA from './StartupEligibilityCTA';
 import ImprovementRoadmap from './ImprovementRoadmap';
+import PRInsightsDashboard from './PRInsightsDashboard';
 import { User } from '../services/githubApi';
 import { fetchCurrentUser } from '../services/githubApi';
 import { saveAssessmentToHistory } from '../utils/historyUtils';
@@ -351,6 +352,12 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
                       Scores & Recommendations
                     </button>
                     <button 
+                      className={`tab-button ${activeTab === 'pr-insights' ? 'active' : ''}`}
+                      onClick={() => setActiveTab('pr-insights')}
+                    >
+                      PR Insights
+                    </button>
+                    <button 
                       className={`tab-button ${activeTab === 'resources' ? 'active' : ''}`}
                       onClick={() => setActiveTab('resources')}
                     >
@@ -459,6 +466,16 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
                       {/* Add the ActionButtons component */}
                       <ActionButtons onReset={onReset} onViewHistory={handleViewHistory} />
                     </>
+                  )}
+                  
+                  {activeTab === 'pr-insights' && (
+                    <motion.div
+                      variants={sectionVariants}
+                      initial="hidden"
+                      animate="visible"
+                    >
+                      <PRInsightsDashboard />
+                    </motion.div>
                   )}
                   
                   {activeTab === 'resources' && (

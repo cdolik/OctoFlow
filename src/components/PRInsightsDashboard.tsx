@@ -53,7 +53,7 @@ const PRInsightsDashboard: React.FC = () => {
   if (loading) {
     return (
       <div className="pr-insights-loading">
-        <h2>Loading PR Insights...</h2>
+        <h3>Loading PR Insights...</h3>
         <div className="loading-spinner"></div>
       </div>
     );
@@ -62,7 +62,7 @@ const PRInsightsDashboard: React.FC = () => {
   if (error) {
     return (
       <div className="pr-insights-error">
-        <h2>Error</h2>
+        <h3>Error</h3>
         <p>{error}</p>
         <button onClick={() => window.location.reload()}>Try Again</button>
       </div>
@@ -72,7 +72,7 @@ const PRInsightsDashboard: React.FC = () => {
   if (!insights) {
     return (
       <div className="pr-insights-empty">
-        <h2>No PR Insights Available</h2>
+        <h3>No PR Insights Available</h3>
         <p>Run the analysis pipeline to generate insights.</p>
       </div>
     );
@@ -91,12 +91,10 @@ const PRInsightsDashboard: React.FC = () => {
 
   return (
     <div className="pr-insights-dashboard">
-      <header className="pr-insights-header">
-        <h1>OctoFlow PR Insights Dashboard</h1>
-        <div className="last-updated">
-          Last updated: {lastUpdatedDate}
-        </div>
-      </header>
+      <h3 className="insights-tab-header">Pull Request Insights</h3>
+      <div className="insights-last-updated">
+        Last updated: {lastUpdatedDate}
+      </div>
 
       <div className="dashboard-grid">
         {/* Summary Stats Card */}
@@ -106,7 +104,7 @@ const PRInsightsDashboard: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <h2>PR Analysis Summary</h2>
+          <h3>PR Analysis Summary</h3>
           <div className="summary-stats">
             <div className="stat">
               <div className="stat-value">{prStats.totalAnalyzed}</div>
@@ -128,7 +126,7 @@ const PRInsightsDashboard: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.1 }}
         >
-          <h2>Score Distribution</h2>
+          <h3>Score Distribution</h3>
           <div className="score-distribution">
             <div className="distribution-bar">
               <div className="bar-segment excellent" 
@@ -192,7 +190,7 @@ const PRInsightsDashboard: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
         >
-          <h2>Recent Pull Requests</h2>
+          <h3>Recent Pull Requests</h3>
           <div className="recent-prs-table">
             <table>
               <thead>

@@ -9,14 +9,19 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 5001;
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
-// Enable CORS
+// Enable CORS with more specific configuration
 app.use(cors({
-  origin: process.env.ALLOWED_ORIGINS || 'http://localhost:3000'
+  origin: [FRONTEND_URL],
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 // Serve static files from the React app build directory in production
-app.use(express.static(path.join(__dirname, 'build')));
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, 'build')));
+}
 
 // Serve data files
 app.use('/data', express.static(path.join(__dirname, 'data')));
@@ -94,12 +99,45 @@ app.get('/api/raw/:date', (req, res) => {
 });
 
 // Handle any requests that don't match the ones above
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'build', 'index.html'));
-});
+if (process.env.NODE_ENV === 'production') {
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'build', 'index.html'));
+  });
+} else {
+  app.get('/', (req, res) => {
+    res.json({
+      status: 'OctoFlow API is running',
+      endpoints: {
+        insights: '/api/insights',
+        summary: '/api/insights/summary',
+        dates: '/api/insights/dates',
+        raw: '/api/raw/:date'
+      },
+      version: '2.0.0'
+    });
+  });
+}
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
   console.log(`- API URL: http://localhost:${PORT}/api`);
   console.log(`- Data files: http://localhost:${PORT}/data`);
+  console.log(`- Frontend URL: ${FRONTEND_URL}`);
+}).on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`Port ${PORT} is already in use. Please try a different port or stop the process using this port.`);
+    process.exit(1);
+  } else {
+    console.error('Server error:', err);
+    process.exit(1);
+  }
+});
+
+// Handle graceful shutdown
+process.on('SIGINT', () => {
+  console.log('Shutting down server gracefully...');
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
 }); 
