@@ -17,31 +17,36 @@ import {
   GitHubTopicsResponse
 } from '../types/github';
 
+// Import secure token management utilities
+import {
+  storeGitHubToken,
+  getGitHubToken,
+  clearGitHubToken,
+  hasValidGitHubToken
+} from '../utils/tokenUtils';
+
+// Import rate limiting utilities
+import { applyRateLimit } from '../utils/rateLimitUtils';
+
 // Base URL for API requests
 const BASE_URL = 'https://api.github.com';
 
-// Token management
-const TOKEN_STORAGE_KEY = 'github_token';
-
 /**
  * Set the GitHub token for API requests
+ * @param token GitHub token to store
+ * @param expiryMs Optional expiration time in milliseconds
+ * @returns Boolean indicating if token was stored successfully
  */
-export const setGitHubToken = (token: string): void => {
-  localStorage.setItem(TOKEN_STORAGE_KEY, token);
+export const setGitHubToken = (token: string, expiryMs?: number): boolean => {
+  return storeGitHubToken(token, expiryMs);
 };
 
 /**
- * Get the current GitHub token
+ * Check if a valid GitHub token is available
+ * @returns Boolean indicating if a valid token is available
  */
-export const getGitHubToken = (): string | null => {
-  return localStorage.getItem(TOKEN_STORAGE_KEY);
-};
-
-/**
- * Clear the GitHub token
- */
-export const clearGitHubToken = (): void => {
-  localStorage.removeItem(TOKEN_STORAGE_KEY);
+export const hasGitHubToken = (): boolean => {
+  return hasValidGitHubToken();
 };
 
 /**
@@ -169,12 +174,35 @@ const handleGitHubError = (error: any, endpoint: string): GitHubApiError => {
 
 /**
  * Make a GET request to the GitHub API
+ * @param endpoint API endpoint to call
+ * @param params Query parameters
+ * @param rateLimitTier Rate limit tier to apply
+ * @returns Promise with the API response
  */
-export const fetchFromGitHub = async <T>(endpoint: string, params: Record<string, string> = {}): Promise<T> => {
+export const fetchFromGitHub = async <T>(
+  endpoint: string, 
+  params: Record<string, string> = {},
+  rateLimitTier: 'standard' | 'auth' | 'sensitive' = 'standard'
+): Promise<T> => {
   const token = getGitHubToken();
   
   if (!token) {
     throw new GitHubApiError('GitHub token is required for authentication', endpoint, 401);
+  }
+  
+  // Apply rate limiting
+  const clientId = 'github-api'; // In a real app, use a unique identifier per user
+  const { result: rateLimit, headers: rateLimitHeaders } = applyRateLimit(clientId, rateLimitTier);
+  
+  // Check if rate limited
+  if (!rateLimit.allowed) {
+    const resetTime = new Date(rateLimit.resetTime).toLocaleTimeString();
+    throw new GitHubApiError(
+      `Rate limit exceeded. Limit will reset at ${resetTime}.`,
+      endpoint,
+      429,
+      true
+    );
   }
   
   // Convert params to query string
@@ -211,12 +239,35 @@ export const fetchFromGitHub = async <T>(endpoint: string, params: Record<string
 
 /**
  * Make a POST request to the GitHub API
+ * @param endpoint API endpoint to call
+ * @param data Data to send in the request body
+ * @param rateLimitTier Rate limit tier to apply
+ * @returns Promise with the API response
  */
-export const postToGitHub = async <T>(endpoint: string, data: unknown): Promise<T> => {
+export const postToGitHub = async <T>(
+  endpoint: string, 
+  data: unknown,
+  rateLimitTier: 'standard' | 'auth' | 'sensitive' = 'sensitive'
+): Promise<T> => {
   const token = getGitHubToken();
   
   if (!token) {
     throw new GitHubApiError('GitHub token is required for authentication', endpoint, 401);
+  }
+  
+  // Apply rate limiting - use 'sensitive' tier by default for POST requests
+  const clientId = 'github-api'; // In a real app, use a unique identifier per user
+  const { result: rateLimit, headers: rateLimitHeaders } = applyRateLimit(clientId, rateLimitTier);
+  
+  // Check if rate limited
+  if (!rateLimit.allowed) {
+    const resetTime = new Date(rateLimit.resetTime).toLocaleTimeString();
+    throw new GitHubApiError(
+      `Rate limit exceeded. Limit will reset at ${resetTime}.`,
+      endpoint,
+      429,
+      true
+    );
   }
   
   const url = `${BASE_URL}/${endpoint}`;
@@ -337,7 +388,7 @@ export const getUserOrganizations = async (): Promise<GitHubOrganization[]> => {
 
 export default {
   setGitHubToken,
-  getGitHubToken,
+  hasGitHubToken,
   clearGitHubToken,
   fetchFromGitHub,
   postToGitHub,

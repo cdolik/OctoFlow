@@ -134,6 +134,8 @@ OctoFlow generates a comprehensive GitHub Health Report that includes:
 
 OctoFlow runs entirely within your GitHub Actions environment and does not send your code or PR data to any external servers. All analysis is performed locally within the GitHub Actions runner.
 
+We take security seriously and have implemented a comprehensive dependency resolution strategy to ensure all dependencies are using secure versions. For more details, see our [Security Policy](SECURITY.md).
+
 ## 📚 Resources
 
 - [GitHub's Well-Architected Framework](https://wellarchitected.github.com/library/overview/)

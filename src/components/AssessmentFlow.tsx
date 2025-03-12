@@ -50,6 +50,28 @@ const AssessmentFlow: React.FC<AssessmentFlowProps> = ({
     trackAssessmentStart(stage, personalizationData);
   }, [stage, personalizationData]);
   
+  // Define handleResponse before it's used in the useEffect dependency array
+  const handleResponse = (score: number) => {
+    const updatedResponses = { ...responses, [currentQuestion.id]: score };
+    setResponses(updatedResponses);
+    
+    if (currentQuestionIndex < stageQuestions.length - 1) {
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
+    } else {
+      // Completed all questions
+      handleComplete();
+    }
+  };
+  
+  const handleSkip = () => {
+    if (currentQuestionIndex < stageQuestions.length - 1) {
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
+    } else {
+      // Completed all questions
+      handleComplete();
+    }
+  };
+  
   // Handle keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -105,32 +127,11 @@ const AssessmentFlow: React.FC<AssessmentFlowProps> = ({
     };
   }, [currentQuestionIndex, stageQuestions.length, handleSkip, handleResponse, onBack]);
   
-  const handleResponse = (score: number) => {
-    const updatedResponses = { ...responses, [currentQuestion.id]: score };
-    setResponses(updatedResponses);
-    
-    if (currentQuestionIndex < stageQuestions.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
-    } else {
-      // Completed all questions
-      handleComplete();
-    }
-  };
-  
   const handlePrevious = () => {
     if (currentQuestionIndex > 0) {
       setCurrentQuestionIndex(currentQuestionIndex - 1);
     } else {
       onBack();
-    }
-  };
-
-  const handleSkip = () => {
-    if (currentQuestionIndex < stageQuestions.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
-    } else {
-      // If this is the last question, complete the assessment with the responses so far
-      handleComplete();
     }
   };
   

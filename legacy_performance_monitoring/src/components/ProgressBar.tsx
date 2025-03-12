@@ -15,13 +15,12 @@ const ProgressBar: React.FC<ProgressBarProps> = ({
 }) => {
   // Ensure progress is between 0 and 100
   const normalizedProgress = Math.min(100, Math.max(0, progress));
-  
   return (
     <div
       className="progress-bar-container mb-8"
       role="progressbar"
       aria-label={label}
-      aria-valuenow={normalizedProgress}
+      aria-valuenow={normalizedProgress.toString()}
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuetext={`${normalizedProgress}% complete`}

@@ -283,6 +283,21 @@ function generateHealthReport(metrics) {
     report += `\n`;
   });
   
+  // Add Security Section
+  report += `## 🔒 Security Assessment\n\n`;
+  report += `Security is a critical aspect of investor-ready GitHub practices. Here's an assessment of your repository's security posture:\n\n`;
+  
+  // Calculate security score based on collaboration and fundamentals scores
+  const securityScore = Math.round((categoryScores[CATEGORIES.FUNDAMENTALS] * 0.5) + (categoryScores[CATEGORIES.COLLABORATION] * 0.5));
+  report += `${getScoreEmoji(securityScore)} **Security Score**: ${securityScore}/100\n\n`;
+  
+  // Security recommendations
+  report += `### Security Recommendations:\n\n`;
+  report += `- Regularly update dependencies to address security vulnerabilities\n`;
+  report += `- Implement security scanning in your CI/CD pipeline\n`;
+  report += `- Conduct regular code reviews with a security focus\n`;
+  report += `- Document security practices in a SECURITY.md file\n\n`;
+  
   // Next Steps
   report += `## 🚀 Next Steps for Your Startup\n\n`;
   report += `1. **Focus on your lowest-scoring category first** - This will give you the biggest improvement in your overall score.\n`;

@@ -155,6 +155,38 @@ export function analyzePR(prData) {
       `Review GitHub's Well-Architected Framework for startup best practices`
     );
   }
+  
+  // Add security-focused analysis
+  const securityKeywords = ['security', 'vulnerability', 'exploit', 'attack', 'hack', 'cve', 'fix', 'patch'];
+  const securityRelated = securityKeywords.some(keyword => 
+    title.toLowerCase().includes(keyword) || 
+    description.toLowerCase().includes(keyword)
+  );
+  
+  if (securityRelated) {
+    // If this is a security-related PR, add specific recommendations
+    recommendations.push(
+      `This appears to be a security-related PR. Consider adding security testing and documentation.`
+    );
+    
+    // Check if there's a security review
+    const hasSecurityReview = reviews.some(review => 
+      review.body && securityKeywords.some(keyword => review.body.toLowerCase().includes(keyword))
+    );
+    
+    if (!hasSecurityReview && reviews.length > 0) {
+      recommendations.push(
+        `Security-related PRs should be reviewed by someone with security expertise.`
+      );
+    }
+    
+    // Add to strengths if it has good security practices
+    if (reviews.length >= 2 && descriptionQuality.score > 0.7) {
+      strengths.push(
+        `Good security practices with thorough description and multiple reviewers.`
+      );
+    }
+  }
 
   return {
     score: Math.min(1, Math.max(0, score)), // Ensure score is between 0 and 1
@@ -170,7 +202,8 @@ export function analyzePR(prData) {
       fundamentals: categorizedStrengths.fundamentals,
       collaboration: categorizedStrengths.collaboration,
       velocity: categorizedStrengths.velocity
-    }
+    },
+    securityRelated // Add flag for security-related PRs
   };
 }
 

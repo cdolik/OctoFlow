@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Category } from '../data/questions';
-import { AssessmentResult, getAssessmentHistory, deleteAssessmentFromHistory } from '../utils/storage';
-import { Radar } from 'react-chartjs-2';
+import { StartupStage, Category } from '../data/questions';
+import { getAssessmentHistory, deleteAssessmentById } from '../utils/historyUtils';
 import Settings from './Settings';
 
 interface HistoryDashboardProps {
@@ -10,9 +9,8 @@ interface HistoryDashboardProps {
 }
 
 const HistoryDashboard: React.FC<HistoryDashboardProps> = ({ onClose }) => {
-  const [history, setHistory] = useState<AssessmentResult[]>([]);
-  const [selectedResult, setSelectedResult] = useState<AssessmentResult | null>(null);
-  const [comparisonResult, setComparisonResult] = useState<AssessmentResult | null>(null);
+  const [history, setHistory] = useState<any[]>([]);
+  const [selectedItem, setSelectedItem] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   
   // Load history on component mount
@@ -20,61 +18,50 @@ const HistoryDashboard: React.FC<HistoryDashboardProps> = ({ onClose }) => {
     loadHistory();
   }, []);
   
-  // Load history data
+  // Load history from localStorage
   const loadHistory = () => {
     const assessmentHistory = getAssessmentHistory();
     setHistory(assessmentHistory);
-    
-    // Select the most recent result by default
-    if (assessmentHistory.length > 0) {
-      setSelectedResult(assessmentHistory[0]);
-    }
   };
   
-  // Format date for display
+  // Format date
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
-    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
   
-  // Handle result selection
-  const handleSelectResult = (result: AssessmentResult) => {
-    setSelectedResult(result);
+  // Get color for score
+  const getScoreColor = (score: number): string => {
+    if (score >= 80) return '#4CAF50'; // Green
+    if (score >= 60) return '#2196F3'; // Blue
+    if (score >= 40) return '#FF9800'; // Orange
+    return '#F44336'; // Red
   };
   
-  // Handle comparison selection
-  const handleCompareResult = (result: AssessmentResult) => {
-    if (selectedResult && result.id === selectedResult.id) {
-      // Can't compare with itself
-      return;
-    }
-    setComparisonResult(result);
-  };
-  
-  // Handle result deletion
-  const handleDeleteResult = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this assessment result?')) {
-      deleteAssessmentFromHistory(id);
-      
-      // Update local state
-      const updatedHistory = history.filter(result => result.id !== id);
-      setHistory(updatedHistory);
-      
-      // Update selected result if needed
-      if (selectedResult && selectedResult.id === id) {
-        setSelectedResult(updatedHistory.length > 0 ? updatedHistory[0] : null);
-      }
-      
-      // Update comparison result if needed
-      if (comparisonResult && comparisonResult.id === id) {
-        setComparisonResult(null);
+  // Delete history item
+  const handleDelete = (id: string) => {
+    if (window.confirm('Are you sure you want to delete this assessment?')) {
+      deleteAssessmentById(id);
+      loadHistory();
+      if (selectedItem === id) {
+        setSelectedItem(null);
       }
     }
   };
   
-  // Clear comparison
-  const clearComparison = () => {
-    setComparisonResult(null);
+  // Clear all history
+  const handleClearAll = () => {
+    if (window.confirm('Are you sure you want to clear all assessment history? This cannot be undone.')) {
+      localStorage.removeItem('octoflow_assessment_history');
+      setHistory([]);
+      setSelectedItem(null);
+    }
   };
   
   // Open settings
@@ -88,234 +75,181 @@ const HistoryDashboard: React.FC<HistoryDashboardProps> = ({ onClose }) => {
     loadHistory(); // Reload history in case settings changed
   };
   
-  // Prepare chart data for comparison
-  const prepareComparisonChartData = () => {
-    if (!selectedResult) return null;
-    
-    const labels = Object.keys(selectedResult.categoryScores);
-    const datasets = [
-      {
-        label: `${selectedResult.stage} - ${formatDate(selectedResult.date).split(' ')[0]}`,
-        data: Object.values(selectedResult.categoryScores),
-        backgroundColor: 'rgba(75, 192, 192, 0.2)',
-        borderColor: 'rgba(75, 192, 192, 1)',
-        borderWidth: 2,
-        pointBackgroundColor: 'rgba(75, 192, 192, 1)',
-        pointBorderColor: '#fff',
-        pointHoverBackgroundColor: '#fff',
-        pointHoverBorderColor: 'rgba(75, 192, 192, 1)',
-      }
-    ];
-    
-    if (comparisonResult) {
-      datasets.push({
-        label: `${comparisonResult.stage} - ${formatDate(comparisonResult.date).split(' ')[0]}`,
-        data: Object.values(comparisonResult.categoryScores),
-        backgroundColor: 'rgba(153, 102, 255, 0.2)',
-        borderColor: 'rgba(153, 102, 255, 1)',
-        borderWidth: 2,
-        pointBackgroundColor: 'rgba(153, 102, 255, 1)',
-        pointBorderColor: '#fff',
-        pointHoverBackgroundColor: '#fff',
-        pointHoverBorderColor: 'rgba(153, 102, 255, 1)',
-      });
-    }
-    
-    return {
-      labels,
-      datasets
-    };
-  };
-  
-  // Chart options
-  const chartOptions = {
-    scales: {
-      r: {
-        min: 0,
-        max: 4,
-        ticks: {
-          stepSize: 1,
-          callback: function(value: any) {
-            return value.toString();
-          }
-        },
-        pointLabels: {
-          font: {
-            size: 14
-          }
-        }
-      }
-    },
-    plugins: {
-      legend: {
-        position: 'top' as const
-      },
-      tooltip: {
-        callbacks: {
-          label: function(context: any) {
-            const label = context.dataset.label || '';
-            const value = context.raw !== undefined ? Number(context.raw) : 0;
-            return `${label}: ${value.toFixed(1)}/4.0`;
-          }
-        }
-      }
-    },
-    maintainAspectRatio: false
-  };
-  
-  // Animation variants
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1
-      }
-    }
-  };
-  
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { 
-      opacity: 1, 
-      y: 0,
-      transition: { 
-        type: "spring",
-        stiffness: 100,
-        damping: 15
-      }
-    }
-  };
-  
   return (
-    <>
+    <div className="history-dashboard-overlay">
       <div className="history-dashboard">
         <div className="history-header">
           <h2>Assessment History</h2>
-          <div className="history-header-actions">
-            <button onClick={handleOpenSettings} className="settings-button">
-              ⚙️ Settings
+          <div className="history-actions">
+            <button 
+              className="settings-button"
+              onClick={handleOpenSettings}
+              aria-label="Settings"
+            >
+              ⚙️
             </button>
-            <button onClick={onClose} className="close-button">×</button>
+            <button 
+              className="close-button"
+              onClick={onClose}
+              aria-label="Close"
+            >
+              ×
+            </button>
           </div>
         </div>
         
         <div className="history-content">
-          <div className="history-sidebar">
-            <h3>Past Assessments</h3>
-            {history.length === 0 ? (
-              <p className="no-history">No assessment history found.</p>
-            ) : (
-              <motion.ul 
-                className="history-list"
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
-              >
-                {history.map(result => (
-                  <motion.li 
-                    key={result.id}
-                    className={`history-item ${selectedResult?.id === result.id ? 'selected' : ''} ${comparisonResult?.id === result.id ? 'comparison' : ''}`}
-                    variants={itemVariants}
-                    onClick={() => handleSelectResult(result)}
+          {history.length === 0 ? (
+            <div className="empty-history">
+              <p>No assessment history found.</p>
+              <p>Complete an assessment to see your history here.</p>
+            </div>
+          ) : (
+            <div className="history-layout">
+              <div className="history-list">
+                <div className="history-list-header">
+                  <h3>Past Assessments</h3>
+                  <button 
+                    className="clear-all-button"
+                    onClick={handleClearAll}
                   >
-                    <div className="history-item-header">
-                      <span className="history-item-stage">{result.stage}</span>
-                      <span className="history-item-date">{formatDate(result.date)}</span>
-                    </div>
-                    <div className="history-item-actions">
+                    Clear All
+                  </button>
+                </div>
+                
+                <div className="history-items">
+                  {history.map((item) => (
+                    <div 
+                      key={item.id}
+                      className={`history-item ${selectedItem === item.id ? 'selected' : ''}`}
+                      onClick={() => setSelectedItem(item.id)}
+                    >
+                      <div className="history-item-header">
+                        <span className="history-date">{formatDate(item.date)}</span>
+                        <span className="history-stage">{item.stage}</span>
+                      </div>
+                      <div className="history-item-score">
+                        <span 
+                          className="score-value"
+                          style={{ color: getScoreColor(item.overallScore) }}
+                        >
+                          {Math.round(item.overallScore)}
+                        </span>
+                        <span className="score-label">Overall Score</span>
+                      </div>
                       <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleCompareResult(result);
-                        }}
-                        disabled={selectedResult?.id === result.id}
-                        className="compare-button"
-                      >
-                        Compare
-                      </button>
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteResult(result.id);
-                        }}
                         className="delete-button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(item.id);
+                        }}
+                        aria-label="Delete assessment"
                       >
-                        Delete
+                        🗑️
                       </button>
                     </div>
-                  </motion.li>
-                ))}
-              </motion.ul>
-            )}
-          </div>
-          
-          <div className="history-details">
-            {selectedResult ? (
-              <>
-                <div className="history-details-header">
-                  <h3>{selectedResult.stage} Assessment</h3>
-                  <p className="history-details-date">{formatDate(selectedResult.date)}</p>
-                  
-                  {comparisonResult && (
-                    <div className="comparison-header">
-                      <p>Comparing with: {comparisonResult.stage} ({formatDate(comparisonResult.date)})</p>
-                      <button onClick={clearComparison} className="clear-comparison-button">
-                        Clear Comparison
-                      </button>
-                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              {selectedItem && (
+                <div className="history-details">
+                  {history.find(item => item.id === selectedItem) && (
+                    <HistoryItemDetails 
+                      item={history.find(item => item.id === selectedItem)} 
+                    />
                   )}
                 </div>
-                
-                <div className="history-chart">
-                  <Radar 
-                    data={prepareComparisonChartData() as any} 
-                    options={chartOptions as any} 
-                    height={350}
-                  />
-                </div>
-                
-                <div className="history-scores">
-                  <h4>Category Scores</h4>
-                  <div className="history-score-grid">
-                    {Object.entries(selectedResult.categoryScores).map(([category, score]) => {
-                      const comparisonScore = comparisonResult ? comparisonResult.categoryScores[category as Category] : null;
-                      const scoreDiff = comparisonScore !== null ? score - comparisonScore : null;
-                      
-                      return (
-                        <div key={category} className="history-score-item">
-                          <div className="history-score-label">{category}</div>
-                          <div className="history-score-value">
-                            {score.toFixed(1)}
-                            {scoreDiff !== null && (
-                              <span className={`score-diff ${scoreDiff > 0 ? 'positive' : scoreDiff < 0 ? 'negative' : 'neutral'}`}>
-                                {scoreDiff > 0 ? '+' : ''}{scoreDiff.toFixed(1)}
-                              </span>
-                            )}
-                          </div>
-                          <div className="history-score-bar">
-                            <div className="history-score-fill" style={{ width: `${(score / 4) * 100}%` }}></div>
-                            {comparisonScore !== null && (
-                              <div className="history-comparison-marker" style={{ left: `${(comparisonScore / 4) * 100}%` }}></div>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div className="no-selection">
-                <p>Select an assessment from the list to view details.</p>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
       
       {showSettings && <Settings onClose={handleCloseSettings} />}
-    </>
+    </div>
+  );
+};
+
+// Component to display details of a history item
+interface HistoryItemDetailsProps {
+  item: any;
+}
+
+const HistoryItemDetails: React.FC<HistoryItemDetailsProps> = ({ item }) => {
+  // Get color for score
+  const getScoreColor = (score: number): string => {
+    if (score >= 3.5) return '#4CAF50'; // Green
+    if (score >= 2.5) return '#2196F3'; // Blue
+    if (score >= 1.5) return '#FF9800'; // Orange
+    return '#F44336'; // Red
+  };
+  
+  return (
+    <div className="history-item-details">
+      <h3>{item.stage} Assessment</h3>
+      <p className="details-date">Completed on {new Date(item.date).toLocaleDateString()}</p>
+      
+      <div className="details-overall-score">
+        <h4>Overall Score</h4>
+        <div 
+          className="overall-score-value"
+          style={{ color: getScoreColor(item.overallScore) }}
+        >
+          {Math.round(item.overallScore)}
+        </div>
+      </div>
+      
+      <div className="details-category-scores">
+        <h4>Category Scores</h4>
+        <div className="category-scores-grid">
+          {Object.entries(item.scores).map(([category, score]: [string, any]) => (
+            <div key={category} className="category-score">
+              <div className="category-name">{category}</div>
+              <div 
+                className="score-value"
+                style={{ color: getScoreColor(score) }}
+              >
+                {score.toFixed(1)}
+              </div>
+              <div className="score-bar">
+                <div 
+                  className="score-fill" 
+                  style={{ 
+                    width: `${(score / 4) * 100}%`,
+                    backgroundColor: getScoreColor(score)
+                  }}
+                ></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      
+      {item.personalizationData && (
+        <div className="details-personalization">
+          <h4>Personalization Data</h4>
+          <div className="personalization-grid">
+            <div className="personalization-item">
+              <span className="item-label">Team Size:</span>
+              <span className="item-value">{item.personalizationData.teamSize || 'Not specified'}</span>
+            </div>
+            <div className="personalization-item">
+              <span className="item-label">Primary Language:</span>
+              <span className="item-value">{item.personalizationData.primaryLanguage || 'Not specified'}</span>
+            </div>
+            <div className="personalization-item">
+              <span className="item-label">Compliance Needs:</span>
+              <span className="item-value">
+                {item.personalizationData.complianceNeeds && item.personalizationData.complianceNeeds.length > 0
+                  ? item.personalizationData.complianceNeeds.join(', ')
+                  : 'None specified'}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 

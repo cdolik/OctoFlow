@@ -27,6 +27,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
       
+      - name: Security audit
+        run: npm audit --production
+      
       - name: Run Startup GitHub Health Analysis
         id: pr_analysis
         env:
@@ -40,7 +43,7 @@ jobs:
           # If this is a PR event, create a summary file for commenting
           if [ "$IS_PR_EVENT" = "true" ]; then
             node src/scripts/generatePRComment.js
-            echo "::set-output name=summary_path::./data/pr-comment.md"
+            echo "summary_path=./data/pr-comment.md" >> $GITHUB_OUTPUT
           fi
       
       - name: Comment on PR with Startup GitHub Health Insights

@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 
 interface PersonalizationInputsProps {
   onSubmit: (inputs: PersonalizationData) => void;
+  onSkip?: () => void;
   initialData?: PersonalizationData;
 }
 
@@ -12,7 +13,7 @@ export interface PersonalizationData {
   complianceNeeds: string[];
 }
 
-const PersonalizationInputs: React.FC<PersonalizationInputsProps> = ({ onSubmit, initialData }) => {
+const PersonalizationInputs: React.FC<PersonalizationInputsProps> = ({ onSubmit, onSkip, initialData }) => {
   const [teamSize, setTeamSize] = useState<string>(initialData?.teamSize || '');
   const [primaryLanguage, setPrimaryLanguage] = useState<string>(initialData?.primaryLanguage || '');
   const [complianceNeeds, setComplianceNeeds] = useState<string[]>(initialData?.complianceNeeds || []);

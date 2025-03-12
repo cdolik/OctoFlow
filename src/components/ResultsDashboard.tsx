@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { StartupStage, Category } from '../data/questions';
+import { StartupStage, Category, calculateCategoryScores } from '../data/questions';
 import MaturityScoreCard from './MaturityScoreCard';
 import QuickWinRecommendations from './QuickWinRecommendations';
 import ResourceHub from './ResourceHub';
@@ -8,13 +8,21 @@ import ExportShare from './ExportShare';
 import StartupEligibilityCTA from './StartupEligibilityCTA';
 import ImprovementRoadmap from './ImprovementRoadmap';
 import PRInsightsDashboard from './PRInsightsDashboard';
-import { User } from '../services/githubApi';
-import { fetchCurrentUser } from '../services/githubApi';
+import { User } from '../types/github';
+import { getUserProfile } from '../services/githubApi';
 import { saveAssessmentToHistory } from '../utils/historyUtils';
 import { questions } from '../data/questions';
 import { PersonalizationData } from './PersonalizationInputs';
 import LoadingSkeleton from './LoadingSkeleton';
 import { useNavigate } from 'react-router-dom';
+
+// Import the missing components
+import Settings from './Settings';
+import HistoryDashboard from './HistoryDashboard';
+import ScoresSummary from './ScoresSummary';
+import RecommendationsList from './RecommendationsList';
+import ActionButtons from './ActionButtons';
+import BadgeGenerator from './BadgeGenerator';
 
 // We'll use React.lazy to load the Chart.js components only when needed
 const RadarChart = React.lazy(() => import('./RadarChart'));
@@ -118,7 +126,7 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
     
     // Calculate overall score
     const scoreValues = Object.values(scores);
-    const avgScore = scoreValues.reduce((sum, score) => sum + score, 0) / scoreValues.length;
+    const avgScore = scoreValues.reduce((sum: number, score: number) => sum + score, 0) / scoreValues.length;
     setOverallScore(avgScore);
     
     // Generate recommendations based on lowest scoring categories
@@ -153,8 +161,14 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
     }, 800);
     
     // Save assessment result to history
-    saveAssessmentToHistory(currentStage, currentResponses, scores);
-  }, [currentStage, allResponses]);
+    saveAssessmentToHistory(
+      currentStage, 
+      currentResponses, 
+      scores, 
+      avgScore, 
+      personalizationData
+    );
+  }, [currentStage, allResponses, personalizationData]);
   
   // Fetch user data for eligibility check
   useEffect(() => {

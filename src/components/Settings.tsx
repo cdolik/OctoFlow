@@ -34,8 +34,9 @@ const Settings: React.FC<SettingsProps> = ({
   });
   const [showConfirmClear, setShowConfirmClear] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [darkMode, setDarkMode] = useState<boolean>(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState<boolean>(true);
+  const [dataCollection, setDataCollection] = useState<boolean>(true);
   const [employeeCount, setEmployeeCount] = useState<number | undefined>(companyInfo.employeeCount);
   const [devCount, setDevCount] = useState<number | undefined>(companyInfo.devCount);
   const [fundingStage, setFundingStage] = useState<string>(companyInfo.fundingStage || '');
@@ -53,9 +54,14 @@ const Settings: React.FC<SettingsProps> = ({
   useEffect(() => {
     const savedSettings = localStorage.getItem('octoflow_settings');
     if (savedSettings) {
-      const parsedSettings = JSON.parse(savedSettings);
-      setDarkMode(parsedSettings.darkMode || false);
-      setNotificationsEnabled(parsedSettings.notificationsEnabled !== false);
+      try {
+        const parsedSettings = JSON.parse(savedSettings);
+        setDarkMode(parsedSettings.darkMode || false);
+        setNotificationsEnabled(parsedSettings.notificationsEnabled !== false);
+        setDataCollection(parsedSettings.dataCollection !== false);
+      } catch (error) {
+        console.error('Error parsing settings:', error);
+      }
     }
     
     // Check if dark mode is enabled in the system
@@ -68,8 +74,10 @@ const Settings: React.FC<SettingsProps> = ({
   useEffect(() => {
     if (darkMode) {
       document.documentElement.setAttribute('data-theme', 'dark');
+      document.body.classList.add('dark-mode');
     } else {
       document.documentElement.setAttribute('data-theme', 'light');
+      document.body.classList.remove('dark-mode');
     }
   }, [darkMode]);
 
@@ -110,10 +118,11 @@ const Settings: React.FC<SettingsProps> = ({
   const saveSettings = () => {
     const settings = {
       darkMode,
-      notificationsEnabled
+      notificationsEnabled,
+      dataCollection
     };
     
-    localStorage.setItem('userSettings', JSON.stringify(settings));
+    localStorage.setItem('octoflow_settings', JSON.stringify(settings));
     
     // Update company info if callback is provided
     if (onCompanyInfoUpdate) {
@@ -145,6 +154,18 @@ const Settings: React.FC<SettingsProps> = ({
   const handleDevCountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setDevCount(value === '' ? undefined : parseInt(value, 10));
+  };
+
+  // Clear all data
+  const clearAllData = () => {
+    if (window.confirm('Are you sure you want to clear all data? This action cannot be undone.')) {
+      // Clear localStorage
+      localStorage.removeItem('octoflow_assessment_history');
+      localStorage.removeItem('octoflow_responses');
+      
+      // Reload the page
+      window.location.reload();
+    }
   };
 
   return (
@@ -244,7 +265,7 @@ const Settings: React.FC<SettingsProps> = ({
                   type="checkbox"
                   id="darkMode"
                   checked={darkMode}
-                  onChange={() => setDarkMode(!darkMode)}
+                  onChange={(e) => setDarkMode(e.target.checked)}
                 />
                 <span className="toggle-slider"></span>
               </div>
@@ -260,7 +281,23 @@ const Settings: React.FC<SettingsProps> = ({
                   type="checkbox"
                   id="notifications"
                   checked={notificationsEnabled}
-                  onChange={() => setNotificationsEnabled(!notificationsEnabled)}
+                  onChange={(e) => setNotificationsEnabled(e.target.checked)}
+                />
+                <span className="toggle-slider"></span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="settings-section">
+            <h3>Privacy</h3>
+            <div className="setting-item">
+              <label htmlFor="dataCollection">Allow Anonymous Usage Data Collection</label>
+              <div className="toggle-switch">
+                <input
+                  type="checkbox"
+                  id="dataCollection"
+                  checked={dataCollection}
+                  onChange={(e) => setDataCollection(e.target.checked)}
                 />
                 <span className="toggle-slider"></span>
               </div>
@@ -322,7 +359,7 @@ const Settings: React.FC<SettingsProps> = ({
                   type="checkbox"
                   id="usingGitHubEnterprise"
                   checked={usingGitHubEnterprise}
-                  onChange={() => setUsingGitHubEnterprise(!usingGitHubEnterprise)}
+                  onChange={(e) => setUsingGitHubEnterprise(e.target.checked)}
                 />
                 <span className="toggle-slider"></span>
               </div>
@@ -335,7 +372,7 @@ const Settings: React.FC<SettingsProps> = ({
                   type="checkbox"
                   id="usingAdvancedSecurity"
                   checked={usingAdvancedSecurity}
-                  onChange={() => setUsingAdvancedSecurity(!usingAdvancedSecurity)}
+                  onChange={(e) => setUsingAdvancedSecurity(e.target.checked)}
                 />
                 <span className="toggle-slider"></span>
               </div>
@@ -355,6 +392,19 @@ const Settings: React.FC<SettingsProps> = ({
                 <option value="more than 2 years">More than 2 years</option>
               </select>
             </div>
+          </div>
+          
+          <div className="settings-section">
+            <h3>Data Management</h3>
+            <button 
+              className="danger-button"
+              onClick={clearAllData}
+            >
+              Clear All Data
+            </button>
+            <p className="settings-note">
+              This will delete all your assessment history and settings.
+            </p>
           </div>
         </div>
         

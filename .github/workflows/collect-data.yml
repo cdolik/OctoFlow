@@ -42,7 +42,7 @@ jobs:
           mkdir -p data/raw/$(date +%Y-%m-%d)
           # Use GITHUB_TOKEN from secrets
           export GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
-          node src/scripts/fetchPRData.js ${{ env.OWNER }} ${{ env.REPO_NAME }} > data/raw/$(date +%Y-%m-%d)/pr-data.json
+          node src/scripts/fetchPRData.js ${{ github.repository_owner }} ${{ github.event.repository.name }} > data/raw/$(date +%Y-%m-%d)/pr-data.json
         
       - name: Analyze PRs (Rule-Based)
         run: |

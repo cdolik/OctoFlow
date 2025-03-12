@@ -1,12 +1,13 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Category } from '../data/questions';
+import { Category, StartupStage } from '../data/questions';
 
 interface MaturityScoreCardProps {
   categoryScores: Record<Category, number>;
+  stage?: StartupStage; // Make stage optional
 }
 
-const MaturityScoreCard: React.FC<MaturityScoreCardProps> = ({ categoryScores }) => {
+const MaturityScoreCard: React.FC<MaturityScoreCardProps> = ({ categoryScores, stage }) => {
   // Calculate overall maturity score
   const calculateOverallScore = (): number => {
     const scores = Object.values(categoryScores);

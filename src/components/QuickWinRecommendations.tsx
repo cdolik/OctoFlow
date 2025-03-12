@@ -251,7 +251,7 @@ const QuickWinRecommendations: React.FC<QuickWinRecommendationsProps> = ({ recom
                 className="recommendation-header" 
                 onClick={() => toggleExpand(index)}
                 role="button"
-                aria-expanded={expandedRecs.includes(index)}
+                aria-expanded={expandedRecs.includes(index) ? 'true' : 'false'}
                 aria-controls={`recommendation-details-${index}`}
                 tabIndex={0}
                 onKeyDown={(e) => {

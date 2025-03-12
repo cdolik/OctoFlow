@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 import { Category } from '../data/questions';
 
 interface RecommendationsListProps {
@@ -12,39 +11,72 @@ interface RecommendationsListProps {
 }
 
 const RecommendationsList: React.FC<RecommendationsListProps> = ({ recommendations }) => {
+  if (recommendations.length === 0) {
+    return (
+      <div className="recommendations-list empty">
+        <h3>Recommendations</h3>
+        <p>Great job! No recommendations at this time.</p>
+      </div>
+    );
+  }
+
+  // Group recommendations by priority
+  const highPriority = recommendations.filter(rec => rec.priority === 'high');
+  const mediumPriority = recommendations.filter(rec => rec.priority === 'medium');
+  const lowPriority = recommendations.filter(rec => rec.priority === 'low');
+
   return (
-    <motion.div 
-      className="recommendations"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, ease: "easeOut", delay: 0.3 }}
-    >
+    <div className="recommendations-list">
       <h3>Recommendations</h3>
-      {recommendations.length === 0 ? (
-        <p>Great job! You&apos;ve implemented GitHub best practices effectively.</p>
-      ) : (
-        <ul className="recommendation-list">
-          {recommendations.map((rec, index) => (
-            <motion.li 
-              key={index} 
-              className={`priority-${rec.priority}`}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.4 + (index * 0.1) }}
-            >
-              <div className="rec-header">
-                <span className="rec-category">{rec.category}</span>
-                <span className="rec-priority">{rec.priority} priority</span>
-              </div>
-              <div className="rec-text">{rec.text}</div>
-              <a href={rec.docsUrl} target="_blank" rel="noopener noreferrer" className="rec-link">
-                GitHub Docs Reference
-              </a>
-            </motion.li>
-          ))}
-        </ul>
+      
+      {highPriority.length > 0 && (
+        <div className="priority-group high">
+          <h4>High Priority</h4>
+          <ul>
+            {highPriority.map((rec, index) => (
+              <li key={index}>
+                <span className="recommendation-text">{rec.text}</span>
+                <a href={rec.docsUrl} target="_blank" rel="noopener noreferrer" className="docs-link">
+                  Learn more
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
-    </motion.div>
+      
+      {mediumPriority.length > 0 && (
+        <div className="priority-group medium">
+          <h4>Medium Priority</h4>
+          <ul>
+            {mediumPriority.map((rec, index) => (
+              <li key={index}>
+                <span className="recommendation-text">{rec.text}</span>
+                <a href={rec.docsUrl} target="_blank" rel="noopener noreferrer" className="docs-link">
+                  Learn more
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      
+      {lowPriority.length > 0 && (
+        <div className="priority-group low">
+          <h4>Low Priority</h4>
+          <ul>
+            {lowPriority.map((rec, index) => (
+              <li key={index}>
+                <span className="recommendation-text">{rec.text}</span>
+                <a href={rec.docsUrl} target="_blank" rel="noopener noreferrer" className="docs-link">
+                  Learn more
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
   );
 };
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import '../styles/PRInsightsDashboard.css';
-import { fetchPRInsights, PRInsights } from '../services/insightsService';
+import { fetchPRInsights, PRInsights as ImportedPRInsights } from '../services/insightsService';
 
 // Types for our PR insights data
 interface PRRecommendation {

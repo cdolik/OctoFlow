@@ -12,8 +12,8 @@ const StageSelector: React.FC<StageSelectorProps> = ({ onSelectStage, initialDat
   const [selectedStage, setSelectedStage] = useState<StartupStage | null>(null);
   const [personalizationData, setPersonalizationData] = useState<PersonalizationData>(
     initialData || {
-      teamSize: undefined,
-      primaryLanguage: undefined,
+      teamSize: '',
+      primaryLanguage: '',
       complianceNeeds: [],
     }
   );

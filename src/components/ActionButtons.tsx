@@ -1,26 +1,36 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 
 interface ActionButtonsProps {
-  onViewHistory: () => void;
   onReset: () => void;
+  onViewHistory: () => void;
 }
 
 const ActionButtons: React.FC<ActionButtonsProps> = ({ onViewHistory, onReset }) => {
   return (
-    <motion.div 
-      className="action-buttons"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, ease: "easeOut", delay: 0.6 }}
-    >
-      <button onClick={onViewHistory} className="secondary-button">
-        View History
+    <div className="action-buttons">
+      <button 
+        className="action-button history-button"
+        onClick={onViewHistory}
+      >
+        View Assessment History
       </button>
-      <button onClick={onReset} className="primary-button">
-        Start Over
+      
+      <button 
+        className="action-button reset-button"
+        onClick={onReset}
+      >
+        Start New Assessment
       </button>
-    </motion.div>
+      
+      <a 
+        href="https://github.com/cdolik/OctoFlow"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="action-button github-button"
+      >
+        View on GitHub
+      </a>
+    </div>
   );
 };
 

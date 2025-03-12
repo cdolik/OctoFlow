@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, Link } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate, useNavigate, Link } from 'react-router-dom';
 import './App.css';
 import './styles/Assessment.css';
 import './styles/Results.css';
@@ -33,13 +33,16 @@ import {
   hasExistingAssessmentData
 } from './utils/storageUtils';
 
+// Get environment variables
+const GITHUB_CLIENT_ID = process.env.REACT_APP_GITHUB_CLIENT_ID || '';
+
 // Get the base path for GitHub Pages
 const basename = process.env.PUBLIC_URL || '';
 
 // Component that wraps our main content and provides access to navigation
 function AppContent() {
   const navigate = useNavigate();
-  const { isAuthenticated, loading, login } = useGitHub();
+  const { isAuthenticated, loading, login, user } = useGitHub();
   const [menuOpen, setMenuOpen] = useState(false);
   const [personalizationData, setPersonalizationData] = useState<PersonalizationData | undefined>(undefined);
   const [currentStage, setCurrentStage] = useState<StartupStage>(StartupStage.Beginner);
@@ -158,6 +161,15 @@ function AppContent() {
     navigate('/dashboard');
   };
   
+  // Handle GitHub login button click
+  const handleLoginClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    if (login && typeof login === 'function') {
+      // If login requires parameters, pass an empty object or appropriate default values
+      login({} as GitHubUser);
+    }
+  };
+  
   if (loading) {
     return <div className="loading">Loading...</div>;
   }
@@ -180,12 +192,17 @@ function AppContent() {
           
           <nav className="app-nav">
             <button 
-              className="nav-toggle" 
+              className="menu-toggle" 
               onClick={() => setMenuOpen(!menuOpen)}
               aria-expanded={menuOpen}
               aria-label="Toggle navigation menu"
             >
-              {menuOpen ? '✕' : '☰'}
+              <span className="sr-only">Menu</span>
+              <div className="hamburger">
+                <span className="bar"></span>
+                <span className="bar"></span>
+                <span className="bar"></span>
+              </div>
             </button>
             
             <div className={`nav-menu ${menuOpen ? 'open' : ''}`}>
@@ -193,7 +210,7 @@ function AppContent() {
               {Object.values(stageResponses).some(responses => Object.keys(responses).length > 0) && (
                 <Link to="/dashboard" className="nav-button" onClick={() => setMenuOpen(false)}>Results</Link>
               )}
-              <button className="github-button" onClick={login} disabled={isAuthenticated}>
+              <button className="github-button" onClick={handleLoginClick} disabled={isAuthenticated}>
                 {isAuthenticated ? 'Connected to GitHub' : 'Connect GitHub'}
               </button>
             </div>
@@ -248,21 +265,15 @@ function AppContent() {
               }
             />
             
-            <Route path="/login" element={
-              !isAuthenticated ? (
-                <GitHubLogin onLoginSuccess={handleLoginSuccess} />
-              ) : (
-                <Navigate to="/dashboard" replace />
-              )
-            } />
-            
-            <Route path="/dashboard" element={
+            <Route path="/github-dashboard" element={
               isAuthenticated ? (
                 <GitHubDashboard />
               ) : (
                 <Navigate to="/auth" replace />
               )
             } />
+            
+            <Route path="/pr-insights" element={<PRInsightsDashboard />} />
           </Routes>
         </main>
         
@@ -276,7 +287,7 @@ function AppContent() {
 
 function App() {
   return (
-    <Router basename={basename}>
+    <Router>
       <ErrorBoundary>
         <GitHubProvider>
           <div className="App">
