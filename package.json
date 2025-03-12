@@ -66,7 +66,9 @@
     "collect": "node src/scripts/fetchPRData.js",
     "analyze": "node src/scripts/analyzePRs.js",
     "update-summary": "node src/scripts/updateSummary.js",
-    "analyze-all": "./run-analysis.sh"
+    "analyze-all": "./run-analysis.sh",
+    "security-audit": "node scripts/security-audit.js",
+    "security-check": "npm audit && npm run security-audit"
   },
   "eslintConfig": {
     "extends": [
