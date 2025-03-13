@@ -1,147 +1,200 @@
-# OctoFlow: GitHub Health Analysis for Startups
+# OctoFlow: GitHub Well-Architected Framework
 
-![OctoFlow Banner](https://github.com/cdolik/OctoFlow/raw/main/public/logo192.png)
+OctoFlow is a GitHub-native intelligence and learning platform that empowers startups with AI-driven insights and actionable recommendations to achieve GitHub mastery. It evaluates repositories against the GitHub Well-Architected Framework and provides personalized guidance to improve repository health.
 
-OctoFlow is a GitHub-native tool that helps startup engineering teams improve their GitHub practices and get investor-ready. It analyzes your pull requests and GitHub activity to provide actionable insights based on GitHub's Well-Architected Framework.
+![OctoFlow Logo](docs/images/octoflow-logo.png)
 
-## 🚀 Features
+## 🌟 Features
 
-- **GitHub Health Analysis**: Analyze your PR quality, code collaboration, and engineering velocity
-- **Investor Readiness Score**: Get a clear measure of how your GitHub practices align with what investors look for
-- **Startup-Focused Insights**: Receive recommendations tailored specifically for fast-moving startup teams
+- **GitHub Health Assessment**: Evaluate repositories against the GitHub Well-Architected Framework
+- **AI-Powered Recommendations**: Get personalized, actionable recommendations to improve repository health
+- **GitHub Actions Integration**: Automate the implementation of recommendations with GitHub Actions
+- **Visualization Dashboard**: View repository health metrics and trends in a user-friendly dashboard
+- **Repository Comparison**: Compare the health of multiple repositories
+- **Embeddable Badges**: Showcase your repository health with embeddable badges
 
-## 📋 How It Works
+## 🏗️ Architecture
 
-1. **Install GitHub Action**: Add the OctoFlow GitHub Action to your repository
-2. **Automatic Analysis**: OctoFlow automatically analyzes your PRs and GitHub activity
-3. **Get Actionable Insights**: Receive a GitHub Health Report with recommendations
+OctoFlow follows a modular architecture with clear separation of concerns:
 
-## 🔧 Installation
+### Core Services
 
-### Option 1: Quick Install (Recommended)
+- **GitHub Data Service**: Fetches and processes data from the GitHub API
+- **Assessment Service**: Evaluates repositories against the GitHub Well-Architected Framework
+- **Recommendation Engine**: Generates AI-powered recommendations
+- **GitHub Actions Service**: Integrates with GitHub Actions to automate recommendations
+- **Visualization Service**: Generates charts and visualizations for repository health
 
-1. Create a `.github/workflows` directory in your repository if it doesn't exist
-2. Create a file named `octoflow.yml` in the `.github/workflows` directory
-3. Copy and paste the following content:
+### API Layer
 
-```yaml
-name: "OctoFlow: Startup GitHub Health Analysis"
+- RESTful API endpoints for all OctoFlow functionality
+- Express.js server with proper error handling and security measures
 
-on:
-  pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
-  schedule:
-    # Run daily at midnight UTC
-    - cron: "0 0 * * *"
-  # Allow manual triggering
-  workflow_dispatch:
+### Frontend (Coming Soon)
 
-jobs:
-  analyze:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0  # Fetch all history for accurate PR analysis
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: 18
-          cache: 'npm'
-      
-      - name: Install dependencies
-        run: npm ci
-      
-      - name: Run Startup GitHub Health Analysis
-        id: pr_analysis
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO_OWNER: ${{ github.repository_owner }}
-          REPO_NAME: ${{ github.event.repository.name }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          IS_PR_EVENT: ${{ github.event_name == 'pull_request' }}
-        run: |
-          ./run-analysis.sh
-          # If this is a PR event, create a summary file for commenting
-          if [ "$IS_PR_EVENT" = "true" ]; then
-            node src/scripts/generatePRComment.js
-            echo "::set-output name=summary_path::./data/pr-comment.md"
-          fi
-      
-      - name: Comment on PR with Startup GitHub Health Insights
-        if: github.event_name == 'pull_request' && steps.pr_analysis.outputs.summary_path
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const fs = require('fs');
-            const prNumber = context.payload.pull_request.number;
-            const summaryPath = '${{ steps.pr_analysis.outputs.summary_path }}';
-            
-            if (fs.existsSync(summaryPath)) {
-              const summary = fs.readFileSync(summaryPath, 'utf8');
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: prNumber,
-                body: summary
-              });
-              console.log('Posted OctoFlow Startup GitHub Health analysis to PR #' + prNumber);
-            } else {
-              console.log('No summary file found at ' + summaryPath);
-            }
-      
-      - name: Generate GitHub Health Report
-        if: github.event_name != 'pull_request'
-        run: |
-          node src/scripts/generateHealthReport.js
-      
-      - name: Commit and push results
-        if: github.event_name != 'pull_request'
-        run: |
-          git config --global user.name 'GitHub Action'
-          git config --global user.email 'action@github.com'
-          git add data/
-          git commit -m "Update GitHub Health Report [skip ci]" || echo "No changes to commit"
-          git push
+- React-based dashboard for visualizing repository health
+- Interactive UI for implementing recommendations
+- Repository comparison tools
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Node.js 16+
+- npm or yarn
+- GitHub API token with appropriate permissions
+
+### Installation
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/octoflow/octoflow.git
+   cd octoflow
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Create a `.env` file with your GitHub API token:
+   ```
+   GITHUB_TOKEN=your_github_token
+   PORT=3000
+   NODE_ENV=development
+   ```
+
+4. Build the project:
+   ```bash
+   npm run build
+   ```
+
+5. Start the server:
+   ```bash
+   npm start
+   ```
+
+The server will be running at http://localhost:3000.
+
+## 📊 API Usage
+
+### Assess a Repository
+
+```bash
+curl -X GET "http://localhost:3000/api/health/assess/owner/repo"
 ```
 
-4. Commit and push the file to your repository
-5. The action will run automatically on new PRs and daily at midnight UTC
+### Get Enhanced Assessment with AI Recommendations
 
-### Option 2: Manual Installation
+```bash
+curl -X GET "http://localhost:3000/api/health/enhanced/owner/repo"
+```
 
-1. Fork the [OctoFlow repository](https://github.com/cdolik/OctoFlow)
-2. Customize the analysis rules in `src/analysis/ruleBased/analyzePR.js`
-3. Deploy the action to your repositories
+### Get Visualization Data
 
-## 📊 GitHub Health Report
+```bash
+curl -X GET "http://localhost:3000/api/health/visualization/owner/repo"
+```
 
-OctoFlow generates a comprehensive GitHub Health Report that includes:
+### Get Health Badges
 
-- **Overall GitHub Health Score**: A measure of your GitHub practices
-- **Investor Readiness Score**: How well your practices align with investor expectations
-- **Category Scores**:
-  - **GitHub Fundamentals**: Repo structure, PR templates, branch management
-  - **Code Collaboration & Quality**: PR reviews, PR size, linked issues
-  - **Engineering Velocity**: Time to review, time to merge, reversion rate
-- **Recommendations**: Actionable insights to improve your GitHub practices
-- **Strengths**: Areas where your team is already following best practices
+```bash
+curl -X GET "http://localhost:3000/api/health/badges/owner/repo"
+```
 
-## 🔒 Security & Privacy
+### Implement a Recommendation
 
-OctoFlow runs entirely within your GitHub Actions environment and does not send your code or PR data to any external servers. All analysis is performed locally within the GitHub Actions runner.
+```bash
+curl -X POST "http://localhost:3000/api/health/implement" \
+  -H "Content-Type: application/json" \
+  -d '{"owner":"owner", "repo":"repo", "recommendationId":"security-branch-protection"}'
+```
 
-We take security seriously and have implemented a comprehensive dependency resolution strategy to ensure all dependencies are using secure versions. For more details, see our [Security Policy](SECURITY.md).
+### Compare Repositories
 
-## 📚 Resources
+```bash
+curl -X GET "http://localhost:3000/api/health/compare/owner1/repo1/owner2/repo2"
+```
 
-- [GitHub's Well-Architected Framework](https://wellarchitected.github.com/library/overview/)
-- [GitHub Actions Documentation](https://docs.github.com/en/actions)
+## 📋 GitHub Well-Architected Framework
 
-## 📝 License
+OctoFlow evaluates repositories against the following pillars of the GitHub Well-Architected Framework:
+
+### 1. Security
+
+- Branch protection rules
+- Code scanning and secret scanning
+- Dependency management
+- Security policies
+
+### 2. Reliability
+
+- CI/CD setup
+- Test coverage
+- Workflow success rate
+- Error handling
+
+### 3. Maintainability
+
+- Documentation quality
+- Code organization
+- Contribution guidelines
+- Code owners
+
+### 4. Collaboration
+
+- Pull request templates
+- Issue templates
+- Review processes
+- Team communication
+
+### 5. Velocity
+
+- Time to merge
+- Pull request size
+- Release frequency
+- Development efficiency
+
+## 🛠️ Development
+
+### Project Structure
+
+```
+octoflow/
+├── src/
+│   ├── api/              # API endpoints
+│   ├── controllers/      # Business logic controllers
+│   ├── services/         # Core services
+│   ├── utils/            # Utility functions
+│   └── server.ts         # Main server file
+├── client/               # Frontend React application (coming soon)
+├── docs/                 # Documentation
+├── tests/                # Test files
+└── README.md             # This file
+```
+
+### Running in Development Mode
+
+```bash
+npm run dev
+```
+
+This will start the server with nodemon for automatic reloading.
+
+### Running Tests
+
+```bash
+npm test
+```
+
+### Building for Production
+
+```bash
+npm run build
+npm start
+```
+
+## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
@@ -149,10 +202,19 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
-## 📧 Contact
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-If you have any questions or feedback, please open an issue on the [GitHub repository](https://github.com/cdolik/OctoFlow/issues).
+## 📞 Contact
+
+For questions or support, please open an issue or contact the maintainers:
+
+- GitHub: [@octoflow](https://github.com/octoflow)
+- Email: support@octoflow.dev
 
 ---
 
-*OctoFlow is an unofficial GitHub application. Not affiliated with GitHub, Inc.*
+Built with ❤️ by the OctoFlow team

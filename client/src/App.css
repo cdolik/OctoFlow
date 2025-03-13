@@ -1,0 +1,77 @@
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.content {
+  flex: 1;
+  padding: 24px;
+}
+
+.page-title {
+  margin-bottom: 24px;
+  font-weight: 600;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.chart-container {
+  height: 300px;
+  margin-bottom: 24px;
+}
+
+.score-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-weight: bold;
+  color: white;
+}
+
+.score-badge.high {
+  background-color: var(--success-color);
+}
+
+.score-badge.medium {
+  background-color: var(--warning-color);
+  color: #333;
+}
+
+.score-badge.low {
+  background-color: var(--danger-color);
+}
+
+.recommendation-item {
+  border-left: 4px solid transparent;
+  padding-left: 16px;
+  margin-bottom: 16px;
+}
+
+.recommendation-item.security {
+  border-left-color: var(--danger-color);
+}
+
+.recommendation-item.reliability {
+  border-left-color: var(--warning-color);
+}
+
+.recommendation-item.maintainability {
+  border-left-color: var(--info-color);
+}
+
+.recommendation-item.collaboration {
+  border-left-color: var(--primary-color);
+}
+
+.recommendation-item.velocity {
+  border-left-color: var(--success-color);
+} 
