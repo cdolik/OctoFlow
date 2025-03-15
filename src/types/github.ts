@@ -146,6 +146,8 @@ export interface GitHubPullRequest {
   closed_at: string | null;
   merged_at: string | null;
   draft: boolean;
+  additions?: number;
+  deletions?: number;
 }
 
 export interface GitHubIssue {
@@ -168,6 +170,7 @@ export interface GitHubIssue {
   created_at: string;
   updated_at: string;
   closed_at: string | null;
+  comments?: number;
 }
 
 export interface GitHubWorkflow {

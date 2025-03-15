@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { getGitHubToken, clearGitHubToken, getUserProfile } from '../services/githubApi';
+import { setGitHubToken, hasGitHubToken, getUserProfile } from '../services/githubApi';
 import { GitHubUser } from '../types/github';
 
 interface GitHubContextType {
@@ -33,26 +33,28 @@ export const GitHubProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   // Check for existing token on mount
   useEffect(() => {
     const checkAuth = async () => {
-      const token = getGitHubToken();
-      
-      if (!token) {
-        setLoading(false);
-        return;
-      }
-      
+      setLoading(true);
       try {
-        const userData = await getUserProfile();
-        setUser(userData);
-        setIsAuthenticated(true);
-      } catch (err) {
-        console.error('Authentication error:', err);
-        setError('Session expired or invalid. Please log in again.');
-        clearGitHubToken();
+        const token = hasGitHubToken();
+        if (token) {
+          const userProfile = await getUserProfile();
+          if (userProfile) {
+            setUser(userProfile);
+            setIsAuthenticated(true);
+          } else {
+            setGitHubToken(''); // Clear invalid token
+            setIsAuthenticated(false);
+          }
+        }
+      } catch (error) {
+        setError(error instanceof Error ? error.message : 'Authentication error');
+        setGitHubToken('');
+        setIsAuthenticated(false);
       } finally {
         setLoading(false);
       }
     };
-    
+
     checkAuth();
   }, []);
 
@@ -63,7 +65,7 @@ export const GitHubProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const logout = () => {
-    clearGitHubToken();
+    setGitHubToken('');
     setUser(null);
     setIsAuthenticated(false);
   };

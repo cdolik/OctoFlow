@@ -160,23 +160,23 @@ export class GitHubDataService {
         .catch(() => ({ workflows: [] }));
       
       // Fetch recent workflow runs
-      const workflowRuns = await fetchFromGitHub<any>(`repos/${owner}/${repo}/actions/runs?per_page=100`)
+      const workflowRuns = await fetchFromGitHub<{ workflow_runs: Array<{ conclusion: string, workflow_id: number }> }>(`repos/${owner}/${repo}/actions/runs?per_page=100`)
         .catch(() => ({ workflow_runs: [] }));
       
       const runs = workflowRuns.workflow_runs || [];
       
       // Calculate success rate
-      const successfulRuns = runs.filter(run => run.conclusion === 'success').length;
+      const successfulRuns = runs.filter((run) => run.conclusion === 'success').length;
       const successRate = runs.length > 0 ? (successfulRuns / runs.length) * 100 : 0;
       
       // Calculate deployment frequency (simplified)
-      const deploymentWorkflows = workflows.workflows.filter(wf => 
+      const deploymentWorkflows = workflows.workflows.filter((wf: { name: string, path: string, id: number }) => 
         wf.name.toLowerCase().includes('deploy') || 
         wf.path.toLowerCase().includes('deploy')
       );
       
       const deploymentFrequency = deploymentWorkflows.length > 0 ? 
-        runs.filter(run => 
+        runs.filter((run) =>
           deploymentWorkflows.some(wf => wf.id === run.workflow_id) && 
           run.conclusion === 'success'
         ).length : 0;
@@ -290,7 +290,7 @@ export class GitHubDataService {
       
       // Calculate issue response time
       const issueResponseTimes = issues
-        .filter(issue => issue.comments > 0)
+        .filter((issue: GitHubIssue) => issue.comments !== undefined && issue.comments > 0)
         .map(issue => {
           // This is simplified - would need to fetch comments to get actual first response time
           return 24; // Placeholder: 24 hours
@@ -372,7 +372,8 @@ export class GitHubDataService {
       
       // Calculate PR size (simplified)
       const prSize = prs.length > 0 ? 
-        prs.reduce((sum, pr) => sum + (pr.additions || 0) + (pr.deletions || 0), 0) / prs.length : 0;
+        prs.reduce((sum, pr: GitHubPullRequest) => 
+          sum + (pr.additions || 0) + (pr.deletions || 0), 0) / prs.length : 0;
       
       // Calculate velocity score (simplified)
       let velocityScore = 0;

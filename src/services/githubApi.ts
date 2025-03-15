@@ -172,6 +172,15 @@ const handleGitHubError = (error: any, endpoint: string): GitHubApiError => {
   );
 };
 
+// Replace the headers.entries() usage with a more compatible approach
+const headersToObject = (headers: Headers): Record<string, string> => {
+  const result: Record<string, string> = {};
+  headers.forEach((value, key) => {
+    result[key] = value;
+  });
+  return result;
+};
+
 /**
  * Make a GET request to the GitHub API
  * @param endpoint API endpoint to call
@@ -226,7 +235,7 @@ export const fetchFromGitHub = async <T>(
           status: response.status,
           data: errorData,
           statusText: response.statusText,
-          headers: Object.fromEntries(response.headers.entries())
+          headers: headersToObject(response.headers)
         }
       };
     }
@@ -291,7 +300,7 @@ export const postToGitHub = async <T>(
           status: response.status,
           data: errorData,
           statusText: response.statusText,
-          headers: Object.fromEntries(response.headers.entries())
+          headers: headersToObject(response.headers)
         }
       };
     }
