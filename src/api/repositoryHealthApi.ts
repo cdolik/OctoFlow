@@ -34,7 +34,7 @@ router.get('/assess/:owner/:repo', async (req: Request, res: Response) => {
     return res.json(assessment);
   } catch (error) {
     console.error('Error in /assess endpoint:', error);
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: error instanceof Error ? error.message : 'An unknown error occurred' });
   }
 });
 
@@ -59,7 +59,7 @@ router.get('/enhanced/:owner/:repo', async (req: Request, res: Response) => {
     return res.json(enhancedAssessment);
   } catch (error) {
     console.error('Error in /enhanced endpoint:', error);
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: error instanceof Error ? error.message : 'An unknown error occurred' });
   }
 });
 
@@ -87,7 +87,7 @@ router.get('/visualization/:owner/:repo', async (req: Request, res: Response) =>
     return res.json(visualizationData);
   } catch (error) {
     console.error('Error in /visualization endpoint:', error);
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: error instanceof Error ? error.message : 'An unknown error occurred' });
   }
 });
 
@@ -115,7 +115,7 @@ router.get('/implementation-plan/:owner/:repo', async (req: Request, res: Respon
     return res.json(implementationPlan);
   } catch (error) {
     console.error('Error in /implementation-plan endpoint:', error);
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: error instanceof Error ? error.message : 'An unknown error occurred' });
   }
 });
 
@@ -143,7 +143,7 @@ router.get('/badges/:owner/:repo', async (req: Request, res: Response) => {
     return res.json(badges);
   } catch (error) {
     console.error('Error in /badges endpoint:', error);
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: error instanceof Error ? error.message : 'An unknown error occurred' });
   }
 });
 
@@ -171,7 +171,7 @@ router.get('/embed/:owner/:repo', async (req: Request, res: Response) => {
     return res.send(html);
   } catch (error) {
     console.error('Error in /embed endpoint:', error);
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: error instanceof Error ? error.message : 'An unknown error occurred' });
   }
 });
 
@@ -189,7 +189,7 @@ router.get('/workflows', (req: Request, res: Response) => {
     return res.json(templates);
   } catch (error) {
     console.error('Error in /workflows endpoint:', error);
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: error instanceof Error ? error.message : 'An unknown error occurred' });
   }
 });
 
@@ -219,7 +219,7 @@ router.get('/workflows/category/:category', (req: Request, res: Response) => {
     return res.json(templates);
   } catch (error) {
     console.error('Error in /workflows/category endpoint:', error);
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: error instanceof Error ? error.message : 'An unknown error occurred' });
   }
 });
 
@@ -239,7 +239,7 @@ router.get('/workflows/recommendation/:id', (req: Request, res: Response) => {
     return res.json(templates);
   } catch (error) {
     console.error('Error in /workflows/recommendation endpoint:', error);
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: error instanceof Error ? error.message : 'An unknown error occurred' });
   }
 });
 
@@ -271,7 +271,7 @@ router.post('/workflows/deploy', async (req: Request, res: Response) => {
     return res.json(result);
   } catch (error) {
     console.error('Error in /workflows/deploy endpoint:', error);
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: error instanceof Error ? error.message : 'An unknown error occurred' });
   }
 });
 
@@ -303,7 +303,7 @@ router.post('/implement', async (req: Request, res: Response) => {
     return res.json(result);
   } catch (error) {
     console.error('Error in /implement endpoint:', error);
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: error instanceof Error ? error.message : 'An unknown error occurred' });
   }
 });
 
@@ -335,7 +335,7 @@ router.post('/implement-multiple', async (req: Request, res: Response) => {
     return res.json(results);
   } catch (error) {
     console.error('Error in /implement-multiple endpoint:', error);
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: error instanceof Error ? error.message : 'An unknown error occurred' });
   }
 });
 
@@ -367,7 +367,7 @@ router.get('/compare/:repo1Owner/:repo1Name/:repo2Owner/:repo2Name', async (req:
     return res.json(comparison);
   } catch (error) {
     console.error('Error in /compare endpoint:', error);
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: error instanceof Error ? error.message : 'An unknown error occurred' });
   }
 });
 

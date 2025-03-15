@@ -23,7 +23,7 @@ export class RepositoryHealthController {
       return await assessmentService.evaluateRepository(owner, repo);
     } catch (error) {
       console.error('Error assessing repository:', error);
-      throw new Error(`Failed to assess repository ${owner}/${repo}: ${error.message}`);
+      throw new Error(`Failed to assess repository ${owner}/${repo}: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -32,10 +32,14 @@ export class RepositoryHealthController {
    */
   async getEnhancedAssessment(owner: string, repo: string): Promise<EnhancedAssessmentResult> {
     try {
+      // Get base assessment
+      const assessment = await this.assessRepository(owner, repo);
+      
+      // Generate enhanced assessment with AI recommendations
       return await recommendationEngine.generateRecommendations(owner, repo);
     } catch (error) {
       console.error('Error generating enhanced assessment:', error);
-      throw new Error(`Failed to generate enhanced assessment for ${owner}/${repo}: ${error.message}`);
+      throw new Error(`Failed to generate enhanced assessment for ${owner}/${repo}: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -44,14 +48,11 @@ export class RepositoryHealthController {
    */
   getVisualizationData(assessmentResult: AssessmentResult) {
     try {
-      return {
-        radarChart: visualizationService.generateHealthRadarChart(assessmentResult.repositoryInsights),
-        scoreCards: visualizationService.generateScoreCards(assessmentResult.repositoryInsights),
-        recommendationChart: visualizationService.generateRecommendationChart(assessmentResult)
-      };
+      // Generate visualization data
+      return visualizationService.generateHealthRadarChart(assessmentResult.repositoryInsights);
     } catch (error) {
       console.error('Error generating visualization data:', error);
-      throw new Error(`Failed to generate visualization data: ${error.message}`);
+      throw new Error(`Failed to generate visualization data: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -60,10 +61,11 @@ export class RepositoryHealthController {
    */
   getImplementationPlanVisualization(enhancedResult: EnhancedAssessmentResult) {
     try {
+      // Generate implementation plan visualization
       return visualizationService.generateImplementationPlanVisualization(enhancedResult);
     } catch (error) {
       console.error('Error generating implementation plan visualization:', error);
-      throw new Error(`Failed to generate implementation plan visualization: ${error.message}`);
+      throw new Error(`Failed to generate implementation plan visualization: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -102,7 +104,7 @@ export class RepositoryHealthController {
       };
     } catch (error) {
       console.error('Error generating health badges:', error);
-      throw new Error(`Failed to generate health badges: ${error.message}`);
+      throw new Error(`Failed to generate health badges: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -118,7 +120,7 @@ export class RepositoryHealthController {
       );
     } catch (error) {
       console.error('Error generating embeddable HTML:', error);
-      throw new Error(`Failed to generate embeddable HTML: ${error.message}`);
+      throw new Error(`Failed to generate embeddable HTML: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -130,7 +132,7 @@ export class RepositoryHealthController {
       return githubActionsService.getAllWorkflowTemplates();
     } catch (error) {
       console.error('Error getting workflow templates:', error);
-      throw new Error(`Failed to get workflow templates: ${error.message}`);
+      throw new Error(`Failed to get workflow templates: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -142,7 +144,7 @@ export class RepositoryHealthController {
       return githubActionsService.getWorkflowTemplatesByCategory(category);
     } catch (error) {
       console.error(`Error getting workflow templates for category ${category}:`, error);
-      throw new Error(`Failed to get workflow templates for category ${category}: ${error.message}`);
+      throw new Error(`Failed to get workflow templates for category ${category}: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -154,7 +156,7 @@ export class RepositoryHealthController {
       return githubActionsService.getWorkflowTemplatesForRecommendation(recommendationId);
     } catch (error) {
       console.error(`Error getting workflow templates for recommendation ${recommendationId}:`, error);
-      throw new Error(`Failed to get workflow templates for recommendation ${recommendationId}: ${error.message}`);
+      throw new Error(`Failed to get workflow templates for recommendation ${recommendationId}: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -171,7 +173,7 @@ export class RepositoryHealthController {
       return await githubActionsService.deployWorkflow(owner, repo, templateId, createPullRequest);
     } catch (error) {
       console.error(`Error deploying workflow ${templateId}:`, error);
-      throw new Error(`Failed to deploy workflow ${templateId}: ${error.message}`);
+      throw new Error(`Failed to deploy workflow ${templateId}: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -204,7 +206,7 @@ export class RepositoryHealthController {
       );
     } catch (error) {
       console.error(`Error implementing recommendation ${recommendationId}:`, error);
-      throw new Error(`Failed to implement recommendation ${recommendationId}: ${error.message}`);
+      throw new Error(`Failed to implement recommendation ${recommendationId}: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -234,7 +236,7 @@ export class RepositoryHealthController {
       return results;
     } catch (error) {
       console.error(`Error implementing multiple recommendations:`, error);
-      throw new Error(`Failed to implement multiple recommendations: ${error.message}`);
+      throw new Error(`Failed to implement multiple recommendations: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -350,7 +352,7 @@ export class RepositoryHealthController {
       };
     } catch (error) {
       console.error('Error comparing repositories:', error);
-      throw new Error(`Failed to compare repositories: ${error.message}`);
+      throw new Error(`Failed to compare repositories: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
